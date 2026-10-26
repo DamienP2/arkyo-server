@@ -24,15 +24,65 @@ enum Command {
     /// Run the server in the foreground (default).
     Run(RunArgs),
     /// Manage the system service.
-    Service {
-        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
-        args: Vec<String>,
-    },
+    #[command(subcommand)]
+    Service(ServiceCmd),
     /// Manage users.
     User {
         #[command(subcommand)]
         cmd: UserCmd,
     },
+}
+
+#[derive(Subcommand, Debug)]
+enum ServiceCmd {
+    /// Register this executable as a system service and start it.
+    Install {
+        /// TCP port saved to config.json before the first start.
+        #[arg(long)]
+        port: Option<u16>,
+        /// Address saved to config.json before the first start.
+        #[arg(long)]
+        bind: Option<IpAddr>,
+        /// [default: /var/lib/arkyo, /Library/Application Support/Arkyo
+        /// or %ProgramData%\Arkyo]
+        #[arg(long)]
+        data_dir: Option<PathBuf>,
+    },
+    /// Stop and remove the service (data is kept).
+    Uninstall,
+    Start,
+    Stop,
+    Status,
+}
+
+fn service_command(cmd: ServiceCmd) -> anyhow::Result<()> {
+    match cmd {
+        ServiceCmd::Install {
+            port,
+            bind,
+            data_dir,
+        } => {
+            let data_dir = data_dir.unwrap_or_else(paths::system_data_dir);
+            service::install(&service::InstallOptions {
+                data_dir: data_dir.clone(),
+                port,
+                bind,
+            })?;
+            let port = port.unwrap_or_else(|| config::Config::load(&data_dir).port);
+            println!("Service `{}` installed and started.", paths::SERVICE_NAME);
+            println!("  Data:  {}", data_dir.display());
+            println!("  Open:  http://localhost:{port}/");
+            Ok(())
+        }
+        ServiceCmd::Uninstall => {
+            service::uninstall()?;
+            println!("Service removed (data kept).");
+            Ok(())
+        }
+        ServiceCmd::Start => service::start(),
+        ServiceCmd::Stop => service::stop(),
+        ServiceCmd::Status => service::status(),
+    }
 }
 
 #[derive(Subcommand, Debug)]
@@ -190,6 +240,9 @@ struct RunArgs {
     /// [default: per-user application data directory].
     #[arg(long, env = "ARKYO_DATA_DIR")]
     data_dir: Option<PathBuf>,
+    /// Started by the Windows Service Control Manager.
+    #[arg(long, hide = true)]
+    service: bool,
 }
 
 fn router(state: AppState) -> Router {
@@ -198,13 +251,47 @@ fn router(state: AppState) -> Router {
         .merge(http::router(state))
 }
 
-async fn run(args: RunArgs) -> anyhow::Result<()> {
-    service::set_supervised(false);
-    let dir = args.data_dir.unwrap_or_else(paths::user_data_dir);
+fn run(args: RunArgs) -> anyhow::Result<()> {
+    service::set_supervised(args.service);
+    if args.service {
+        #[cfg(windows)]
+        {
+            let dir = args.data_dir.clone().unwrap_or_else(paths::system_data_dir);
+            return service::windows_runtime::run(Box::new(move |stop| {
+                tokio::runtime::Runtime::new()?
+                    .block_on(serve(args, dir, async move { stop.notified().await }))
+            }));
+        }
+        #[cfg(not(windows))]
+        anyhow::bail!("--service is only meaningful on Windows");
+    }
+    // Under launchd/systemd the service data lives in the system directory.
+    let dir = args.data_dir.clone().unwrap_or_else(|| {
+        if service::is_supervised() {
+            paths::system_data_dir()
+        } else {
+            paths::user_data_dir()
+        }
+    });
+    tokio::runtime::Runtime::new()?.block_on(serve(args, dir, shutdown_signal()))
+}
+
+async fn serve(
+    args: RunArgs,
+    dir: PathBuf,
+    shutdown: impl std::future::Future<Output = ()> + Send + 'static,
+) -> anyhow::Result<()> {
     // A fresh update that keeps failing is rolled back here.
     update::startup_guard(&dir);
     let cfg = config::Config::load(&dir);
     let pool = db::open(&dir).await?;
+    // The service always writes config.json: it marks its data directory for
+    // the CLI (`paths::cli_data_dir`).
+    if !dir.join("config.json").exists() {
+        if let Err(e) = cfg.save(&dir) {
+            tracing::warn!("cannot write config.json: {e:#}");
+        }
+    }
     let state = AppState {
         pool,
         data_dir: dir.clone(),
@@ -219,7 +306,11 @@ async fn run(args: RunArgs) -> anyhow::Result<()> {
         listener,
         router(state).into_make_service_with_connect_info::<SocketAddr>(),
     )
-    .with_graceful_shutdown(shutdown_signal())
+    .with_graceful_shutdown(async move {
+        shutdown.await;
+        // Open SSE streams would otherwise keep graceful shutdown waiting.
+        http::close_event_streams();
+    })
     .await?;
     tracing::info!("shut down");
     Ok(())
@@ -263,12 +354,9 @@ async fn shutdown_signal() {
     }
     #[cfg(not(unix))]
     ctrl_c.await;
-    // Open SSE streams would otherwise keep graceful shutdown waiting.
-    http::close_event_streams();
 }
 
-#[tokio::main]
-async fn main() -> anyhow::Result<()> {
+fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt()
         .with_env_filter(
             EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")),
@@ -276,12 +364,15 @@ async fn main() -> anyhow::Result<()> {
         .init();
     let cli = Cli::parse();
     match cli.command {
-        None => run(cli.run).await,
-        Some(Command::Run(args)) => run(args).await,
-        Some(Command::User { cmd }) => user_command(cmd).await,
-        Some(Command::Service { .. }) => {
-            eprintln!("not implemented yet");
-            std::process::exit(2);
+        None => run(cli.run),
+        Some(Command::Run(args)) => run(args),
+        Some(Command::User { cmd }) => tokio::runtime::Runtime::new()?.block_on(user_command(cmd)),
+        Some(Command::Service(cmd)) => {
+            if let Err(e) = service_command(cmd) {
+                eprintln!("error: {e:#}");
+                std::process::exit(1);
+            }
+            Ok(())
         }
     }
 }
