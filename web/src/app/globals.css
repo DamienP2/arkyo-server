@@ -1,6 +1,6 @@
 /* arkyo-server: import Google Fonts retiré (serveur hors ligne, sur le réseau local) —
-   les polices sont auto-hébergées par src/fonts.css (équivalent de next/font dans
-   arkyo:app/layout.tsx). */
+   les mêmes polices sont auto-hébergées par src/fonts.css : DM Sans variable
+   (300-700), IBM Plex Mono 300-600, Instrument Serif 400 droit + italique. */
 @import "tailwindcss";
 @source "./**/*.{tsx,ts,jsx,js}";
 @source "../components/**/*.{tsx,ts,jsx,js}";
