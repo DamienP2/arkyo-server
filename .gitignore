@@ -3,3 +3,4 @@ web/node_modules/
 web/dist/
 .ref/
 .superpowers/
+.DS_Store
