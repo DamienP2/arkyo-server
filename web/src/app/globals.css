@@ -113,6 +113,7 @@ body {
   --text-tertiary: #5f6584;
   --border-strong: #cdd2e1;
   --accent-soft: rgba(79, 99, 230, 0.1);
+  /* arkyo-server: habillage Strata : le texte d'accent sur fond --muted utilise --accent-strong (--accent clair sur --muted ≈ 4,3:1) */
   --accent-strong: #3346c9;
   --success: #16a34a;
   --success-text: #15803d;

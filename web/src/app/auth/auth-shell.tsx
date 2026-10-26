@@ -30,12 +30,12 @@ export const LABEL_CLASS =
   "mb-1.5 block text-[11px] font-semibold tracking-wider text-[var(--muted-foreground)] uppercase";
 
 /** Champ texte (étape email d'arkyo). */
-export const INPUT_CLASS =
-  "h-10 w-full rounded-lg border border-[var(--border)] bg-transparent px-3 text-sm text-[var(--foreground)] outline-none placeholder:text-[var(--muted-foreground)] focus-visible:ring-2 focus-visible:ring-[var(--ring)] disabled:cursor-not-allowed disabled:opacity-60";
+export const INPUT_CLASS = // arkyo-server: habillage Strata
+  "h-8 w-full rounded-md border border-[var(--border)] bg-[var(--muted)] px-2 py-1 text-[13px] text-[var(--foreground)] outline-none transition-colors placeholder:text-[var(--muted-foreground)] focus-visible:border-[var(--accent)] focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60";
 
 /** Bouton principal (bouton « Continuer » de l'étape email d'arkyo). */
 export const SUBMIT_CLASS = // arkyo-server: habillage Strata
-  "mt-4 flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-[var(--primary)] text-sm font-medium text-[var(--primary-foreground)] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40";
+  "mt-4 flex h-8 w-full items-center justify-center gap-2 rounded-lg bg-[var(--accent)] text-[13px] font-semibold text-[var(--accent-foreground)] transition-colors hover:bg-[var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-40";
 
 /** Bouton secondaire en pied de formulaire (« ← Changer d'utilisateur » d'arkyo). */
 export const FOOT_LINK_CLASS =

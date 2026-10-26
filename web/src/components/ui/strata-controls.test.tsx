@@ -36,8 +36,8 @@ describe("contrôles au style Strata", () => {
   it("bouton destructive : rouge Strata", () => {
     render(<Button variant="destructive">X</Button>);
     const c = screen.getByRole("button").className;
-    expect(c).toContain("bg-[#e11d48]");
-    expect(c).toContain("text-white");
+    expect(c).toContain("bg-[var(--destructive)]");
+    expect(c).toContain("text-[var(--destructive-foreground)]");
   });
 
   it("champ : 32 px, rayon 6 px, fond --muted, focus bordure accent", () => {

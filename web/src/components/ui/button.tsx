@@ -13,7 +13,7 @@ const buttonVariants = cva(
       variant: {
         default: "bg-[var(--accent)] text-[var(--accent-foreground)] hover:bg-[var(--accent-strong)]",
         destructive:
-          "bg-[#e11d48] text-white hover:opacity-90",
+          "bg-[var(--destructive)] text-[var(--destructive-foreground)] hover:opacity-90",
         outline:
           "border border-[var(--border-strong)] bg-[var(--surface-raised)] hover:bg-[var(--muted)] hover:text-[var(--foreground)]",
         secondary: "border border-[var(--border-strong)] bg-[var(--surface-raised)] text-[var(--foreground)] hover:bg-[var(--muted)]",

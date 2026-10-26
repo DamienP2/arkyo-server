@@ -17,6 +17,15 @@ fn monogram(svg: &str) -> &str {
     &svg[start..end]
 }
 
+/// usvg drops the `viewBox`; put it back on the root tag so the favicon scales.
+fn with_view_box(svg: &str, tree: &usvg::Tree) -> String {
+    if svg.contains("viewBox=") {
+        return svg.to_string();
+    }
+    let vb = format!(r#"<svg viewBox="0 0 {} {}""#, tree.size().width(), tree.size().height());
+    svg.replacen("<svg", &vb, 1)
+}
+
 thread_local! {
     static FONT: std::cell::RefCell<Option<std::path::PathBuf>> = const { std::cell::RefCell::new(None) };
 }
@@ -141,7 +150,7 @@ fn run(src: &Path, font: &Path, out: &Path, favicon: &Path) {
     let out = out.to_path_buf();
     // Favicon: the same drawing with text converted to paths.
     let tree = usvg::Tree::from_str(&svg, &options()).expect("valid svg");
-    std::fs::write(favicon, tree.to_string(&usvg::WriteOptions::default())).unwrap();
+    std::fs::write(favicon, with_view_box(&tree.to_string(&usvg::WriteOptions::default()), &tree)).unwrap();
     std::fs::create_dir_all(&out).unwrap();
 
     // Windows icon: PNG-in-ICO, 16 to 256.
@@ -247,6 +256,7 @@ mod tests {
         let svg = std::fs::read_to_string(&fav).unwrap();
         assert!(!svg.contains("<text"), "favicon still has text");
         assert!(svg.contains("<path"), "favicon has no paths");
+        assert!(svg.contains(r#"viewBox="0 0 100 100""#), "favicon has no viewBox");
         let _ = std::fs::remove_dir_all(&tmp);
     }
 

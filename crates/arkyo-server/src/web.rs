@@ -15,7 +15,7 @@ use crate::http::AppState;
 #[folder = "../../web/dist"]
 struct WebApp;
 
-const NOT_BUILT: &str = "<!doctype html><meta charset=utf-8><title>Arkyo</title>\
+const NOT_BUILT: &str = "<!doctype html><meta charset=utf-8><title>Strata Arkyo</title>\
 <body style=\"font:15px system-ui;padding:40px\">\
 <h2>Web app not built</h2><p>Run <code>cd web &amp;&amp; npm install &amp;&amp; npm run build</code> \
 then rebuild the server.</p>";
