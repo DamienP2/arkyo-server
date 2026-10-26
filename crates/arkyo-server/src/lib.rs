@@ -2,7 +2,9 @@
 #[allow(dead_code)]
 pub mod config;
 pub mod db;
+pub mod http;
 pub mod ids;
 #[allow(dead_code)]
 pub mod paths;
+pub mod sessions;
 pub mod users;

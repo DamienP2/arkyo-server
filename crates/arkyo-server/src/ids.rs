@@ -12,6 +12,13 @@ pub fn now_iso() -> String {
         .to_string()
 }
 
+/// UTC time `secs` seconds from now, same format as [`now_iso`].
+pub fn iso_in(secs: i64) -> String {
+    (jiff::Timestamp::now() + jiff::SignedDuration::from_secs(secs))
+        .strftime("%Y-%m-%dT%H:%M:%S%.3fZ")
+        .to_string()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

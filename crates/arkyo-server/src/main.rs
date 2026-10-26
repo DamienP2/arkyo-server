@@ -1,8 +1,10 @@
 use arkyo_core::password;
+use arkyo_server::http::{self, AppState};
 use arkyo_server::{config, db, paths, users};
 
 use std::net::{IpAddr, SocketAddr};
 use std::path::PathBuf;
+use std::sync::{Arc, RwLock};
 
 use axum::{routing::get, Router};
 use clap::{Args, Parser, Subcommand};
@@ -190,19 +192,30 @@ struct RunArgs {
     data_dir: Option<PathBuf>,
 }
 
-fn router() -> Router {
-    Router::new().route("/healthz", get(|| async { "ok" }))
+fn router(state: AppState) -> Router {
+    Router::new()
+        .route("/healthz", get(|| async { "ok" }))
+        .merge(http::router(state))
 }
 
 async fn run(args: RunArgs) -> anyhow::Result<()> {
     let dir = args.data_dir.unwrap_or_else(paths::user_data_dir);
     let cfg = config::Config::load(&dir);
+    let pool = db::open(&dir).await?;
+    let state = AppState {
+        pool,
+        data_dir: dir.clone(),
+        config: Arc::new(RwLock::new(cfg.clone())),
+    };
     let addr = SocketAddr::new(args.bind.unwrap_or(cfg.bind), args.port.unwrap_or(cfg.port));
     let listener = tokio::net::TcpListener::bind(addr).await?;
     tracing::info!("listening on http://{addr} (data dir {})", dir.display());
-    axum::serve(listener, router())
-        .with_graceful_shutdown(shutdown_signal())
-        .await?;
+    axum::serve(
+        listener,
+        router(state).into_make_service_with_connect_info::<SocketAddr>(),
+    )
+    .with_graceful_shutdown(shutdown_signal())
+    .await?;
     tracing::info!("shut down");
     Ok(())
 }

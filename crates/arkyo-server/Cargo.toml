@@ -28,6 +28,10 @@ cuid.workspace = true
 jiff.workspace = true
 argon2 = "0.5"
 rpassword = "7"
+sha2 = "0.10"
+base64 = "0.22"
 
 [dev-dependencies]
 tempfile = "3"
+tower = { version = "0.5", features = ["util"] }
+http-body-util = "0.1"

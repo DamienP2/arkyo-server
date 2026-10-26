@@ -156,3 +156,23 @@ async fn create_while_another_pool_is_open() {
         .unwrap();
     assert_eq!(users::get(&a, &u.id).await.unwrap().email, "a@b.fr");
 }
+
+#[tokio::test]
+async fn identifier_prefers_email_over_other_users_username() {
+    // Whichever user was created first, an exact email match wins.
+    for a_first in [true, false] {
+        let (_d, p) = pool().await;
+        let mk_a = || nu("a@site.fr", None, "technicien");
+        let mk_b = || nu("b@site.fr", Some("a@site.fr"), "owner");
+        let (a, b) = if a_first {
+            let a = users::create(&p, mk_a()).await.unwrap();
+            (a, users::create(&p, mk_b()).await.unwrap())
+        } else {
+            let b = users::create(&p, mk_b()).await.unwrap();
+            (users::create(&p, mk_a()).await.unwrap(), b)
+        };
+        let (found, _) = users::find_by_identifier(&p, "a@site.fr").await.unwrap();
+        assert_eq!(found.id, a.id, "a_first={a_first}");
+        assert_ne!(found.id, b.id);
+    }
+}

@@ -146,7 +146,8 @@ pub async fn create(pool: &SqlitePool, new: NewUser) -> Result<User, UserError> 
 pub async fn find_by_identifier(pool: &SqlitePool, ident: &str) -> Option<(User, String)> {
     let ident = ident.trim();
     let user: User = sqlx::query_as(&format!(
-        r#"SELECT {COLS} FROM "User" WHERE "email" = ?1 OR "username" = ?1 LIMIT 1"#
+        r#"SELECT {COLS} FROM "User" WHERE "email" = ?1 OR "username" = ?1
+           ORDER BY ("email" = ?1) DESC LIMIT 1"#
     ))
     .bind(ident)
     .fetch_optional(pool)
@@ -305,4 +306,25 @@ async fn begin_write(pool: &SqlitePool) -> Result<Transaction<'static, Sqlite>, 
         .execute(&mut *tx)
         .await?;
     Ok(tx)
+}
+
+/// Records a successful login.
+pub async fn touch_login(pool: &SqlitePool, id: &str) -> Result<(), UserError> {
+    sqlx::query(r#"UPDATE "User" SET "lastLogin" = ? WHERE "id" = ?"#)
+        .bind(now_iso())
+        .bind(id)
+        .execute(pool)
+        .await?;
+    Ok(())
+}
+
+/// Sets the interface language.
+pub async fn set_locale(pool: &SqlitePool, id: &str, locale: &str) -> Result<(), UserError> {
+    sqlx::query(r#"UPDATE "User" SET "locale" = ?, "updatedAt" = ? WHERE "id" = ?"#)
+        .bind(locale)
+        .bind(now_iso())
+        .bind(id)
+        .execute(pool)
+        .await?;
+    Ok(())
 }
