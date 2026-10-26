@@ -32,6 +32,7 @@ import {
 import { api } from "@/lib/api-client";
 import { PresenceAvatars } from "@/components/presence/presence-avatars";
 import { useTopbarTabs } from "@/lib/topbar-tabs-context";
+import { StrataBrand } from "@/components/brand/strata-brand"; // arkyo-server: habillage Strata
 import { useTenantMembership } from "@/lib/tenant-membership-context";
 import { locales, type Locale } from "@/i18n/config";
 import { cn } from "@/lib/utils";
@@ -498,35 +499,9 @@ export function Topbar() {
         className="group flex shrink-0 items-center gap-2.5 px-3"
         title={tenantName ? `Espace ${displayName}` : "Accueil"}
       >
-        <svg
-          width={20}
-          height={20}
-          viewBox="0 0 100 100"
-          aria-hidden="true"
-          className="text-[var(--arkyo-blue-light)] transition-transform duration-150 group-hover:scale-105"
-        >
-          <path
-            d="M26 84 L26 28 C26 6 74 6 74 28 L74 84"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-          <line
-            x1="26"
-            y1="58"
-            x2="74"
-            y2="58"
-            stroke="currentColor"
-            strokeWidth="2.8"
-            strokeLinecap="round"
-            opacity="0.4"
-          />
-          <circle cx="62" cy="58" r="2.5" fill="currentColor" opacity="0.7" />
-        </svg>
-        <span className="text-[13px] font-bold tracking-tight text-white">
-          arkyo<span className="font-normal text-[var(--arkyo-soft)]">.io</span>
+        {/* arkyo-server: habillage Strata */}
+        <span className="brand-on-dark">
+          <StrataBrand />
         </span>
         {displayName && (
           <>

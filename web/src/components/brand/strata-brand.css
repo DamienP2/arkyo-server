@@ -1,0 +1,42 @@
+/* Lockup Strata, repris de cg:web/src/styles.css (.brand*), sans signature. */
+.brand {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  flex: none;
+}
+.brand-lockup {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.brand-name,
+.brand-module {
+  font-weight: 800;
+  font-size: 16px;
+  letter-spacing: -0.035em;
+  line-height: 1;
+  color: var(--foreground);
+}
+.brand-module {
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  color: var(--accent);
+}
+.brand.stacked {
+  align-items: center;
+  gap: 12px;
+}
+.brand.stacked .brand-lockup {
+  gap: 10px;
+}
+.brand.stacked .brand-name,
+.brand.stacked .brand-module {
+  font-size: 40px;
+}
+/* arkyo-server: la topbar reste sombre dans les deux thèmes. */
+.brand-on-dark {
+  --foreground: #ffffff;
+  --accent: #8fa3ff;
+}

@@ -16,6 +16,7 @@ import type { ReactNode } from "react";
 import { useTheme } from "next-themes";
 import { Sun, Moon, Check, X, Loader2 } from "@/components/ui/icons";
 import { LocaleSelector } from "@/components/locale-selector";
+import { StrataBrand } from "@/components/brand/strata-brand"; // arkyo-server: habillage Strata
 
 export const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 export const USERNAME_RE = /^[a-z0-9]([a-z0-9._-]{1,28}[a-z0-9])?$/;
@@ -81,129 +82,9 @@ export function AuthShell({ error, children }: { error?: string; children?: Reac
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-[var(--background)] px-4">
 
-      {/* Monogramme */}
-      <div className="group mb-6 cursor-pointer">
-        <svg width={72} height={72} viewBox="0 0 100 100">
-          <defs>
-            <linearGradient id="flow-auth" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="var(--arkyo-blue-light)" stopOpacity="0">
-                <animate
-                  attributeName="offset"
-                  values="-0.3;1"
-                  dur="1.5s"
-                  repeatCount="indefinite"
-                />
-              </stop>
-              <stop offset="15%" stopColor="var(--arkyo-blue-light)" stopOpacity="0.9">
-                <animate
-                  attributeName="offset"
-                  values="-0.15;1.15"
-                  dur="1.5s"
-                  repeatCount="indefinite"
-                />
-              </stop>
-              <stop offset="30%" stopColor="var(--arkyo-blue-light)" stopOpacity="0">
-                <animate
-                  attributeName="offset"
-                  values="0;1.3"
-                  dur="1.5s"
-                  repeatCount="indefinite"
-                />
-              </stop>
-            </linearGradient>
-            <filter id="glow-auth">
-              <feGaussianBlur stdDeviation="2.5" result="blur" />
-              <feMerge>
-                <feMergeNode in="blur" />
-                <feMergeNode in="SourceGraphic" />
-              </feMerge>
-            </filter>
-          </defs>
-          <path
-            d="M26 84 L26 28 C26 6 74 6 74 28 L74 84"
-            fill="none"
-            stroke="var(--arkyo-blue-light)"
-            strokeWidth="5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-          <line
-            x1="26"
-            y1="58"
-            x2="74"
-            y2="58"
-            stroke="var(--arkyo-blue-light)"
-            strokeWidth="2.8"
-            strokeLinecap="round"
-            opacity="0.4"
-          />
-          <line
-            x1="26"
-            y1="58"
-            x2="74"
-            y2="58"
-            stroke="url(#flow-auth)"
-            strokeWidth="3.5"
-            strokeLinecap="round"
-            filter="url(#glow-auth)"
-            className="opacity-0 transition-opacity group-hover:opacity-100"
-          />
-          <circle
-            cx="62"
-            cy="58"
-            r="2.5"
-            fill="var(--arkyo-blue-light)"
-            opacity="0.7"
-            className="group-hover:hidden"
-          />
-          <circle
-            cx="50"
-            cy="58"
-            r="3"
-            fill="var(--arkyo-blue-light)"
-            opacity="0.8"
-            className="hidden group-hover:block"
-          >
-            <animate attributeName="cx" values="30;70;30" dur="1.5s" repeatCount="indefinite" />
-            <animate
-              attributeName="opacity"
-              values="0.3;1;0.3"
-              dur="1.5s"
-              repeatCount="indefinite"
-            />
-            <animate attributeName="r" values="2;3.5;2" dur="1.5s" repeatCount="indefinite" />
-          </circle>
-          <line
-            x1="34"
-            y1="42"
-            x2="66"
-            y2="42"
-            stroke="var(--arkyo-blue-light)"
-            strokeWidth="1"
-            strokeLinecap="round"
-            opacity="0.15"
-          />
-          <line
-            x1="34"
-            y1="72"
-            x2="66"
-            y2="72"
-            stroke="var(--arkyo-blue-light)"
-            strokeWidth="1"
-            strokeLinecap="round"
-            opacity="0.15"
-          />
-        </svg>
-      </div>
-
-      {/* Lockup */}
-      <div className="mb-2 flex items-baseline gap-0.5">
-        <span className="text-3xl font-semibold tracking-tight text-[var(--foreground)]">
-          arkyo
-        </span>
-        <span className="text-3xl font-light tracking-tight text-[var(--muted-foreground)]">
-          .io
-        </span>
+      {/* arkyo-server: habillage Strata (lockup empilé à la place du monogramme et d'arkyo.io) */}
+      <div className="mb-2">
+        <StrataBrand stacked />
       </div>
 
       <div className="mb-10" />

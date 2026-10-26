@@ -1,11 +1,11 @@
 /**
  * Titre d'onglet, comme le `metadata.title` d'arkyo:app/layout.tsx :
- * `arkyo.io` par défaut, `arkyo.io | <page>` quand la page a un titre.
+ * `Strata Arkyo` par défaut, `Strata Arkyo | <page>` quand la page a un titre.
  */
 
 import { useEffect } from "react";
 
-export const DEFAULT_TITLE = "arkyo.io";
+export const DEFAULT_TITLE = "Strata Arkyo";
 
 export function pageTitle(title?: string | null): string {
   return title ? `${DEFAULT_TITLE} | ${title}` : DEFAULT_TITLE;

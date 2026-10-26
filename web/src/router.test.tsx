@@ -85,11 +85,11 @@ describe("routeur et coquille", () => {
     expect(await screen.findByText("Mises à jour")).toBeInTheDocument();
   });
 
-  test("le site sans nom n'affiche que le lockup arkyo.io", async () => {
+  test("le site sans nom n'affiche que le lockup Strata Arkyo", async () => {
     renderApp("/dashboard", signedInApi(undefined, ""));
     await screen.findByText("Bientôt disponible");
     const header = document.querySelector("header")!;
-    expect(header.querySelector('a[href="/dashboard"]')!.textContent).toBe("arkyo.io");
+    expect(header.querySelector('a[href="/dashboard"]')!.textContent).toBe("StrataArkyo");
   });
 
   test("les éditeurs plein écran s'affichent sans sidebar ni topbar", async () => {

@@ -27,17 +27,16 @@ describe("page de connexion", () => {
     expect(await screen.findByLabelText("Confirmation")).toBeInTheDocument();
   });
 
-  test("reprend le cadre arkyo : monogramme, lockup arkyo.io, thème et langues", async () => {
+  test("affiche le lockup Strata Arkyo empilé, thème et langues", async () => {
     renderApp("/auth", signedOut);
     expect(await screen.findByLabelText("Identifiant")).toBeInTheDocument();
-    expect(screen.getByText("arkyo")).toBeInTheDocument();
-    expect(screen.getByText(".io")).toBeInTheDocument();
-    expect(document.querySelector("#flow-auth")).not.toBeNull();
+    expect(screen.getByLabelText("Strata Arkyo")).toHaveClass("stacked");
+    expect(document.querySelector("#flow-auth")).toBeNull();
     expect(screen.getByRole("button", { name: "Mode sombre" })).toBeInTheDocument();
     for (const l of ["fr", "en", "es", "de", "it"]) {
       expect(screen.getByRole("button", { name: l })).toBeInTheDocument();
     }
-    await waitFor(() => expect(document.title).toBe("arkyo.io | Connexion"));
+    await waitFor(() => expect(document.title).toBe("Strata Arkyo | Connexion"));
   });
 
   test("connexion réussie mène à /dashboard ; erreur 401 affiche « Identifiant ou mot de passe incorrect »", async () => {
