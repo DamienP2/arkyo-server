@@ -163,7 +163,7 @@ Chaque phase se termine par une release installable et une vérification de pari
 
 **Environnement de référence** *(choix du concepteur)* : arkyo au commit `88b2e4b` tourne en local (son `docker-compose.yml` Postgres + Redis, un tenant de test créé avec ses scripts de seed et un jeu de données de démonstration). La vérification se fait manuellement dans le navigateur, avec des captures avant/après des mêmes écrans sur les mêmes données. Pas de comparaison de captures automatisée en CI.
 
-1. **Socle** : workspace, serveur axum, SQLite et migrations du schéma complet, auth et rôles, coquille du front (layouts, design system, navigation, thème, i18n), embarquement, CLI, service, tray, mise à jour, CI et release.
+1. **Socle** : workspace, serveur axum, SQLite et tables du socle (chaque phase suivante ajoute les tables qu'elle consomme, en particulier la phase 2 qui tranche la fusion des catalogues table par table), auth et rôles, coquille du front (layouts, design system, navigation, thème, i18n), embarquement, CLI, service, tray, mise à jour, CI et release.
 2. **Catalogue et administration** : catalogue complet, taxonomie, connecteurs, signaux, numérotation, import/backup, impression, utilisateurs et rôles, données initiales.
 3. **Projets et bibliothèques** : projets (liste, fiche, tâches, messages, documents, audit), racks, rigs, panels, templates.
 4. **Éditeur projet, cœur** : inventaire, élévations rack, câblage et numérotation, synoptique.
