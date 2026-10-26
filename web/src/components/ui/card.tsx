@@ -1,12 +1,13 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
+// arkyo-server: habillage Strata
 const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ className, ...props }, ref) => (
     <div
       ref={ref}
       className={cn(
-        "rounded-xl border border-[var(--border)] bg-[var(--card)] text-[var(--card-foreground)] shadow-sm",
+        "rounded-lg border border-[var(--border)] bg-[var(--card)] text-[var(--card-foreground)]",
         className,
       )}
       {...props}

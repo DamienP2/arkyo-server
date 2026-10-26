@@ -64,6 +64,7 @@ export function EmptyState({ icon, title, description, action, className }: Empt
  * Bouton "action" par défaut utilisé dans EmptyState — garde le look dashed
  * de la capture. Facultatif : on peut passer son propre bouton.
  */
+// arkyo-server: habillage Strata
 export function EmptyStateAction({
   onClick,
   children,
@@ -80,7 +81,7 @@ export function EmptyStateAction({
       type={type}
       onClick={onClick}
       className={cn(
-        "flex items-center gap-2 rounded-lg border border-dashed border-[var(--border)] px-3 py-2 text-xs font-medium text-[var(--muted-foreground)] transition-colors hover:bg-[var(--secondary)] hover:text-[var(--foreground)]",
+        "flex items-center gap-2 rounded-lg border border-dashed border-[var(--border-strong)] px-3 py-2 text-xs font-medium text-[var(--muted-foreground)] transition-colors hover:bg-[var(--secondary)] hover:text-[var(--foreground)]",
         className,
       )}
     >

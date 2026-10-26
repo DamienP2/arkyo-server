@@ -157,22 +157,24 @@ function ToastViewport({
   );
 }
 
+// arkyo-server: habillage Strata
 function ToastCard({ item, onDismiss }: { item: ToastItem; onDismiss: () => void }) {
   const Icon =
     item.variant === "success" ? CheckCircle2 : item.variant === "error" ? AlertCircle : Info;
   const accent =
     item.variant === "success"
-      ? "text-emerald-500"
+      ? "text-[var(--success)]"
       : item.variant === "error"
-        ? "text-red-500"
+        ? "text-[var(--danger)]"
         : "text-[var(--accent)]";
 
   return (
     <div
       role={item.variant === "error" ? "alert" : "status"}
       className={cn(
-        "pointer-events-auto flex items-start gap-3 rounded-xl border border-[var(--border)]/60 bg-[var(--card)] p-3 shadow-lg",
+        "pointer-events-auto flex items-start gap-3 rounded-lg border border-[var(--border-strong)] border-l-[3px] bg-[var(--surface-raised)] px-3.5 py-2.5 shadow-lg",
         "animate-fade-in",
+        item.variant === "error" ? "border-l-[var(--danger)]" : "border-l-[var(--accent)]",
       )}
     >
       <Icon className={cn("h-4 w-4 shrink-0 mt-0.5", accent)} strokeWidth={2} />

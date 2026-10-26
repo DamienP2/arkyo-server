@@ -10,13 +10,14 @@ const SheetTrigger = DialogPrimitive.Trigger;
 const SheetClose = DialogPrimitive.Close;
 const SheetPortal = DialogPrimitive.Portal;
 
+// arkyo-server: habillage Strata
 const SheetOverlay = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Overlay>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Overlay>
 >(({ className, ...props }, ref) => (
   <DialogPrimitive.Overlay
     ref={ref}
-    className={cn("sheet-overlay fixed inset-0 z-50 bg-black/40 backdrop-blur-sm", className)}
+    className={cn("sheet-overlay fixed inset-0 z-50 bg-black/60 backdrop-blur-[3px]", className)}
     {...props}
   />
 ));
@@ -32,7 +33,7 @@ const SheetContent = React.forwardRef<
       ref={ref}
       aria-describedby={props["aria-describedby"] ?? undefined}
       className={cn(
-        "sheet-content fixed inset-y-0 right-0 z-50 w-80 border-l border-[var(--border)] bg-[var(--surface,var(--background))] shadow-xl",
+        "sheet-content fixed inset-y-0 right-0 z-50 w-80 border-l border-[var(--border-strong)] bg-[var(--surface)] shadow-xl",
         "flex flex-col",
         className,
       )}
@@ -41,7 +42,7 @@ const SheetContent = React.forwardRef<
       {children}
       <DialogPrimitive.Close
         aria-label="Fermer"
-        className="absolute top-4 right-4 inline-flex h-7 w-7 items-center justify-center rounded-lg text-[var(--muted-foreground)] transition-colors hover:bg-[var(--secondary)] hover:text-[var(--foreground)] focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:outline-none"
+        className="absolute top-4 right-4 inline-flex h-7 w-7 items-center justify-center rounded-md text-[var(--muted-foreground)] transition-colors hover:bg-[var(--secondary)] hover:text-[var(--foreground)] focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:outline-none"
       >
         <X className="h-4 w-4" />
       </DialogPrimitive.Close>

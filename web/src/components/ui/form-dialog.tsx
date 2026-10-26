@@ -223,6 +223,7 @@ export function HelpTooltip({ text }: { text: string }) {
 
 // ── FormDialog ───────────────────────────────────────────────────────────────
 
+// arkyo-server: habillage Strata
 export function FormDialog<TValues extends FieldValues>({
   open,
   onOpenChange,
@@ -310,7 +311,7 @@ export function FormDialog<TValues extends FieldValues>({
         {/* Header */}
         <div className="flex items-start gap-4 border-b border-[var(--border)] px-6 py-5 pr-14">
           {icon ? (
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--accent)]/10 text-[var(--accent)] [&_svg]:h-5 [&_svg]:w-5">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[var(--accent-soft)] text-[var(--accent)] [&_svg]:h-5 [&_svg]:w-5">
               {icon}
             </div>
           ) : null}

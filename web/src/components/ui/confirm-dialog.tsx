@@ -62,6 +62,7 @@ function DefaultIcon({ variant }: { variant: ConfirmVariant }) {
 
 // ── Provider ─────────────────────────────────────────────────────────────────
 
+// arkyo-server: habillage Strata
 export function ConfirmProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = React.useState<ConfirmState | null>(null);
 
@@ -119,10 +120,10 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
           <div className="flex items-start gap-4 p-5">
             <div
               className={cn(
-                "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl",
+                "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg",
                 variant === "destructive"
                   ? "bg-[var(--destructive)]/10 text-[var(--destructive)]"
-                  : "bg-[var(--accent)]/10 text-[var(--accent)]",
+                  : "bg-[var(--accent-soft)] text-[var(--accent)]",
               )}
             >
               {iconNode}
