@@ -52,6 +52,9 @@ async fn embedded(uri: Uri, headers: HeaderMap) -> Response {
     let raw = uri.path().trim_start_matches('/');
     let path = match WebApp::get(raw).filter(|_| !raw.is_empty()) {
         Some(_) => raw,
+        // A bundle of another build (a tab opened before an update) fails
+        // cleanly instead of receiving the HTML page as a script.
+        None if raw.starts_with("assets/") => return not_found(),
         None => "index.html",
     };
     let Some(file) = WebApp::get(path) else {

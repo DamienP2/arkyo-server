@@ -107,3 +107,13 @@ async fn gzip_variant_when_accepted() {
     assert_eq!(s, StatusCode::OK);
     assert_eq!(h.get(header::CONTENT_ENCODING).unwrap(), "gzip");
 }
+
+#[tokio::test]
+async fn missing_asset_is_404_not_index() {
+    let env = common::env().await;
+    for uri in ["/assets/index-0ld8u1ld.js", "/assets/style-gone.css"] {
+        let (s, h, _) = get(&env, uri, true).await;
+        assert_eq!(s, StatusCode::NOT_FOUND, "{uri}");
+        assert!(!ctype(&h).starts_with("text/html"), "{uri}");
+    }
+}
