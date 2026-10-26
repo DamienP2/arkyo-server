@@ -1,6 +1,7 @@
-//! Renders the Arkyo monogram (`web/public/favicon.svg`) into the icon assets.
+//! Renders the "SA" monogram (`sa.svg`, Inter 800) into the icon assets and
+//! writes `web/public/favicon.svg` with the text converted to paths.
 //!
-//! Usage: make-icons <favicon.svg> <out-dir>
+//! Usage: make-icons <sa.svg> <font.otf> <out-dir> <favicon-out>
 //! Writes arkyo.ico, arkyo-1024.png, arkyo-macos-1024.png,
 //! uninstall-macos-1024.png, installer-background.png, tray-template-44.rgba,
 //! tray-color-64.rgba and an `arkyo.iconset/` folder (for `iconutil`).
@@ -16,9 +17,22 @@ fn monogram(svg: &str) -> &str {
     &svg[start..end]
 }
 
+thread_local! {
+    static FONT: std::cell::RefCell<Option<std::path::PathBuf>> = const { std::cell::RefCell::new(None) };
+}
+
+/// usvg options whose font database holds only the bundled Inter font.
+fn options() -> usvg::Options<'static> {
+    let mut opt = usvg::Options::default();
+    let path = FONT.with(|f| f.borrow().clone()).expect("font set");
+    opt.fontdb_mut().load_font_file(&path).expect("load font");
+    opt.font_family = "Inter".into();
+    opt
+}
+
 /// Draws `svg` (a full document) at its own size.
 fn render(svg: &str, w: u32, h: u32) -> tiny_skia::Pixmap {
-    let tree = usvg::Tree::from_str(svg, &usvg::Options::default()).expect("valid svg");
+    let tree = usvg::Tree::from_str(svg, &options()).expect("valid svg");
     let mut pm = tiny_skia::Pixmap::new(w, h).unwrap();
     let sx = w as f32 / tree.size().width();
     let sy = h as f32 / tree.size().height();
@@ -69,7 +83,7 @@ fn installer_background(svg: &str) -> tiny_skia::Pixmap {
     render(
         &format!(
             r##"<svg xmlns="http://www.w3.org/2000/svg" width="620" height="418" viewBox="0 0 620 418">
-  <rect width="620" height="418" fill="#F8FAFC"/>
+  <rect width="620" height="418" fill="#f4f5f9"/>
   <g transform="translate(34 264) scale(1.22)">{}</g>
 </svg>"##,
             monogram(svg)
@@ -79,23 +93,18 @@ fn installer_background(svg: &str) -> tiny_skia::Pixmap {
     )
 }
 
-/// macOS template image: the glyph in solid black on transparent, no square.
+/// macOS template image: "SA" in solid black on transparent, no tile.
 fn tray_template(svg: &str) -> tiny_skia::Pixmap {
-    let body = monogram(svg);
-    // Keep the arch, crossbar and dot; drop the background square.
-    let glyph: String = body
+    let glyph: String = monogram(svg)
         .lines()
         .filter(|l| !l.contains("<rect"))
         .collect::<Vec<_>>()
         .join("\n")
-        .replace("#60A5FA", "#000000")
-        .replace(" opacity=\"0.4\"", "")
-        .replace(" opacity=\"0.85\"", "")
-        .replace("stroke-width=\"3.5\"", "stroke-width=\"5\"")
-        .replace("r=\"3.2\"", "r=\"4.5\"");
+        .replace("#ffffff", "#000000")
+        .replace("#8fa3ff", "#000000");
     render(
         &format!(
-            r#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="2 0 96 96" width="44" height="44">{glyph}</svg>"#
+            r#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="12 12 76 76" width="44" height="44">{glyph}</svg>"#
         ),
         44,
         44,
@@ -118,9 +127,21 @@ fn save_rgba(pm: &tiny_skia::Pixmap, path: &Path) {
 
 fn main() {
     let mut args = std::env::args().skip(1);
-    let src = args.next().expect("usage: make-icons <favicon.svg> <out-dir>");
-    let out = std::path::PathBuf::from(args.next().expect("out dir"));
-    let svg = std::fs::read_to_string(&src).expect("read svg");
+    let usage = "usage: make-icons <sa.svg> <font.otf> <out-dir> <favicon-out>";
+    let src = args.next().expect(usage);
+    let font = args.next().expect(usage);
+    let out = args.next().expect(usage);
+    let favicon = args.next().expect(usage);
+    run(Path::new(&src), Path::new(&font), Path::new(&out), Path::new(&favicon));
+}
+
+fn run(src: &Path, font: &Path, out: &Path, favicon: &Path) {
+    FONT.with(|f| *f.borrow_mut() = Some(font.to_path_buf()));
+    let svg = std::fs::read_to_string(src).expect("read svg");
+    let out = out.to_path_buf();
+    // Favicon: the same drawing with text converted to paths.
+    let tree = usvg::Tree::from_str(&svg, &options()).expect("valid svg");
+    std::fs::write(favicon, tree.to_string(&usvg::WriteOptions::default())).unwrap();
     std::fs::create_dir_all(&out).unwrap();
 
     // Windows icon: PNG-in-ICO, 16 to 256.
@@ -184,4 +205,54 @@ fn macos_sized(src: &tiny_skia::Pixmap, size: u32) -> tiny_skia::Pixmap {
         None,
     );
     pm
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn renders_all_outputs_with_expected_sizes() {
+        let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+        let tmp = std::env::temp_dir().join(format!("make-icons-test-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&tmp);
+        let fav = tmp.join("favicon.svg");
+        std::fs::create_dir_all(&tmp).unwrap();
+        run(&root.join("sa.svg"), &root.join("fonts/Inter-ExtraBold.otf"), &tmp, &fav);
+
+        let dims = |n: &str| {
+            let d = image_dims(&std::fs::read(tmp.join(n)).unwrap());
+            d
+        };
+        assert_eq!(dims("arkyo-1024.png"), (1024, 1024));
+        assert_eq!(dims("arkyo-macos-1024.png"), (1024, 1024));
+        assert_eq!(dims("uninstall-macos-1024.png"), (1024, 1024));
+        assert_eq!(dims("installer-background.png"), (620, 418));
+
+        let icon = ico::IconDir::read(std::fs::File::open(tmp.join("arkyo.ico")).unwrap()).unwrap();
+        assert_eq!(icon.entries().len(), 7);
+
+        let tray = std::fs::read(tmp.join("tray-template-44.rgba")).unwrap();
+        assert_eq!(tray.len(), 44 * 44 * 4);
+        let mut opaque = 0;
+        for px in tray.chunks(4) {
+            if px[3] != 0 {
+                assert_eq!(&px[..3], &[0, 0, 0], "non-black tray pixel");
+                opaque += 1;
+            }
+        }
+        assert!(opaque > 100, "tray glyph is empty");
+        assert_eq!(std::fs::read(tmp.join("tray-color-64.rgba")).unwrap().len(), 64 * 64 * 4);
+
+        let svg = std::fs::read_to_string(&fav).unwrap();
+        assert!(!svg.contains("<text"), "favicon still has text");
+        assert!(svg.contains("<path"), "favicon has no paths");
+        let _ = std::fs::remove_dir_all(&tmp);
+    }
+
+    /// Width and height from a PNG header.
+    fn image_dims(b: &[u8]) -> (u32, u32) {
+        let r = |i: usize| u32::from_be_bytes([b[i], b[i + 1], b[i + 2], b[i + 3]]);
+        (r(16), r(20))
+    }
 }
