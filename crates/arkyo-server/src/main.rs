@@ -211,7 +211,7 @@ async fn run(args: RunArgs) -> anyhow::Result<()> {
         config: Arc::new(RwLock::new(cfg.clone())),
     };
     let addr = SocketAddr::new(args.bind.unwrap_or(cfg.bind), args.port.unwrap_or(cfg.port));
-    let listener = tokio::net::TcpListener::bind(addr).await?;
+    let listener = bind_retry(addr).await?;
     update::confirm_after(dir.clone(), std::time::Duration::from_secs(60));
     update::spawn_auto_check(dir.clone());
     tracing::info!("listening on http://{addr} (data dir {})", dir.display());
@@ -223,6 +223,28 @@ async fn run(args: RunArgs) -> anyhow::Result<()> {
     .await?;
     tracing::info!("shut down");
     Ok(())
+}
+
+/// After an update the previous process may still hold the port briefly.
+async fn bind_retry(addr: SocketAddr) -> std::io::Result<tokio::net::TcpListener> {
+    bind_retry_with(addr, 20, std::time::Duration::from_millis(250)).await
+}
+
+async fn bind_retry_with(
+    addr: SocketAddr,
+    retries: u32,
+    delay: std::time::Duration,
+) -> std::io::Result<tokio::net::TcpListener> {
+    let mut attempt = 0;
+    loop {
+        match tokio::net::TcpListener::bind(addr).await {
+            Err(e) if e.kind() == std::io::ErrorKind::AddrInUse && attempt < retries => {
+                attempt += 1;
+                tokio::time::sleep(delay).await;
+            }
+            r => return r,
+        }
+    }
 }
 
 /// Ctrl-C everywhere, plus SIGTERM on Unix (systemd / launchd stop).
@@ -261,5 +283,33 @@ async fn main() -> anyhow::Result<()> {
             eprintln!("not implemented yet");
             std::process::exit(2);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::time::Duration;
+
+    #[tokio::test]
+    async fn bind_retry_waits_for_the_port_to_be_released() {
+        let held = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let addr = held.local_addr().unwrap();
+        std::thread::spawn(move || {
+            std::thread::sleep(Duration::from_millis(300));
+            drop(held);
+        });
+        let l = bind_retry_with(addr, 20, Duration::from_millis(50)).await;
+        assert!(l.is_ok(), "{l:?}");
+    }
+
+    #[tokio::test]
+    async fn bind_retry_gives_up_with_addr_in_use() {
+        let held = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let addr = held.local_addr().unwrap();
+        let e = bind_retry_with(addr, 3, Duration::from_millis(10))
+            .await
+            .unwrap_err();
+        assert_eq!(e.kind(), std::io::ErrorKind::AddrInUse);
     }
 }

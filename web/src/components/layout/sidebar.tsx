@@ -26,10 +26,7 @@ import {
 type NavItem = {
   href: string;
   label: string;
-  icon: React.ComponentType<{
-    className?: string;
-    style?: React.CSSProperties;
-  }>;
+  icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
   altPrefixes?: string[];
   // Désambiguïse deux entrées qui partagent le même pathname (ex. /projects,
   // /templates) via le query param `?tab=`.
@@ -146,10 +143,7 @@ function RailItem({
 }: {
   href: string;
   label: string;
-  icon: React.ComponentType<{
-    className?: string;
-    style?: React.CSSProperties;
-  }>;
+  icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
   active: boolean;
   expanded: boolean;
   index?: number;
@@ -170,13 +164,9 @@ function RailItem({
       <span
         className={cn(
           "truncate pr-3 text-[13px] font-medium transition-all duration-150 ease-out",
-          expanded
-            ? "translate-x-0 opacity-100"
-            : "pointer-events-none -translate-x-1 opacity-0",
+          expanded ? "translate-x-0 opacity-100" : "pointer-events-none -translate-x-1 opacity-0",
         )}
-        style={
-          expanded ? { transitionDelay: `${40 + index * 12}ms` } : undefined
-        }
+        style={expanded ? { transitionDelay: `${40 + index * 12}ms` } : undefined}
       >
         {label}
       </span>
@@ -229,9 +219,7 @@ export function Sidebar() {
   // clavier (immédiat, pour la navigation Tab). Repli immédiat à la sortie.
   const [hovering, setHovering] = useState(false);
   const [focused, setFocused] = useState(false);
-  const hoverTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
-    undefined,
-  );
+  const hoverTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const expanded = hovering || focused;
 
   const handleEnter = () => {
@@ -247,12 +235,10 @@ export function Sidebar() {
   // restait déplié après navigation même souris sortie.
   const handleFocus = (e: React.FocusEvent<HTMLElement>) => {
     const t = e.target as HTMLElement;
-    if (typeof t.matches === "function" && t.matches(":focus-visible"))
-      setFocused(true);
+    if (typeof t.matches === "function" && t.matches(":focus-visible")) setFocused(true);
   };
   const handleBlur = (e: React.FocusEvent<HTMLElement>) => {
-    if (!e.currentTarget.contains(e.relatedTarget as Node | null))
-      setFocused(false);
+    if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setFocused(false);
   };
   // Hors contexte tenant (provider absent) : aucun masquage — la sidebar reste
   // complète. Sous provider : gouvernance RBAC réelle (OWNER bypass dans `has`).
@@ -260,8 +246,7 @@ export function Sidebar() {
 
   // Une entrée est visible si elle n'a pas de permission requise, ou si le
   // membre satisfait cette permission.
-  const canSee = (item: NavItem) =>
-    !item.perm || has(item.perm.domain, item.perm.level);
+  const canSee = (item: NavItem) => !item.perm || has(item.perm.domain, item.perm.level);
 
   const visibleProjectItems = projectItems.filter(canSee);
   const visibleTemplateItems = templateItems.filter(canSee);
@@ -293,10 +278,7 @@ export function Sidebar() {
         "fixed bottom-0 left-0 z-30 flex flex-col overflow-hidden border-r border-[var(--border)] bg-[var(--card)] px-1.5 py-2 transition-[width] duration-200 ease-out",
         expanded && "shadow-lg",
       )}
-      style={{
-        top: "var(--topbar-bottom)",
-        width: expanded ? "190px" : "var(--rail-width)",
-      }}
+      style={{ top: "var(--topbar-bottom)", width: expanded ? "190px" : "var(--rail-width)" }}
     >
       <nav className="flex w-full flex-col gap-0.5">
         {navItems.map((item, i) => (
@@ -353,11 +335,7 @@ export function Sidebar() {
             Libellé « Admin » révélé uniquement une fois déplié. */}
         {visibleAdminItems.length > 0 && (
           <>
-            <SectionHeader
-              label="Admin"
-              expanded={expanded}
-              labelAtRest={false}
-            />
+            <SectionHeader label="Admin" expanded={expanded} labelAtRest={false} />
             {visibleAdminItems.map((item, i) => (
               <RailItem
                 key={item.href}
