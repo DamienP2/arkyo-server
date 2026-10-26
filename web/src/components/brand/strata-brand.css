@@ -35,8 +35,3 @@
 .brand.stacked .brand-module {
   font-size: 40px;
 }
-/* arkyo-server: la topbar reste sombre dans les deux thèmes. */
-.brand-on-dark {
-  --foreground: #ffffff;
-  --accent: #8fa3ff;
-}

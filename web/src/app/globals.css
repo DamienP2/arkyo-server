@@ -1,11 +1,14 @@
 /* arkyo-server: import Google Fonts retiré (serveur hors ligne, sur le réseau local) —
-   les mêmes polices sont auto-hébergées par src/fonts.css : DM Sans variable
-   (300-700), IBM Plex Mono 300-600, Instrument Serif 400 droit + italique. */
+   les polices sont auto-hébergées par src/fonts.css : Inter 400-800, mono système,
+   Instrument Serif 400 droit + italique. (arkyo-server: habillage Strata) */
 /* arkyo-server: habillage Strata — palette, Inter (remplace DM Sans) et mono système,
    voir docs/superpowers/specs/2026-10-26-strata-arkyo-design.md. */
 @import "tailwindcss";
 @source "./**/*.{tsx,ts,jsx,js}";
 @source "../components/**/*.{tsx,ts,jsx,js}";
+/* arkyo-server: habillage Strata — `dark:` suit la classe .dark posée par next-themes
+   (et non la préférence du système), comme les variables de .dark. */
+@custom-variant dark (&:where(.dark, .dark *));
 
 :root {
   --arkyo-ink: #141218;
@@ -311,9 +314,10 @@ body {
 .dark {
   color-scheme: dark;
 }
+/* arkyo-server: habillage Strata — sélection à l'accent du thème */
 .dark ::selection {
-  background: rgba(79, 142, 247, 0.3);
-  color: #f0f0f5;
+  background: color-mix(in srgb, var(--accent) 30%, transparent);
+  color: var(--foreground);
 }
 
 /* Ombres portées plus visibles en dark */

@@ -702,7 +702,8 @@ function TwoPointCrop({
                     width={vLen(cropArea.width)}
                     height={vLen(cropArea.height)}
                     fill="none"
-                    stroke="rgb(99, 102, 241)"
+                    // arkyo-server: habillage Strata
+                    stroke="var(--accent)"
                     strokeWidth={2}
                   />
                 </>
@@ -715,8 +716,11 @@ function TwoPointCrop({
                   y={Math.min(vY(p1.y), cursor.vy)}
                   width={Math.abs(cursor.vx - vX(p1.x))}
                   height={Math.abs(cursor.vy - vY(p1.y))}
-                  fill="rgba(99, 102, 241, 0.1)"
-                  stroke="rgba(99, 102, 241, 0.6)"
+                  // arkyo-server: habillage Strata
+                  fill="var(--accent-soft)"
+                  // arkyo-server: habillage Strata
+                  stroke="var(--accent)"
+                  strokeOpacity={0.6}
                   strokeWidth={1}
                   strokeDasharray="4 3"
                 />
@@ -735,7 +739,8 @@ function TwoPointCrop({
                     cx={vX(p1.x)}
                     cy={vY(p1.y)}
                     r={5}
-                    fill="rgb(99, 102, 241)"
+                    // arkyo-server: habillage Strata
+                    fill="var(--accent)"
                     stroke="white"
                     strokeWidth={1.5}
                   />
@@ -761,7 +766,8 @@ function TwoPointCrop({
                     cx={vX(p2.x)}
                     cy={vY(p2.y)}
                     r={5}
-                    fill="rgb(99, 102, 241)"
+                    // arkyo-server: habillage Strata
+                    fill="var(--accent)"
                     stroke="white"
                     strokeWidth={1.5}
                   />
@@ -841,7 +847,8 @@ function TwoPointCrop({
                   top: LOUPE_SIZE / 2 - 2,
                   width: 4,
                   height: 4,
-                  border: "1px solid rgb(99, 102, 241)",
+                  // arkyo-server: habillage Strata
+                  border: "1px solid var(--accent)",
                 }}
               />
             </div>
@@ -895,7 +902,8 @@ function TwoPointCrop({
             Annuler
           </button>
           <div className="flex items-center gap-2">
-            {errorMessage && <p className="text-xs text-red-500">{errorMessage}</p>}
+            {/* arkyo-server: habillage Strata */}
+            {errorMessage && <p className="text-xs text-[var(--danger-text)]">{errorMessage}</p>}
             <button
               onClick={reset}
               disabled={!p1 && !p2}
@@ -907,7 +915,8 @@ function TwoPointCrop({
             <button
               onClick={handleValidate}
               disabled={!cropArea || uploading || cropArea.width < 1 || cropArea.height < 1}
-              className="flex items-center gap-2 rounded-lg bg-[var(--accent)] px-4 py-2 text-xs font-medium text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+              // arkyo-server: habillage Strata
+              className="flex items-center gap-2 rounded-lg bg-[var(--accent)] px-4 py-2 text-xs font-medium text-[var(--accent-foreground)] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {uploading ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -1745,7 +1754,8 @@ function RatioCrop({
                 Annuler
               </button>
               <div className="flex items-center gap-2">
-                {errorMessage && <p className="text-xs text-red-500">{errorMessage}</p>}
+                {/* arkyo-server: habillage Strata */}
+                {errorMessage && <p className="text-xs text-[var(--danger-text)]">{errorMessage}</p>}
                 <button
                   onClick={showWholeImage}
                   disabled={!box}
@@ -1767,7 +1777,8 @@ function RatioCrop({
                   disabled={
                     !crop || uploading || crop.width < 1 || crop.height < 1 || phase !== "selected"
                   }
-                  className="flex items-center gap-2 rounded-lg bg-[var(--accent)] px-4 py-2 text-xs font-medium text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                  // arkyo-server: habillage Strata
+                  className="flex items-center gap-2 rounded-lg bg-[var(--accent)] px-4 py-2 text-xs font-medium text-[var(--accent-foreground)] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {uploading ? (
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -2231,13 +2242,15 @@ export function ImageCropUpload({
           <button
             type="button"
             onClick={() => onChange("")}
-            className="flex items-center gap-1 rounded-lg border border-[var(--border)] px-2.5 py-1 text-xs text-[var(--muted-foreground)] transition-colors hover:border-red-500/30 hover:bg-red-500/10 hover:text-red-500"
+            // arkyo-server: habillage Strata
+            className="flex items-center gap-1 rounded-lg border border-[var(--border)] px-2.5 py-1 text-xs text-[var(--muted-foreground)] transition-colors hover:border-[var(--danger)]/30 hover:bg-[var(--danger)]/10 hover:text-[var(--danger-text)]"
           >
             <X className="h-3 w-3" />
             Supprimer
           </button>
         )}
-        {error && !rawSrc && <p className="ml-auto text-[11px] text-red-500">{error}</p>}
+        {/* arkyo-server: habillage Strata */}
+        {error && !rawSrc && <p className="ml-auto text-[11px] text-[var(--danger-text)]">{error}</p>}
       </div>
       <p className="text-[10px] text-[var(--muted-foreground)]">PNG, JPG, WebP, SVG — max 10 Mo</p>
 

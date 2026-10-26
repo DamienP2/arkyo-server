@@ -3,7 +3,9 @@
 /**
  * Topbar tenant — alignée sur le pattern visuel de la SupervisorTopbar.
  *
- * Lockup : monogram + arkyo.io + | + Nom du tenant (Title Case).
+ * Lockup : StrataBrand (« Strata Arkyo ») + | + Nom du tenant (Title Case).
+ * arkyo-server: habillage Strata — lockup Strata, topbar claire ou sombre selon
+ * le thème (variante « Clair A »), couleurs aux variables du thème.
  * Actions : Theme toggle (Sun/Moon icon), NotificationsMenu, LanguageMenu,
  *           séparateur, badge rôle MemberRole, ProfileMenu.
  *
@@ -195,12 +197,13 @@ function NotificationsMenu() {
       <button
         type="button"
         onClick={handleToggle}
-        className="relative flex h-7 w-7 items-center justify-center rounded-md text-[var(--arkyo-soft)] transition-colors hover:bg-[var(--arkyo-ink)] hover:text-white"
+        // arkyo-server: habillage Strata
+        className="relative flex h-7 w-7 items-center justify-center rounded-md text-[var(--muted-foreground)] transition-colors hover:bg-[var(--muted)] hover:text-[var(--foreground)]"
         aria-label="Notifications"
       >
         <Bell className="h-3.5 w-3.5" />
-        {count > 0 && (
-          <span className="absolute -top-1 -right-1 flex h-[16px] min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white">
+        {count > 0 && ( // arkyo-server: habillage Strata
+          <span className="absolute -top-1 -right-1 flex h-[16px] min-w-[16px] items-center justify-center rounded-full bg-[var(--destructive)] px-1 text-[9px] font-bold text-[var(--destructive-foreground)]">
             {count > 9 ? "9+" : count}
           </span>
         )}
@@ -345,7 +348,8 @@ function LanguageMenu() {
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="flex h-7 items-center justify-center gap-1 rounded-md px-1.5 text-[var(--arkyo-soft)] transition-colors hover:bg-[var(--arkyo-ink)] hover:text-white"
+        // arkyo-server: habillage Strata
+        className="flex h-7 items-center justify-center gap-1 rounded-md px-1.5 text-[var(--muted-foreground)] transition-colors hover:bg-[var(--muted)] hover:text-[var(--foreground)]"
         aria-label="Langue"
         title={`Langue : ${LANG_LABEL[current].native}`}
       >
@@ -372,7 +376,7 @@ function LanguageMenu() {
                 className={cn(
                   "flex w-full items-center gap-2.5 px-3 py-2 text-xs transition-colors",
                   active
-                    ? "bg-[var(--accent)]/8 font-medium text-[var(--accent)]"
+                    ? "bg-[var(--accent-soft)] font-medium text-[var(--accent-strong)]" // arkyo-server: habillage Strata
                     : "hover:bg-[var(--secondary)]",
                 )}
               >
@@ -407,7 +411,8 @@ function ProfileMenu({
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="flex h-7 w-7 items-center justify-center rounded-md text-[var(--arkyo-soft)] transition-colors hover:bg-[var(--arkyo-ink)] hover:text-white"
+        // arkyo-server: habillage Strata
+        className="flex h-7 w-7 items-center justify-center rounded-md text-[var(--muted-foreground)] transition-colors hover:bg-[var(--muted)] hover:text-[var(--foreground)]"
         aria-label="Profil"
       >
         <User className="h-3.5 w-3.5" />
@@ -453,7 +458,8 @@ function ProfileMenu({
                 setOpen(false);
                 onLogout();
               }}
-              className="flex w-full items-center gap-2.5 px-3 py-2 text-xs text-red-500 transition-colors hover:bg-red-500/10"
+              // arkyo-server: habillage Strata
+              className="flex w-full items-center gap-2.5 px-3 py-2 text-xs text-[var(--danger-text)] transition-colors hover:bg-[var(--danger)]/10"
             >
               <LogOut className="h-3.5 w-3.5" />
               <span className="flex-1 text-left">Déconnexion</span>
@@ -490,23 +496,23 @@ export function Topbar() {
 
   return (
     <header
-      className="fixed right-0 left-0 z-40 flex items-center bg-[var(--arkyo-slate)]"
+      // arkyo-server: habillage Strata
+      className="fixed right-0 left-0 z-40 flex items-center border-b border-[var(--border)] bg-[var(--surface)]"
       style={{ top: "calc(var(--dev-banner-height) + var(--impersonation-banner-height, 0px))", height: "var(--topbar-height)" }}
     >
-      {/* Lockup: monogram + arkyo.io | Tenant Name */}
+      {/* Lockup: Strata Arkyo | Tenant Name (arkyo-server: habillage Strata) */}
       <Link
         href="/dashboard"
         className="group flex shrink-0 items-center gap-2.5 px-3"
         title={tenantName ? `Espace ${displayName}` : "Accueil"}
       >
         {/* arkyo-server: habillage Strata */}
-        <span className="brand-on-dark">
-          <StrataBrand />
-        </span>
+        <StrataBrand />
         {displayName && (
           <>
-            <span className="text-[13px] text-[var(--arkyo-mid)]">|</span>
-            <span className="text-[13px] font-medium text-[var(--arkyo-soft)]">
+            {/* arkyo-server: habillage Strata */}
+            <span className="text-[13px] text-[var(--border-strong)]">|</span>
+            <span className="text-[13px] font-medium text-[var(--text-tertiary)]">
               {displayName}
             </span>
           </>
@@ -522,7 +528,8 @@ export function Topbar() {
         {mounted && (
           <button
             onClick={() => setTheme(isDark ? "light" : "dark")}
-            className="flex h-7 w-7 items-center justify-center rounded-md text-[var(--arkyo-soft)] transition-colors hover:bg-[var(--arkyo-ink)] hover:text-white"
+            // arkyo-server: habillage Strata
+            className="flex h-7 w-7 items-center justify-center rounded-md text-[var(--muted-foreground)] transition-colors hover:bg-[var(--muted)] hover:text-[var(--foreground)]"
             aria-label="Thème"
           >
             {isDark ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
@@ -530,7 +537,8 @@ export function Topbar() {
         )}
         <NotificationsMenu />
         <LanguageMenu />
-        <div className="mx-1 h-4 w-px bg-white/10" />
+        {/* arkyo-server: habillage Strata */}
+        <div className="mx-1 h-4 w-px bg-[var(--border)]" />
         {role && (
           <span
             className={cn(

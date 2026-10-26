@@ -213,7 +213,8 @@ export function UnsavedChangesProvider({ children }: { children: React.ReactNode
       <Dialog open={pending !== null} onOpenChange={handleOpenChange}>
         <DialogContent showClose={false} className="max-w-md p-0">
           <div className="flex items-start gap-4 p-5">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
+            {/* arkyo-server: habillage Strata */}
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--warning)]/10 text-[var(--warning-text)]">
               <AlertTriangle className="h-5 w-5" />
             </div>
             <div className="min-w-0 flex-1 pt-0.5">

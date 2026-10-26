@@ -154,8 +154,8 @@ function RailItem({
       className={cn(
         "flex h-9 w-full items-center rounded-md transition-colors duration-150",
         active
-          ? "bg-[color-mix(in_srgb,var(--accent)_12%,transparent)] text-[var(--accent)]"
-          : "text-muted-foreground hover:text-foreground hover:bg-[color-mix(in_srgb,var(--accent)_8%,transparent)]",
+          ? "bg-[var(--rail-active-bg)] text-[var(--rail-icon-active)]" // arkyo-server: habillage Strata
+          : "text-[var(--rail-icon)] hover:text-foreground hover:bg-[color-mix(in_srgb,var(--accent)_8%,transparent)]", // arkyo-server: habillage Strata
       )}
     >
       <span className="flex h-9 w-9 shrink-0 items-center justify-center">
@@ -198,7 +198,7 @@ function SectionHeader({
       {(expanded || labelAtRest) && (
         <div
           className={cn(
-            "text-muted-foreground/40 mb-0.5 font-bold tracking-widest uppercase transition-all duration-150 ease-out",
+            "text-[var(--rail-icon)] mb-0.5 font-bold tracking-widest uppercase transition-all duration-150 ease-out", // arkyo-server: habillage Strata
             expanded ? "px-2 text-left text-[9px]" : "text-center text-[7px]",
           )}
         >
@@ -275,7 +275,7 @@ export function Sidebar() {
       onFocusCapture={handleFocus}
       onBlurCapture={handleBlur}
       className={cn(
-        "fixed bottom-0 left-0 z-30 flex flex-col overflow-hidden border-r border-[var(--border)] bg-[var(--card)] px-1.5 py-2 transition-[width] duration-200 ease-out",
+        "fixed bottom-0 left-0 z-30 flex flex-col overflow-hidden border-r border-[var(--border)] bg-[var(--rail-bg)] px-1.5 py-2 transition-[width] duration-200 ease-out", // arkyo-server: habillage Strata
         expanded && "shadow-lg",
       )}
       style={{ top: "var(--topbar-bottom)", width: expanded ? "190px" : "var(--rail-width)" }}
@@ -353,7 +353,8 @@ export function Sidebar() {
         {/* arkyo-server: entrée Support et son divider dédié retirés (support
             SaaS arkyo). */}
 
-        <div className="text-muted-foreground/40 mt-1 mb-1 text-center text-[7px] font-bold tracking-widest uppercase">
+        {/* arkyo-server: habillage Strata */}
+        <div className="text-[var(--rail-icon)] mt-1 mb-1 text-center text-[7px] font-bold tracking-widest uppercase">
           v0.1.0
         </div>
       </div>

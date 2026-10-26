@@ -83,11 +83,12 @@ export function NotificationsPanel() {
     <div className="relative" ref={ref}>
       <button
         onClick={handleOpen}
-        className="relative flex h-7 w-7 items-center justify-center rounded-md text-[var(--arkyo-soft)] transition-colors hover:bg-[var(--arkyo-ink)] hover:text-white"
+        // arkyo-server: habillage Strata
+        className="relative flex h-7 w-7 items-center justify-center rounded-md text-[var(--muted-foreground)] transition-colors hover:bg-[var(--muted)] hover:text-[var(--foreground)]"
       >
         <Bell className="h-3.5 w-3.5" />
-        {count > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[8px] font-bold text-white">
+        {count > 0 && ( // arkyo-server: habillage Strata
+          <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--destructive)] text-[8px] font-bold text-[var(--destructive-foreground)]">
             {count > 9 ? "9+" : count}
           </span>
         )}
@@ -100,7 +101,8 @@ export function NotificationsPanel() {
             {count > 0 && (
               <button
                 onClick={markAllAsRead}
-                className="text-[10px] text-[var(--arkyo-blue)] hover:underline"
+                // arkyo-server: habillage Strata
+                className="text-[10px] text-[var(--accent)] hover:underline"
               >
                 Tout marquer comme lu
               </button>
@@ -120,11 +122,12 @@ export function NotificationsPanel() {
                 <button
                   key={n.id}
                   onClick={() => !n.readAt && markAsRead(n.id)}
-                  className={`w-full border-b border-[var(--border)] px-4 py-3 text-left transition-colors last:border-0 hover:bg-[var(--secondary)]/50 ${!n.readAt ? "bg-[var(--arkyo-blue)]/5" : ""}`}
+                  // arkyo-server: habillage Strata
+                  className={`w-full border-b border-[var(--border)] px-4 py-3 text-left transition-colors last:border-0 hover:bg-[var(--secondary)]/50 ${!n.readAt ? "bg-[var(--accent)]/5" : ""}`}
                 >
                   <div className="flex items-start gap-2">
-                    {!n.readAt && (
-                      <div className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--arkyo-blue)]" />
+                    {!n.readAt && ( // arkyo-server: habillage Strata
+                      <div className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--accent)]" />
                     )}
                     <div className="min-w-0 flex-1">
                       <p className={`truncate text-xs ${!n.readAt ? "font-semibold" : ""}`}>

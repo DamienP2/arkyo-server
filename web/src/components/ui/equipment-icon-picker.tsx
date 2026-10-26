@@ -185,8 +185,8 @@ export function EquipmentIconPicker({
                     <span className="line-clamp-1 text-[9px] leading-tight font-medium tracking-wide">
                       {label}
                     </span>
-                    {current && (
-                      <span className="bg-[var(--accent)] absolute top-1 right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full text-white">
+                    {current && ( // arkyo-server: habillage Strata
+                      <span className="bg-[var(--accent)] absolute top-1 right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full text-[var(--accent-foreground)]">
                         <Check className="h-2.5 w-2.5" />
                       </span>
                     )}
@@ -260,7 +260,8 @@ export function EquipmentIconPicker({
               <button
                 type="button"
                 onClick={handleApplyUrl}
-                className="bg-[var(--accent)] hover:opacity-90 h-8 rounded-md px-4 text-[11px] font-semibold text-white transition-opacity"
+                // arkyo-server: habillage Strata
+                className="bg-[var(--accent)] hover:opacity-90 h-8 rounded-md px-4 text-[11px] font-semibold text-[var(--accent-foreground)] transition-opacity"
               >
                 Appliquer
               </button>

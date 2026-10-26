@@ -152,7 +152,8 @@ export function ImageUpload({
             <button
               type="button"
               onClick={() => onChange("")}
-              className="flex items-center gap-1 rounded-lg border border-[var(--border)] px-2.5 py-1 text-xs text-[var(--muted-foreground)] transition-colors hover:border-red-500/30 hover:bg-red-500/10 hover:text-red-500"
+              // arkyo-server: habillage Strata
+              className="flex items-center gap-1 rounded-lg border border-[var(--border)] px-2.5 py-1 text-xs text-[var(--muted-foreground)] transition-colors hover:border-[var(--danger)]/30 hover:bg-[var(--danger)]/10 hover:text-[var(--danger-text)]"
             >
               <X className="h-3 w-3" />
               Supprimer
@@ -160,7 +161,8 @@ export function ImageUpload({
           )}
         </div>
 
-        {error && <p className="text-[11px] text-red-500">{error}</p>}
+        {/* arkyo-server: habillage Strata */}
+        {error && <p className="text-[11px] text-[var(--danger-text)]">{error}</p>}
       </div>
 
       <input

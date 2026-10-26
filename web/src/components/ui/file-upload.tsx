@@ -100,7 +100,8 @@ export function FileUpload({
             type="button"
             onClick={() => onChange("")}
             disabled={uploading}
-            className="rounded p-1 text-[var(--muted-foreground)] transition-colors hover:bg-red-500/10 hover:text-red-500"
+            // arkyo-server: habillage Strata
+            className="rounded p-1 text-[var(--muted-foreground)] transition-colors hover:bg-[var(--danger)]/10 hover:text-[var(--danger-text)]"
             aria-label="Retirer"
           >
             <X className="h-3.5 w-3.5" />
@@ -125,7 +126,8 @@ export function FileUpload({
         </button>
       )}
 
-      {error && <p className="text-[10px] text-red-500">{error}</p>}
+      {/* arkyo-server: habillage Strata */}
+      {error && <p className="text-[10px] text-[var(--danger-text)]">{error}</p>}
     </div>
   );
 }

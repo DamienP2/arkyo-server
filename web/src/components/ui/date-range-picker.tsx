@@ -262,7 +262,8 @@ export function DateRangePicker({
                 // Mois courant
                 inMonth && !isEndpoint && !isInRange && "text-[var(--foreground)] hover:bg-[var(--secondary)]/60",
                 // Endpoints
-                isEndpoint && "bg-[var(--accent)] text-white font-semibold shadow-sm",
+                // arkyo-server: habillage Strata
+                isEndpoint && "bg-[var(--accent)] text-[var(--accent-foreground)] font-semibold shadow-sm",
                 // Entre range
                 isInRange && "bg-[var(--accent)]/15 text-[var(--foreground)]",
                 // Aujourd'hui (si pas endpoint)

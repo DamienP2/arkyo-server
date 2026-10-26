@@ -25,7 +25,8 @@ export function LocaleSelector({ variant = "inline" }: { variant?: Variant }) {
       <select
         onChange={(e) => handleChange(e.target.value as Locale)}
         defaultValue=""
-        className="cursor-pointer bg-transparent text-xs text-[var(--arkyo-soft)] outline-none"
+        // arkyo-server: habillage Strata
+        className="cursor-pointer bg-transparent text-xs text-[var(--muted-foreground)] outline-none"
       >
         <option value="" disabled>
           🌐
@@ -47,7 +48,7 @@ export function LocaleSelector({ variant = "inline" }: { variant?: Variant }) {
           onClick={() => handleChange(l)}
           className={`text-[10px] font-medium tracking-wider uppercase transition-colors ${
             l === currentLocale
-              ? "font-bold text-[var(--arkyo-blue)]"
+              ? "font-bold text-[var(--accent)]" /* arkyo-server: habillage Strata */
               : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
           }`}
           style={{ fontFamily: "var(--font-mono)" }}

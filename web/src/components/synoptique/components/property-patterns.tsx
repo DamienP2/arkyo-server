@@ -69,13 +69,13 @@ export function ActionSwitch({
       <div
         className={cn(
           "relative h-5 w-9 shrink-0 rounded-full transition-colors",
-          checked ? "bg-[var(--accent)]" : "bg-[var(--border)]",
+          checked ? "bg-[var(--accent)]" : "bg-[var(--muted)]", // arkyo-server: habillage Strata
         )}
       >
         <span
           className={cn(
-            "absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform",
-            checked ? "translate-x-[18px]" : "translate-x-0",
+            "absolute top-0.5 left-0.5 h-4 w-4 rounded-full shadow transition-transform", // arkyo-server: habillage Strata
+            checked ? "translate-x-[18px] bg-white" : "translate-x-0 bg-[var(--muted-foreground)]", // arkyo-server: habillage Strata
           )}
         />
       </div>

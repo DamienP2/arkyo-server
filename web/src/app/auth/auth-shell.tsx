@@ -34,8 +34,8 @@ export const INPUT_CLASS =
   "h-10 w-full rounded-lg border border-[var(--border)] bg-transparent px-3 text-sm text-[var(--foreground)] outline-none placeholder:text-[var(--muted-foreground)] focus-visible:ring-2 focus-visible:ring-[var(--ring)] disabled:cursor-not-allowed disabled:opacity-60";
 
 /** Bouton principal (bouton « Continuer » de l'étape email d'arkyo). */
-export const SUBMIT_CLASS =
-  "mt-4 flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-[var(--arkyo-blue)] text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40";
+export const SUBMIT_CLASS = // arkyo-server: habillage Strata
+  "mt-4 flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-[var(--primary)] text-sm font-medium text-[var(--primary-foreground)] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40";
 
 /** Bouton secondaire en pied de formulaire (« ← Changer d'utilisateur » d'arkyo). */
 export const FOOT_LINK_CLASS =
@@ -91,8 +91,8 @@ export function AuthShell({ error, children }: { error?: string; children?: Reac
 
       {/* Form */}
       <div className="w-full max-w-xs">
-        {error && (
-          <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-center text-xs text-red-600 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-400">
+        {error && ( // arkyo-server: habillage Strata
+          <div className="mb-4 rounded-md border border-[var(--danger)]/30 bg-[var(--danger)]/10 px-3 py-2 text-center text-xs text-[var(--danger-text)]">
             {error}
           </div>
         )}
@@ -162,22 +162,25 @@ export function UsernameField({
           {status === "checking" && (
             <Loader2 className="h-4 w-4 animate-spin text-[var(--muted-foreground)]" />
           )}
-          {status === "ok" && <Check className="h-4 w-4 text-emerald-500" />}
+          {/* arkyo-server: habillage Strata */}
+          {status === "ok" && <Check className="h-4 w-4 text-[var(--success)]" />}
           {(status === "taken" || status === "invalid") && (
-            <X className="h-4 w-4 text-red-500" />
+            <X className="h-4 w-4 text-[var(--danger)]" />
           )}
         </div>
       </div>
       <p className="mt-1 text-[11px] text-[var(--muted-foreground)]">
         {status === "invalid" && "3 à 30 caractères : a-z, 0-9, . _ -."}
-        {status === "taken" && <span className="text-red-500">Identifiant déjà pris.</span>}
+        {/* arkyo-server: habillage Strata */}
+        {status === "taken" && <span className="text-[var(--danger-text)]">Identifiant déjà pris.</span>}
         {status === "ok" && (
-          <span className="text-emerald-600">Identifiant disponible.</span>
+          <span className="text-[var(--success-text)]">Identifiant disponible.</span>
         )}
         {status === "checking" && "Vérification…"}
         {status === "idle" && idleHint}
       </p>
-      {fieldError && <p className="mt-1 text-[11px] text-red-500">{fieldError}</p>}
+      {/* arkyo-server: habillage Strata */}
+      {fieldError && <p className="mt-1 text-[11px] text-[var(--danger-text)]">{fieldError}</p>}
     </div>
   );
 }

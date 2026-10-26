@@ -27,7 +27,8 @@ function Avatar({
   return (
     <div
       title={member.name}
-      className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-[var(--arkyo-slate)] text-[9px] font-semibold text-white"
+      // arkyo-server: habillage Strata
+      className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-[var(--surface)] text-[9px] font-semibold text-white"
       style={{
         backgroundColor: member.color,
         marginLeft: overlap ? -6 : 0,
@@ -53,7 +54,8 @@ export function PresenceAvatars({ className }: { className?: string }) {
       {extra > 0 && (
         <div
           title={`${extra} autre${extra > 1 ? "s" : ""}`}
-          className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-[var(--arkyo-slate)] bg-[var(--arkyo-ink)] text-[9px] font-semibold text-white"
+          // arkyo-server: habillage Strata
+          className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-[var(--surface)] bg-[var(--muted)] text-[9px] font-semibold text-[var(--muted-foreground)]"
           style={{ marginLeft: -6 }}
         >
           +{extra}
