@@ -116,6 +116,8 @@ body {
   --warning: #d97706;
   --warning-text: #b45309;
   --danger: #e11d48;
+  /* arkyo-server: habillage Strata */
+  --danger-text: #be123c;
   --radius: 0.5rem;
   /* Layout */
   --rail-width: 48px;
@@ -202,6 +204,8 @@ body {
   --warning: #f5a524;
   --warning-text: #f5a524;
   --danger: #ff3b5c;
+  /* arkyo-server: habillage Strata */
+  --danger-text: #ff3b5c;
   --arkyo-blue: #8fa3ff;
   --arkyo-blue-light: #bfcaff;
   --arkyo-blue-soft: rgba(143, 163, 255, 0.16);
