@@ -176,3 +176,26 @@ async fn identifier_prefers_email_over_other_users_username() {
         assert_ne!(found.id, b.id);
     }
 }
+
+#[tokio::test]
+async fn reset_password_revokes_every_session() {
+    let (_d, p) = pool().await;
+    let u = users::create(&p, nu("a@b.fr", None, "owner"))
+        .await
+        .unwrap();
+    let other = users::create(&p, nu("c@d.fr", None, "technicien"))
+        .await
+        .unwrap();
+    let t1 = arkyo_server::sessions::create(&p, &u.id).await.unwrap();
+    let t2 = arkyo_server::sessions::create(&p, &u.id).await.unwrap();
+    let kept = arkyo_server::sessions::create(&p, &other.id).await.unwrap();
+    users::reset_password(&p, &u.id, "nouveau123", true)
+        .await
+        .unwrap();
+    assert!(arkyo_server::sessions::lookup(&p, &t1).await.is_none());
+    assert!(arkyo_server::sessions::lookup(&p, &t2).await.is_none());
+    assert!(arkyo_server::sessions::lookup(&p, &kept).await.is_some());
+    let (fresh, hash) = users::find_by_identifier(&p, "a@b.fr").await.unwrap();
+    assert!(users::verify_password(&hash, "nouveau123"));
+    assert!(fresh.must_change_password);
+}

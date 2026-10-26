@@ -146,15 +146,43 @@ fn prompt_password() -> anyhow::Result<String> {
     Ok(pw)
 }
 
+impl UserCmd {
+    fn data_dir(&self) -> Option<PathBuf> {
+        match self {
+            UserCmd::Add { data_dir, .. }
+            | UserCmd::Passwd { data_dir, .. }
+            | UserCmd::List { data_dir }
+            | UserCmd::Remove { data_dir, .. }
+            | UserCmd::Disable { data_dir, .. }
+            | UserCmd::Enable { data_dir, .. } => data_dir.clone(),
+        }
+    }
+}
+
 async fn user_command(cmd: UserCmd) -> anyhow::Result<()> {
-    let open = |d: Option<PathBuf>| async move {
-        let dir = paths::cli_data_dir(d);
-        std::fs::create_dir_all(&dir)?;
+    let dir = paths::cli_data_dir(cmd.data_dir());
+    let result = async {
         let pool = db::open(&dir).await?;
-        anyhow::Ok((dir, pool))
-    };
-    let find = |pool: sqlx::SqlitePool, ident: String| async move {
-        users::find_by_identifier(&pool, &ident)
+        let r = user_command_on(&pool, &dir, cmd).await;
+        // Checkpoints the WAL and releases the base before handing it back.
+        pool.close().await;
+        r
+    }
+    .await;
+    // `sudo arkyo-server user …` must not leave root-owned base files that
+    // the service account can no longer open.
+    #[cfg(unix)]
+    db::restore_owner(&dir);
+    result
+}
+
+async fn user_command_on(
+    pool: &sqlx::SqlitePool,
+    dir: &std::path::Path,
+    cmd: UserCmd,
+) -> anyhow::Result<()> {
+    let find = |ident: String| async move {
+        users::find_by_identifier(pool, &ident)
             .await
             .map(|(u, _)| u)
             .ok_or_else(|| anyhow::anyhow!("Utilisateur introuvable"))
@@ -166,12 +194,11 @@ async fn user_command(cmd: UserCmd) -> anyhow::Result<()> {
             username,
             role,
             temporary,
-            data_dir,
+            data_dir: _,
         } => {
-            let (dir, pool) = open(data_dir).await?;
             let password = prompt_password()?;
             let u = users::create(
-                &pool,
+                pool,
                 users::NewUser {
                     email,
                     name,
@@ -185,19 +212,15 @@ async fn user_command(cmd: UserCmd) -> anyhow::Result<()> {
             println!("Utilisateur {} créé dans {}.", u.email, dir.display());
         }
         UserCmd::Passwd {
-            user,
-            temporary,
-            data_dir,
+            user, temporary, ..
         } => {
-            let (_, pool) = open(data_dir).await?;
-            let u = find(pool.clone(), user).await?;
+            let u = find(user).await?;
             let pw = prompt_password()?;
-            users::set_password(&pool, &u.id, &pw, temporary).await?;
-            println!("Mot de passe modifié.");
+            users::reset_password(pool, &u.id, &pw, temporary).await?;
+            println!("Mot de passe modifié (sessions ouvertes fermées).");
         }
-        UserCmd::List { data_dir } => {
-            let (_, pool) = open(data_dir).await?;
-            for u in users::list(&pool).await {
+        UserCmd::List { .. } => {
+            for u in users::list(pool).await {
                 println!(
                     "{}  {}{}",
                     u.email,
@@ -206,22 +229,19 @@ async fn user_command(cmd: UserCmd) -> anyhow::Result<()> {
                 );
             }
         }
-        UserCmd::Remove { user, data_dir } => {
-            let (_, pool) = open(data_dir).await?;
-            let u = find(pool.clone(), user).await?;
-            users::delete(&pool, &u.id).await?;
+        UserCmd::Remove { user, .. } => {
+            let u = find(user).await?;
+            users::delete(pool, &u.id).await?;
             println!("Utilisateur {} supprimé.", u.email);
         }
-        UserCmd::Disable { user, data_dir } => {
-            let (_, pool) = open(data_dir).await?;
-            let u = find(pool.clone(), user).await?;
-            users::set_active(&pool, &u.id, false).await?;
+        UserCmd::Disable { user, .. } => {
+            let u = find(user).await?;
+            users::set_active(pool, &u.id, false).await?;
             println!("Utilisateur {} désactivé.", u.email);
         }
-        UserCmd::Enable { user, data_dir } => {
-            let (_, pool) = open(data_dir).await?;
-            let u = find(pool.clone(), user).await?;
-            users::set_active(&pool, &u.id, true).await?;
+        UserCmd::Enable { user, .. } => {
+            let u = find(user).await?;
+            users::set_active(pool, &u.id, true).await?;
             println!("Utilisateur {} activé.", u.email);
         }
     }
@@ -356,13 +376,58 @@ async fn shutdown_signal() {
     ctrl_c.await;
 }
 
-fn main() -> anyhow::Result<()> {
-    tracing_subscriber::fmt()
-        .with_env_filter(
-            EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")),
-        )
+/// Where a Windows service logs: it has no console (`<data>/logs/arkyo-server.log`).
+fn log_file(args: &RunArgs) -> Option<PathBuf> {
+    args.service.then(|| {
+        args.data_dir
+            .clone()
+            .unwrap_or_else(paths::system_data_dir)
+            .join("logs")
+            .join("arkyo-server.log")
+    })
+}
+
+/// Logs to `file` when given (and writable), else to stdout.
+fn init_logging(file: Option<PathBuf>) {
+    use std::io::IsTerminal;
+    use tracing_subscriber::prelude::*;
+    let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
+    let file = file.and_then(|p| {
+        std::fs::create_dir_all(p.parent()?).ok()?;
+        std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(p)
+            .ok()
+    });
+    let (to_file, to_stdout) = match file {
+        Some(f) => (
+            Some(
+                tracing_subscriber::fmt::layer()
+                    .with_ansi(false)
+                    .with_writer(std::sync::Mutex::new(f)),
+            ),
+            None,
+        ),
+        None => (
+            None,
+            Some(tracing_subscriber::fmt::layer().with_ansi(std::io::stdout().is_terminal())),
+        ),
+    };
+    tracing_subscriber::registry()
+        .with(filter)
+        .with(to_file)
+        .with(to_stdout)
         .init();
+}
+
+fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
+    init_logging(match &cli.command {
+        None => log_file(&cli.run),
+        Some(Command::Run(args)) => log_file(args),
+        Some(_) => None,
+    });
     match cli.command {
         None => run(cli.run),
         Some(Command::Run(args)) => run(args),
@@ -392,6 +457,32 @@ mod tests {
         });
         let l = bind_retry_with(addr, 20, Duration::from_millis(50)).await;
         assert!(l.is_ok(), "{l:?}");
+    }
+
+    #[test]
+    fn only_the_windows_service_logs_to_a_file() {
+        let args = RunArgs {
+            data_dir: Some(PathBuf::from("/data")),
+            service: true,
+            ..RunArgs::default()
+        };
+        assert_eq!(
+            log_file(&args),
+            Some(PathBuf::from("/data").join("logs").join("arkyo-server.log"))
+        );
+        let default = RunArgs {
+            service: true,
+            ..RunArgs::default()
+        };
+        assert_eq!(
+            log_file(&default),
+            Some(
+                paths::system_data_dir()
+                    .join("logs")
+                    .join("arkyo-server.log")
+            )
+        );
+        assert_eq!(log_file(&RunArgs::default()), None);
     }
 
     #[tokio::test]

@@ -243,6 +243,19 @@ async fn exists(tx: &mut Transaction<'_, Sqlite>, id: &str) -> Result<(), UserEr
     row.map(|_| ()).ok_or(UserError::NotFound)
 }
 
+/// Sets a password chosen by an administrator (CLI `user passwd`) and closes
+/// every open session of the account: whoever knew the old password is out.
+pub async fn reset_password(
+    pool: &SqlitePool,
+    id: &str,
+    pw: &str,
+    must_change: bool,
+) -> Result<(), UserError> {
+    set_password(pool, id, pw, must_change).await?;
+    crate::sessions::revoke_all_for(pool, id).await?;
+    Ok(())
+}
+
 pub async fn set_active(pool: &SqlitePool, id: &str, active: bool) -> Result<(), UserError> {
     // IMMEDIATE-like behaviour: the first statement is a write so the guard is race-free.
     let mut tx = begin_write(pool).await?;
