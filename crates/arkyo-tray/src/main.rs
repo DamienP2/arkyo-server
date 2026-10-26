@@ -15,5 +15,5 @@ fn main() {
 
 #[cfg(not(any(target_os = "macos", windows)))]
 fn main() {
-    eprintln!("L'app tray Arkyo est disponible sur macOS et Windows ; sous Linux utilisez `arkyo-server service status` et l'interface web.");
+    eprintln!("L'app tray Strata Arkyo est disponible sur macOS et Windows ; sous Linux utilisez `arkyo-server service status` et l'interface web.");
 }

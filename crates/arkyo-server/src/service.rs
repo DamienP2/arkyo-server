@@ -390,7 +390,7 @@ mod imp {
     use super::*;
     use crate::paths::SERVICE_NAME;
 
-    const DISPLAY_NAME: &str = "Arkyo Server";
+    const DISPLAY_NAME: &str = "Strata Arkyo Server";
     const FIREWALL_RULE: &str = "Arkyo Server";
     /// Rules an older install added under a former name.
     const LEGACY_FIREWALL_RULES: [&str; 0] = [];
@@ -430,7 +430,7 @@ mod imp {
             .context(
                 "cannot create the service (already installed? run `service uninstall` first)",
             )?;
-        svc.set_description("Arkyo project and team management server")?;
+        svc.set_description("Strata Arkyo server")?;
         let restart = ServiceAction {
             action_type: ServiceActionType::Restart,
             delay: Duration::from_secs(2),

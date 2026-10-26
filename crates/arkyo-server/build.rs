@@ -20,8 +20,8 @@ fn icon() {
     {
         let mut res = winresource::WindowsResource::new();
         res.set_icon("../../assets/icons/arkyo.ico");
-        res.set("FileDescription", "Arkyo Server");
-        res.set("ProductName", "Arkyo");
+        res.set("FileDescription", "Strata Arkyo Server");
+        res.set("ProductName", "Strata Arkyo");
         if let Err(e) = res.compile() {
             println!("cargo:warning=cannot embed the icon: {e}");
         }

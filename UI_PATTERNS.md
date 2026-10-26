@@ -1,5 +1,7 @@
 # Arkyo — Patterns UI canoniques
 
+> arkyo-server : habillage Strata — police Inter, palette Strata (voir CLAUDE.md)
+
 > **OBLIGATOIRE** : avant toute UI nouvelle ou refonte, lire ce fichier et **réutiliser** les composants/snippets ci-dessous. Ne jamais inventer une variante.
 > Si un composant manquant est nécessaire → en parler à l'utilisateur avant de créer.
 

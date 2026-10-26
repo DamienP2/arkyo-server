@@ -29,7 +29,7 @@ Ce fichier liste ce que les revues de la phase 1 ont laissé en suspens. Aucun p
   - Le fallback SPA répond à toutes les méthodes HTTP.
   - Le corps de la 401 de `/api/events` diffère d'arkyo.
   - Les tests du tray ne tournent pas sous Linux.
-  - Le badge de l'icône de désinstallation chevauche le monogramme.
   - Le dialogue du désinstalleur macOS pointe vers une icône supprimée.
   - Le journal Windows n'a pas de rotation.
   - Le tray suppose `localhost` même quand le serveur écoute sur une IP précise.
+  - Bug v0.1.0 : la page Système liste les adresses d'accès avec le port 8090 même quand le serveur tourne avec un autre `--port` (les URL sont construites depuis le défaut de la configuration au lieu du port réellement lié).

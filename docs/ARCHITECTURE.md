@@ -1,6 +1,6 @@
 # Architecture
 
-`arkyo-server` est le recodage d'arkyo (SaaS Next.js / Prisma / Postgres) en application autonome mono-site. Ce document décrit l'organisation du repo ; la conception complète est dans `docs/superpowers/specs/2026-10-26-arkyo-server-design.md`.
+`arkyo-server` (affiché « Strata Arkyo ») est le recodage d'arkyo (SaaS Next.js / Prisma / Postgres) en application autonome mono-site. Ce document décrit l'organisation du repo ; la conception complète est dans `docs/superpowers/specs/2026-10-26-arkyo-server-design.md`.
 
 ```
 arkyo-server/
@@ -9,7 +9,7 @@ arkyo-server/
     arkyo-core/       logique métier pure (sans E/S)
     arkyo-server/     binaire `arkyo-server` : axum, SQLite, CLI, service, mise à jour
     arkyo-tray/       application barre des menus / zone de notification
-  web/                SPA React 19 + Vite + Tailwind v4 (port du front d'arkyo)
+  web/                SPA React 19 + Vite + Tailwind v4 (port du front d'arkyo, habillage Strata)
   packaging/          macos/ windows/ linux/ stamp-version.sh
   .github/workflows/  ci.yml, release.yml
   scripts/            fetch-refs.sh, make-icons.sh
@@ -29,7 +29,7 @@ Les chemins, les formes JSON, les codes HTTP et les messages d'erreur des routes
 
 ## Le front : copie fidèle et shims Next.js
 
-Les fichiers d'arkyo sont copiés **à l'identique, au même chemin relatif sous `web/src/`** (alias `@/*` → `web/src/*`). On ne modifie un fichier copié que pour retirer ce qui relève du SaaS (tenant, plan, impersonation, support…), et chaque retrait est commenté `// arkyo-server: <raison>`. On ne reformate jamais un fichier copié (pas de prettier) : le diff avec arkyo doit rester lisible.
+Les fichiers d'arkyo sont copiés **à l'identique, au même chemin relatif sous `web/src/`** (alias `@/*` → `web/src/*`). On ne modifie un fichier copié que pour retirer ce qui relève du SaaS (tenant, plan, impersonation, support…) ou pour l'habillage Strata ; chaque modification est commentée (`// arkyo-server: <raison>` ou `// arkyo-server: habillage Strata`, `/* … */` en CSS). On ne reformate jamais un fichier copié (pas de prettier) : le diff avec arkyo doit rester lisible.
 
 Arkyo étant en Next.js, ses imports `next/navigation`, `next/link`, `next/image`, `next-auth/react` et `next-intl` sont **redirigés vers des shims** plutôt que réécrits :
 
@@ -67,3 +67,13 @@ SQLite (`arkyo.db`, mode WAL) via `sqlx`, sans macros `query!`. Les migrations s
 - `.ref/cg` : référence d'architecture (Strata Graphics), commit `8ad8b56`. Source du serveur, du packaging et des workflows.
 
 Arkyo est figé : il n'y a rien à resynchroniser.
+
+## Habillage Strata
+
+Le produit s'affiche « Strata Arkyo » ; seuls les noms affichés changent, jamais les identifiants techniques.
+
+- **Palette** : variables CSS de `web/src/app/globals.css` (clair dans `:root`, sombre dans `.dark`), dont `--text-tertiary`, `--border-strong`, `--accent-soft`, `--accent-strong`, `--success[-text]`, `--warning[-text]`, `--danger[-text]`. `@custom-variant dark` est lié à la classe `.dark`. Les couleurs métier (`--arkyo-signal-*`, `--role-*`, avatars de présence, connecteurs, câbles, couleurs choisies par l'utilisateur) ne bougent pas.
+- **Police** : Inter, embarquée (pas de requête externe).
+- **Marque** : composant `StrataBrand` (`web/src/components/brand`), titres « Strata Arkyo ».
+- **Icônes** : « SA » (Inter ExtraBold, licence OFL) générées par `tools/make-icons` dans `assets/icons/` (les fichiers gardent leurs noms `arkyo.*`).
+- **Paquets** : application macOS `/Applications/Strata Arkyo.app` et `Uninstall Strata Arkyo.app` ; MSI Windows (dossier du menu Démarrer « Strata Arkyo », service affiché « Strata Arkyo Server », même affichage via `arkyo-server service install` et dans les métadonnées des exécutables). Le nom du service, la règle de pare-feu, les dossiers et les `UpgradeCode` restent inchangés.

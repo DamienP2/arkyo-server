@@ -1,6 +1,6 @@
 # CLAUDE.md : règles de travail pour arkyo-server
 
-`arkyo-server` est le recodage d'arkyo (SaaS) en application autonome mono-site : serveur Rust (axum) + front React embarqué, distribué comme Strata Graphics (CG). Il s'agit d'un **recodage, pas d'une refonte** : mêmes écrans, même design, mêmes fonctions qu'arkyo. Tout est en français (code commenté en anglais ou français selon le fichier existant, UI, docs, commits).
+`arkyo-server` (nom affiché : **Strata Arkyo**) est le recodage d'arkyo (SaaS) en application autonome mono-site : serveur Rust (axum) + front React embarqué, distribué comme Strata Graphics (CG). Il s'agit d'un **recodage, pas d'une refonte** : mêmes écrans, même ergonomie, mêmes fonctions qu'arkyo, avec l'habillage Strata (palette, police, logotype). Tout est en français (code commenté en anglais ou français selon le fichier existant, UI, docs, commits).
 
 Documents : `README.md`, `docs/INSTALL.md`, `docs/ARCHITECTURE.md`, `UI_PATTERNS.md`, spec `docs/superpowers/specs/2026-10-26-arkyo-server-design.md`, plan de la phase en cours dans `docs/superpowers/plans/`.
 
@@ -14,7 +14,7 @@ Documents : `README.md`, `docs/INSTALL.md`, `docs/ARCHITECTURE.md`, `UI_PATTERNS
 - Contenu du dossier de données : `arkyo.db` (SQLite, WAL), `config.json`, `uploads/`.
 - API : chemins, formes JSON et messages d'erreur identiques à arkyo pour toute route reprise. Erreur = `{ "error": "<message FR>" }` avec le même code HTTP qu'arkyo.
 - Base : tables = noms des modèles Prisma (PascalCase), colonnes = noms des champs Prisma (camelCase, entre guillemets). ID = cuid v1 (`cuid::cuid1()`), dates = TEXT ISO 8601 UTC avec millisecondes (`2026-10-26T10:00:00.000Z`), booléens = INTEGER 0/1, JSON = TEXT. Pas de macros `sqlx::query!`.
-- Front : les fichiers repris d'arkyo sont copiés à l'identique au même chemin relatif sous `web/src/` (alias `@/*` → `web/src/*`). On ne modifie un fichier copié que pour retirer ce qui relève du SaaS, et chaque retrait est commenté `// arkyo-server: <raison>`.
+- Front : les fichiers repris d'arkyo sont copiés au même chemin relatif sous `web/src/` (alias `@/*` → `web/src/*`), puis on retire le SaaS et on applique l'habillage Strata. Chaque modification est commentée `// arkyo-server: <raison>` (retrait) ou `// arkyo-server: habillage Strata` (`/* … */` en CSS).
 - Versions npm : celles de `arkyo:package.json` pour toute dépendance reprise.
 - Textes UI en français, comme arkyo.
 - La phase 1 ne crée que les tables `User`, `UserProfile`, `Role`, `AuthSession`, `Notification`, `AppConfig`. (Chaque phase suivante ajoute, dans une nouvelle migration, uniquement les tables qu'elle consomme.)
@@ -22,11 +22,22 @@ Documents : `README.md`, `docs/INSTALL.md`, `docs/ARCHITECTURE.md`, `UI_PATTERNS
 
 ## Reprendre un fichier d'arkyo
 
-1. **Copier verbatim** `arkyo:<chemin>` vers `web/src/<chemin>` (même chemin relatif).
+1. **Copier** `arkyo:<chemin>` vers `web/src/<chemin>` (même chemin relatif).
 2. **Retirer ensuite le SaaS** (tenant, plan, crédits, impersonation, ghost mode, support, propositions, badges « Arkyo/perso », etc., voir les non-objectifs du §2 de la spec), avec un commentaire `// arkyo-server: <raison>` à chaque retrait.
-3. **Ne jamais reformater** un fichier copié : pas de prettier, pas de réordonnancement d'imports, pas de renommage « pour faire propre ». Le diff avec arkyo doit ne montrer que les retraits commentés.
-4. Les imports Next.js (`next/navigation`, `next/link`, `next/image`, `next-auth/react`, `next-intl`) ne se réécrivent pas : ils passent par les shims de `web/src/shims` (alias Vite et `tsconfig.json`). Compléter un shim plutôt que modifier le fichier copié.
-5. Côté serveur, une route reprise garde le chemin, le JSON et les erreurs d'arkyo. Même schéma de handler : session et permission, validation du corps, écriture SQLite, évènement temps réel, JSON.
+3. **Appliquer l'habillage Strata** (règles ci-dessous), chaque modification commentée `// arkyo-server: habillage Strata`. Aucune modification de structure, d'ordre, de navigation ni de comportement : seulement couleurs, police, tailles et rayons des contrôles, et textes de marque.
+4. **Ne jamais reformater** un fichier copié : pas de prettier, pas de réordonnancement d'imports, pas de renommage « pour faire propre ». Le diff avec arkyo doit ne montrer que les retraits et modifications d'habillage commentés.
+5. Les imports Next.js (`next/navigation`, `next/link`, `next/image`, `next-auth/react`, `next-intl`) ne se réécrivent pas : ils passent par les shims de `web/src/shims` (alias Vite et `tsconfig.json`). Compléter un shim plutôt que modifier le fichier copié.
+6. Côté serveur, une route reprise garde le chemin, le JSON et les erreurs d'arkyo. Même schéma de handler : session et permission, validation du corps, écriture SQLite, évènement temps réel, JSON.
+
+## Habillage Strata
+
+Spec : `docs/superpowers/specs/2026-10-26-strata-arkyo-design.md`.
+
+- **Nom affiché « Strata Arkyo »** (titres, tray, macOS, MSI). Ne jamais renommer l'exécutable, le service, les dossiers de données, les identifiants de bundle, l'`UpgradeCode`, les paquets `Arkyo-<version>-…` ni les fichiers `assets/icons/arkyo.*`.
+- **Palette** : variables CSS de `web/src/app/globals.css` (clair `:root`, sombre `.dark`, `@custom-variant dark` lié à `.dark`). Jamais de couleur en dur : `--text-tertiary`, `--border-strong`, `--accent-soft`, `--accent-strong`, `--success[-text]`, `--warning[-text]`, `--danger[-text]`, plus les variables existantes. Contraste ≥ 4,5:1 pour le texte, ≥ 3:1 pour grands textes et icônes, dans les deux thèmes.
+- **Couleurs métier inchangées** : `--arkyo-signal-*`, `--role-*`, avatars de présence, couleurs de connecteurs et câbles, couleurs choisies par l'utilisateur.
+- **Police** : Inter, embarquée. Logotype : composant `StrataBrand` (`web/src/components/brand`). Icônes « SA » : `tools/make-icons`.
+- Un écran habillé garde la disposition d'arkyo : toute différence de disposition avant/après est un défaut.
 
 ## Règles d'interface non négociables (arkyo)
 

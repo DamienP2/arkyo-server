@@ -1,10 +1,10 @@
-# Arkyo Server
+# Strata Arkyo
 
 > Conception, câblage et recette pour l'intégration broadcast et la prestation événementielle, en application autonome installée sur votre site.
 
-**Arkyo Server** est le recodage d'[arkyo](https://github.com/DamienP2/arkyo) en application **mono-site** : **un seul exécutable** (`arkyo-server`) qui embarque l'API, la base SQLite et l'interface web. Pas de Node, de Postgres, de Redis ni de Docker à installer ; pas de multi-tenant, d'abonnement ni de plateforme centrale. Il se distribue et se met à jour comme Strata Graphics (CG) : paquet natif, service système, application dans la barre des menus ou la zone de notification, mise à jour intégrée.
+**Strata Arkyo** (exécutable `arkyo-server`) est le recodage d'[arkyo](https://github.com/DamienP2/arkyo) en application **mono-site** : **un seul exécutable** (`arkyo-server`) qui embarque l'API, la base SQLite et l'interface web. Pas de Node, de Postgres, de Redis ni de Docker à installer ; pas de multi-tenant, d'abonnement ni de plateforme centrale. Il se distribue et se met à jour comme Strata Graphics (CG) : paquet natif, service système, application dans la barre des menus ou la zone de notification, mise à jour intégrée.
 
-Arkyo couvre le cycle d'une installation broadcast : **conception → câblage → configuration → recette → documentation**. Les écrans, le design et les fonctions sont ceux d'arkyo ; seul ce qui relevait du SaaS disparaît.
+Strata Arkyo couvre le cycle d'une installation broadcast : **conception → câblage → configuration → recette → documentation**. Les écrans et les fonctions sont ceux d'arkyo, seul ce qui relevait du SaaS disparaît ; l'habillage est celui de Strata (palette Strata en clair et en sombre, police Inter embarquée, logotype Strata Arkyo). Seuls les noms affichés changent : exécutable, service, dossiers de données et paquets gardent leurs noms `arkyo-server` / `Arkyo-<version>-…`.
 
 ## État : phase 1 (socle)
 

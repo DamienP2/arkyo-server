@@ -1,6 +1,6 @@
-# Installer le serveur Arkyo
+# Installer le serveur Strata Arkyo
 
-Le serveur tient dans **un seul exécutable**, `arkyo-server`. Il contient l'API, la base SQLite et la web app. Il n'a besoin ni de Node, ni de Postgres, ni de Redis, ni de navigateur sur le serveur.
+Le serveur Strata Arkyo tient dans **un seul exécutable**, `arkyo-server` (le nom affiché change, pas les noms techniques : exécutable, service, dossiers de données, paquets `Arkyo-<version>-…`). Il contient l'API, la base SQLite et la web app. Il n'a besoin ni de Node, ni de Postgres, ni de Redis, ni de navigateur sur le serveur.
 
 | OS | Paquet | Service | Données | Journaux |
 | --- | --- | --- | --- | --- |
@@ -18,11 +18,11 @@ Double-cliquez sur **`Arkyo-<version>-windows-x64.msi`**. Le MSI :
 - copie le serveur et l'application de la zone de notification dans `C:\Program Files\Arkyo` et ajoute le dossier au `PATH` ;
 - crée le service `arkyo-server` (démarrage automatique, redémarrage en cas d'échec) et le démarre ;
 - ajoute la règle de pare-feu **« Arkyo Server (TCP 8090) »** ;
-- ajoute au menu Démarrer *Arkyo*, *Arkyo (navigateur)* et *Désinstaller Arkyo*.
+- ajoute au menu Démarrer le dossier *Strata Arkyo* : *Strata Arkyo*, *Strata Arkyo (navigateur)* et *Désinstaller Strata Arkyo*. Le service s'affiche « Strata Arkyo Server » dans la console Services (son nom technique reste `arkyo-server`) ; le dossier d'installation reste `C:\Program Files\Arkyo`.
 
 > **Pare-feu : la règle est fixée au port TCP 8090.** Si vous changez le port dans `config.json`, adaptez la règle à la main (Pare-feu Windows Defender avec fonctions avancées de sécurité, règle entrante « Arkyo Server (TCP 8090) »), sinon les autres machines n'atteindront plus le serveur.
 
-Une version plus récente s'installe par-dessus (données conservées). Désinstallation : *Paramètres → Applications*, ou le raccourci *Désinstaller Arkyo* du menu Démarrer. Les données de `C:\ProgramData\Arkyo` sont conservées.
+Une version plus récente s'installe par-dessus (données conservées). Désinstallation : *Paramètres → Applications*, ou le raccourci *Désinstaller Strata Arkyo* du menu Démarrer. Les données de `C:\ProgramData\Arkyo` sont conservées.
 
 ## macOS : image disque .dmg
 
@@ -31,13 +31,13 @@ Une version plus récente s'installe par-dessus (données conservées). Désinst
 
 L'installateur place :
 - le serveur dans `/usr/local/arkyo/arkyo-server` (lien `/usr/local/bin/arkyo-server`), lancé comme service launchd `com.arkyo.server` au démarrage du Mac ;
-- **Arkyo.app** (icône de la barre des menus, lancée à l'ouverture de session) et **Uninstall Arkyo.app** dans `/Applications` ;
+- **Strata Arkyo.app** (icône de la barre des menus, lancée à l'ouverture de session) et **Uninstall Strata Arkyo.app** (affichée « Désinstaller Strata Arkyo » dans un Finder en français) dans `/Applications`. Une mise à jour depuis la v0.1.0 supprime l'ancienne `/Applications/Arkyo.app` ;
 - une règle du pare-feu macOS pour le serveur, quand le pare-feu est actif ;
 - une règle `sudoers` (`/etc/sudoers.d/arkyo`) qui permet aux administrateurs de démarrer et d'arrêter le service depuis l'icône **sans mot de passe**. Elle ne couvre que `arkyo-server service start` et `service stop`.
 
 > Tant que le paquet n'est pas signé et notarisé, macOS affiche « développeur non identifié » : *Réglages Système → Confidentialité et sécurité → Ouvrir quand même*. La CI signe et notarise dès que les secrets Apple (`MACOS_CERTS_P12`, `MACOS_CERTS_PASSWORD`, `MACOS_APP_IDENTITY`, `MACOS_INSTALLER_IDENTITY`, `APPLE_ID`, `APPLE_TEAM_ID`, `APPLE_APP_PASSWORD`) sont configurés dans le dépôt.
 
-Désinstallation : **Uninstall Arkyo.app** (dans `/Applications`), ou `sudo /usr/local/arkyo/uninstall.sh` (`--purge` pour effacer aussi les données).
+Désinstallation : **Uninstall Strata Arkyo.app** (dans `/Applications`), ou `sudo /usr/local/arkyo/uninstall.sh` (`--purge` pour effacer aussi les données).
 
 ## Ubuntu (serveur)
 
@@ -128,14 +128,14 @@ Si la nouvelle version ne démarre pas trois fois de suite, l'ancienne est **res
 
 API : `GET /api/system/update`, `PUT /api/system/update/settings`, `POST /api/system/update/check`, `POST /api/system/update/install`, `POST /api/system/update/upload`, `POST /api/system/update/rollback`.
 
-## L'application « Arkyo » (macOS et Windows)
+## L'application « Strata Arkyo » (macOS et Windows)
 
-Les installateurs ajoutent une icône dans la barre des menus (macOS) ou la zone de notification (Windows), lancée à l'ouverture de session. Son menu affiche l'état du serveur (*En marche* / *Arrêté*) et propose **Ouvrir Arkyo** (la page web), **Démarrer** / **Arrêter le service** et **Quitter**.
+Les installateurs ajoutent une icône dans la barre des menus (macOS) ou la zone de notification (Windows), lancée à l'ouverture de session. Son menu affiche l'état du serveur (*En marche* / *Arrêté*) et propose **Ouvrir Strata Arkyo** (la page web), **Démarrer** / **Arrêter le service** et **Quitter**.
 
 ## Désinstallation, en résumé
 
 | OS | Commande | Données |
 | --- | --- | --- |
-| Windows | *Paramètres → Applications*, ou *Désinstaller Arkyo* (menu Démarrer) | conservées |
-| macOS | `Uninstall Arkyo.app`, ou `sudo /usr/local/arkyo/uninstall.sh [--purge]` | conservées sauf `--purge` |
+| Windows | *Paramètres → Applications*, ou *Désinstaller Strata Arkyo* (menu Démarrer) | conservées |
+| macOS | `Uninstall Strata Arkyo.app`, ou `sudo /usr/local/arkyo/uninstall.sh [--purge]` | conservées sauf `--purge` |
 | Ubuntu | `sudo ./uninstall.sh [--purge]` | conservées sauf `--purge` |
