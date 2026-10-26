@@ -60,6 +60,9 @@ jobs:
           key: ${{ matrix.target }}
           # A tag's cache serves no other run (caches are scoped to their ref): restore only.
           save-if: false
+      # The CI workflow skips tags: test what is packaged.
+      - name: Test
+        run: cargo test --workspace --locked
       - name: Build
         # The tray app ships with the Windows installer (macOS builds it in macos-installer).
         run: cargo build --release --locked -p arkyo-server ${{ matrix.pkg == 'windows' && '-p arkyo-tray' || '' }} --target ${{ matrix.target }}
@@ -140,6 +143,9 @@ jobs:
           key: macos-universal
           # A tag's cache serves no other run (caches are scoped to their ref): restore only.
           save-if: false
+      # The CI workflow skips tags: test what is packaged.
+      - name: Test
+        run: cargo test --workspace --locked
       - name: Build universal binary
         run: |
           for t in aarch64-apple-darwin x86_64-apple-darwin; do

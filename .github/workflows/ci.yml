@@ -1,7 +1,8 @@
 name: CI
 
 on:
-  # Branches only: a release tag runs the Release workflow (and its own checks).
+  # Branches only: a release tag runs the Release workflow, which runs
+  # `cargo test --workspace` again before packaging.
   push:
     branches: ['**']
   pull_request:

@@ -6,7 +6,7 @@ Le serveur tient dans **un seul exécutable**, `arkyo-server`. Il contient l'API
 | --- | --- | --- | --- | --- |
 | Ubuntu 22.04 ou plus récent x86_64 (serveur) | **`Arkyo-<version>-ubuntu-x64.tar.gz`** | systemd `arkyo-server` (compte système `arkyo`) | `/var/lib/arkyo` | `journalctl -u arkyo-server -f` |
 | macOS 11 ou plus récent (Apple Silicon / Intel) | **`Arkyo-<version>-macos-universal.dmg`** (ou le `.pkg` seul) | launchd `com.arkyo.server` | `/Library/Application Support/Arkyo` | `/Library/Logs/Arkyo/arkyo-server.log` |
-| Windows 10+ / Server 2016+ x64 | **`Arkyo-<version>-windows-x64.msi`** | service Windows `arkyo-server` (démarrage auto, redémarrage sur échec) | `C:\ProgramData\Arkyo` | aucun fichier (lancez `arkyo-server run` dans un terminal pour voir la sortie) |
+| Windows 10+ / Server 2016+ x64 | **`Arkyo-<version>-windows-x64.msi`** | service Windows `arkyo-server` (démarrage auto, redémarrage sur échec) | `C:\ProgramData\Arkyo` | `C:\ProgramData\Arkyo\logs\arkyo-server.log` |
 
 Les paquets sont produits par la CI (`.github/workflows/release.yml`) à chaque tag `v*`, avec les paquets de mise à jour (`Arkyo-<version>-<plateforme>`, le serveur seul) que les serveurs installés téléchargent.
 
@@ -58,7 +58,7 @@ Désinstallation : `sudo ./uninstall.sh` (`--purge` pour supprimer aussi `/var/l
    sudo arkyo-server user add admin@exemple.fr --name "Admin"              # macOS
    sudo -u arkyo arkyo-server user add admin@exemple.fr --name "Admin"     # Ubuntu
    ```
-   (dans un terminal administrateur sous Windows). Le mot de passe est demandé deux fois. Sous Ubuntu, `-u arkyo` évite de créer des fichiers de base appartenant à root dans `/var/lib/arkyo`.
+   (dans un terminal administrateur sous Windows). Le mot de passe est demandé deux fois. Sous Ubuntu, `-u arkyo` est la forme recommandée ; lancée avec `sudo` seul, la commande rend ensuite les fichiers de base au propriétaire du dossier (`arkyo`), pour que le service puisse toujours les ouvrir.
 2. Créez ensuite les autres comptes (rôles `owner`, `chef-projet`, `technicien`, `consultation` ou rôle personnalisé) : `arkyo-server user add <email> --role technicien`.
 3. Un compte créé avec **`--temporary`** (`user add` ou `user passwd`) doit **changer son mot de passe à sa première connexion**. À utiliser quand l'administrateur choisit le mot de passe d'un tiers.
 4. Les autres machines utilisent `http://<serveur>:8090/`. L'écran **Système** (administrateurs) affiche la version, le dossier de données et les adresses d'accès.
@@ -73,7 +73,7 @@ arkyo-server user enable  <email|identifiant>
 arkyo-server user remove  <email|identifiant>
 ```
 
-Ces commandes (à lancer comme ci-dessus : `sudo` sur macOS, `sudo -u arkyo` sous Ubuntu) agissent sur le dossier de données du service s'il est installé (il contient un `config.json`), sinon sur celui de l'utilisateur courant. `--data-dir <dossier>` (ou `ARKYO_DATA_DIR`) cible un autre dossier.
+Ces commandes (à lancer comme ci-dessus : `sudo` sur macOS, `sudo -u arkyo` sous Ubuntu) agissent sur le dossier de données du service s'il est installé (il contient un `config.json`), sinon sur celui de l'utilisateur courant. `--data-dir <dossier>` (ou `ARKYO_DATA_DIR`) cible un autre dossier. `user passwd` ferme aussi toutes les sessions ouvertes du compte.
 
 ## Gérer le service
 
@@ -104,6 +104,9 @@ arkyo-server service install --port 8090 --bind 0.0.0.0 --data-dir <dossier>
 - `config.json` : `port` et `bind` ;
 - `uploads/` : les fichiers déposés ;
 - `update/` : réglages de mise à jour, paquets téléchargés.
+- `logs/` (service Windows) : `arkyo-server.log`, le journal du service.
+
+La base contient les empreintes des mots de passe : `arkyo.db` est créé en `0600` (lisible par le seul compte du service) et l'installation du service restreint le dossier (`0700` sous Linux, avec `UMask=0077` dans l'unité systemd ; `0711` sous macOS, où l'application de la barre des menus lit `config.json`).
 
 **Sauvegarde** : arrêtez le service (`service stop`) puis copiez le dossier entier.
 

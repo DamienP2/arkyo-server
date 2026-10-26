@@ -45,6 +45,7 @@ SQLite (`arkyo.db`, mode WAL) via `sqlx`, sans macros `query!`. Les migrations s
 - Tables = noms des modèles Prisma d'arkyo (PascalCase), colonnes = noms des champs (camelCase, entre guillemets).
 - ID = cuid v1, dates = TEXT ISO 8601 UTC avec millisecondes (`2026-10-26T10:00:00.000Z`), booléens = INTEGER 0/1, JSON = TEXT.
 - **Règle : chaque phase ajoute ses propres tables**, dans une nouvelle migration (`000N_<phase>.sql`), et seulement celles qu'elle consomme. On ne modifie jamais une migration déjà livrée. La phase 1 crée `User`, `UserProfile`, `Role`, `AuthSession`, `Notification` et `AppConfig` (`0001_socle.sql`).
+- **Règle : migrations additives uniquement.** Une version plus ancienne doit pouvoir rouvrir une base migrée par une version plus récente (retour arrière depuis la web app, restauration automatique après trois démarrages ratés, installation d'un paquet plus ancien) : `db::open` ignore les migrations appliquées qu'il ne connaît pas (`set_ignore_missing`). Donc on ajoute des tables et des colonnes (avec valeur par défaut ou NULL), on n'en renomme ni n'en supprime, et le code ne suppose jamais qu'une table ou une colonne inconnue est absente.
 
 ## Embarquement de `web/dist`
 
@@ -52,10 +53,11 @@ SQLite (`arkyo.db`, mode WAL) via `sqlx`, sans macros `query!`. Les migrations s
 
 ## Service, tray et mise à jour
 
-- `service.rs` installe le service natif : systemd (`arkyo-server`, compte `arkyo`), launchd (`com.arkyo.server`), service Windows (lancé avec `run --service`).
+- `service.rs` installe le service natif : systemd (`arkyo-server`, compte `arkyo`), launchd (`com.arkyo.server`), service Windows (lancé avec `run --service`, journal dans `<données>/logs/arkyo-server.log`). L'unité systemd et le plist launchd posent `ARKYO_SUPERVISED=1`, qui dit au serveur qu'un gestionnaire de services le relance (sinon : heuristiques `INVOCATION_ID` / `XPC_SERVICE_NAME` pour les installations antérieures).
+- `firewall.rs` : sur macOS, autorise le programme dans le pare-feu applicatif (`socketfilterfw --add` / `--unblockapp`, en root, si le pare-feu est actif) ; appelé par `update.rs` sur le nouveau fichier après chaque mise à jour ou retour arrière.
 - `update.rs` : vérifie les releases GitHub (`DamienP2/arkyo-server`), extrait `arkyo-server` du paquet, contrôle le SHA-256 et `--version`, garde `arkyo-server.previous`, et revient en arrière si le nouveau programme échoue trois démarrages de suite. Routes sous `/api/system/update`.
 - Packaging : `packaging/macos/pkg` (`.pkg`, `.dmg`), `packaging/windows/msi` (WiX 5), `packaging/linux` (`install.sh`, `uninstall.sh`). La version vient du tag (`packaging/stamp-version.sh`).
-- CI (`ci.yml`) : web (tests, tsc, build) puis clippy et tests sur Ubuntu, macOS et Windows. Release (`release.yml`) : paquets des trois plateformes et paquets de mise à jour ; publication sur tag `v*`.
+- CI (`ci.yml`) : web (tests, tsc, build) puis clippy et tests sur Ubuntu, macOS et Windows. Release (`release.yml`) : `cargo test --workspace`, puis paquets des trois plateformes et paquets de mise à jour ; publication sur tag `v*`.
 
 ## Clones de référence : `.ref/`
 
