@@ -1,6 +1,8 @@
 /* arkyo-server: import Google Fonts retiré (serveur hors ligne, sur le réseau local) —
    les mêmes polices sont auto-hébergées par src/fonts.css : DM Sans variable
    (300-700), IBM Plex Mono 300-600, Instrument Serif 400 droit + italique. */
+/* arkyo-server: habillage Strata — palette, Inter (remplace DM Sans) et mono système,
+   voir docs/superpowers/specs/2026-10-26-strata-arkyo-design.md. */
 @import "tailwindcss";
 @source "./**/*.{tsx,ts,jsx,js}";
 @source "../components/**/*.{tsx,ts,jsx,js}";
@@ -13,22 +15,26 @@
   --arkyo-soft: #a09db2;
   --arkyo-mist: #e8e6f0;
   --arkyo-cloud: #f4f3f8;
-  --arkyo-blue: #3654ff;
-  --arkyo-blue-light: #5a74ff;
-  --arkyo-blue-soft: #eef0ff;
+  /* arkyo-server: habillage Strata — accents de marque = accent du thème (clair ici, sombre dans .dark) */
+  --arkyo-blue: #4f63e6;
+  --arkyo-blue-light: #3346c9;
+  --arkyo-blue-soft: rgba(79, 99, 230, 0.1);
   --arkyo-signal-video: #3654ff;
   --arkyo-signal-audio: #7c3aed;
   --arkyo-signal-data: #10b981;
   --arkyo-signal-distrib: #f59e0b;
   --arkyo-signal-power: #ef4444;
-  --font-sans: "DM Sans", system-ui, -apple-system, sans-serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
+  /* arkyo-server: habillage Strata */
+  --font-sans: Inter, system-ui, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", Consolas, "DejaVu Sans Mono", monospace;
   --font-serif: "Instrument Serif", Georgia, serif;
 }
 
 body {
   font-family: var(--font-sans);
   letter-spacing: -0.005em;
+  font-size: 13px; /* arkyo-server: habillage Strata */
+  line-height: 1.4; /* arkyo-server: habillage Strata */
 }
 
 @keyframes arkyo-pulse {
@@ -78,28 +84,38 @@ body {
 }
 
 :root {
-  --background: #f8f8fa;
+  /* arkyo-server: habillage Strata — palette claire dérivée (spec §3.2, §9.4) */
+  --background: #f4f5f9;
   --surface: #ffffff;
   --surface-raised: #ffffff;
-  --canvas-bg: #fafafa; /* fond canvas synoptique — très léger */
-  --foreground: #0a0a0a;
+  --canvas-bg: #f7f8fb; /* fond canvas synoptique — panneau 2 */
+  --foreground: #141726;
   --card: #ffffff;
-  --card-foreground: #0a0a0a;
+  --card-foreground: #141726;
   --popover: #ffffff;
-  --popover-foreground: #0a0a0a;
-  --primary: #0a0a0a;
-  --primary-foreground: #fafafa;
-  --secondary: #f1f1f3;
-  --secondary-foreground: #0a0a0a;
-  --muted: #f1f1f3;
-  --muted-foreground: #71717a;
-  --accent: #3b82f6;
+  --popover-foreground: #141726;
+  --primary: #4f63e6;
+  --primary-foreground: #ffffff;
+  --secondary: #eef0f6;
+  --secondary-foreground: #141726;
+  --muted: #eef0f6;
+  --muted-foreground: #4b5170;
+  --accent: #4f63e6;
   --accent-foreground: #ffffff;
-  --destructive: #ef4444;
-  --destructive-foreground: #fafafa;
-  --border: #e4e4e7;
-  --input: #e4e4e7;
-  --ring: #3b82f6;
+  --destructive: #e11d48;
+  --destructive-foreground: #ffffff;
+  --border: #e1e4ee;
+  --input: #eef0f6;
+  --ring: #4f63e6;
+  --text-tertiary: #5f6584;
+  --border-strong: #cdd2e1;
+  --accent-soft: rgba(79, 99, 230, 0.1);
+  --accent-strong: #3346c9;
+  --success: #16a34a;
+  --success-text: #15803d;
+  --warning: #d97706;
+  --warning-text: #b45309;
+  --danger: #e11d48;
   --radius: 0.5rem;
   /* Layout */
   --rail-width: 48px;
@@ -120,10 +136,11 @@ body {
     var(--topbar-height) + var(--dev-banner-height) + var(--impersonation-banner-height, 0px)
   );
   /* Rail colors */
-  --rail-bg: #1a1a1f;
-  --rail-icon: rgba(255, 255, 255, 0.45);
-  --rail-icon-active: #ffffff;
-  --rail-active-bg: rgba(255, 255, 255, 0.1);
+  /* arkyo-server: habillage Strata */
+  --rail-bg: #ffffff;
+  --rail-icon: #5f6584;
+  --rail-icon-active: #3346c9;
+  --rail-active-bg: rgba(79, 99, 230, 0.1);
 
   /* ── Tokens couleurs métier (centralisés) ─────────────────────────
      Utilisés dans tout le module supervisor pour les rôles, plans,
@@ -152,35 +169,47 @@ body {
 }
 
 .dark {
-  /* Palette dark inspirée Photoshop/Figma : contrastes forts, surfaces bien différenciées. */
-  --background: #1a1a1e; /* fond global — gris très sombre, pas pur noir */
-  --surface: #26262b; /* panels, topbar — nettement plus clair que bg */
-  --surface-raised: #333338; /* hover, inputs, surélevés */
-  --canvas-bg: #2a2a2f; /* canvas synoptique — gris moyen, confort visuel */
+  /* arkyo-server: habillage Strata — palette sombre Strata Graphics exacte (spec §3.1) */
+  --background: #0b0c12;
+  --surface: #12141d;
+  --surface-raised: #181b26;
+  --canvas-bg: #12141d;
 
-  --foreground: #f5f5f7; /* texte principal — quasi blanc */
-  --card: #26262b;
-  --card-foreground: #f5f5f7;
-  --popover: #333338;
-  --popover-foreground: #f5f5f7;
-  --primary: #f5f5f7;
-  --primary-foreground: #1a1a1e;
-  --secondary: #333338;
-  --secondary-foreground: #f5f5f7;
-  --muted: #333338;
-  --muted-foreground: #c0c0c8; /* muted bien lisible — contraste 10+ sur bg */
-  --accent: #5b9dff; /* bleu plus lumineux, saturation retenue */
-  --accent-foreground: #ffffff;
-  --destructive: #f87171;
-  --destructive-foreground: #1a1a1e;
-  --border: #44444c; /* bordures clairement visibles */
-  --input: #333338;
-  --ring: #5b9dff;
+  --foreground: #e6e8f2;
+  --card: #12141d;
+  --card-foreground: #e6e8f2;
+  --popover: #181b26;
+  --popover-foreground: #e6e8f2;
+  --primary: #8fa3ff;
+  --primary-foreground: #0b1236;
+  --secondary: #1f2331;
+  --secondary-foreground: #e6e8f2;
+  --muted: #1f2331;
+  --muted-foreground: #a3a8bf;
+  --accent: #8fa3ff;
+  --accent-foreground: #0b1236;
+  --destructive: #e11d48;
+  --destructive-foreground: #ffffff;
+  --border: #262a3a;
+  --input: #1f2331;
+  --ring: #8fa3ff;
+  --text-tertiary: #8a90ad;
+  --border-strong: #323750;
+  --accent-soft: rgba(143, 163, 255, 0.16);
+  --accent-strong: #bfcaff;
+  --success: #22c55e;
+  --success-text: #22c55e;
+  --warning: #f5a524;
+  --warning-text: #f5a524;
+  --danger: #ff3b5c;
+  --arkyo-blue: #8fa3ff;
+  --arkyo-blue-light: #bfcaff;
+  --arkyo-blue-soft: rgba(143, 163, 255, 0.16);
   /* Rail */
-  --rail-bg: #0f0f12;
-  --rail-icon: rgba(255, 255, 255, 0.55);
-  --rail-icon-active: #ffffff;
-  --rail-active-bg: rgba(255, 255, 255, 0.12);
+  --rail-bg: #0b0c12;
+  --rail-icon: #8a90ad;
+  --rail-icon-active: #e6e8f2;
+  --rail-active-bg: rgba(143, 163, 255, 0.16);
 
   /* ── Tokens couleurs métier — variantes dark légèrement ajustées
      pour conserver le contraste sur fond sombre. */
