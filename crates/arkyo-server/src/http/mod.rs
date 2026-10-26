@@ -1,6 +1,7 @@
 //! HTTP API: shared state, session middleware, extractors and routing.
 
 mod auth;
+mod events;
 mod me;
 mod notifications;
 mod presence;
@@ -141,6 +142,11 @@ async fn api_not_found() -> Response {
     error(StatusCode::NOT_FOUND, "Not found")
 }
 
+/// Ends the open `/api/events` streams so graceful shutdown can complete.
+pub fn close_event_streams() {
+    events::close_all();
+}
+
 pub fn router(state: AppState) -> Router {
     let api = Router::new()
         .route("/auth/state", get(auth::state))
@@ -162,6 +168,7 @@ pub fn router(state: AppState) -> Router {
             axum::routing::patch(notifications::mark_read).delete(notifications::remove),
         )
         .route("/presence", get(presence::get).post(presence::post))
+        .route("/events", get(events::stream))
         .fallback(api_not_found)
         .layer(middleware::from_fn_with_state(state.clone(), session_layer));
     let web = crate::web::routes(&state.data_dir);

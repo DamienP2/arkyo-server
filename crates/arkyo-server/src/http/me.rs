@@ -3,11 +3,11 @@
 use axum::extract::State;
 use axum::http::{header, StatusCode};
 use axum::response::{IntoResponse, Response};
-use axum::Json;
+use axum::{Extension, Json};
 use serde::Deserialize;
 use serde_json::{json, Value};
 
-use super::{error, role_permissions, server_error, AppState, CurrentUser};
+use super::{error, role_permissions, server_error, AppState, CurrentUser, Resolved};
 use crate::users;
 
 pub async fn permissions(State(st): State<AppState>, CurrentUser(u): CurrentUser) -> Json<Value> {
@@ -32,9 +32,11 @@ pub struct LocaleBody {
     locale: Option<String>,
 }
 
+/// Sets the `locale` cookie; also stores it on the user when signed in (the
+/// sign-in page's language selector works without a session, as in arkyo).
 pub async fn locale(
     State(st): State<AppState>,
-    CurrentUser(u): CurrentUser,
+    resolved: Option<Extension<Resolved>>,
     body: Result<Json<LocaleBody>, axum::extract::rejection::JsonRejection>,
 ) -> Response {
     let locale = body
@@ -44,8 +46,13 @@ pub async fn locale(
     let Some(locale) = locale else {
         return error(StatusCode::BAD_REQUEST, "Locale invalide");
     };
-    if users::set_locale(&st.pool, &u.id, &locale).await.is_err() {
-        return server_error();
+    if let Some(Extension(r)) = resolved {
+        if users::set_locale(&st.pool, &r.user.id, &locale)
+            .await
+            .is_err()
+        {
+            return server_error();
+        }
     }
     (
         [(

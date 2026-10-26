@@ -236,6 +236,8 @@ async fn shutdown_signal() {
     }
     #[cfg(not(unix))]
     ctrl_c.await;
+    // Open SSE streams would otherwise keep graceful shutdown waiting.
+    http::close_event_streams();
 }
 
 #[tokio::main]
