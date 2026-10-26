@@ -8,3 +8,4 @@ pub mod ids;
 pub mod paths;
 pub mod sessions;
 pub mod users;
+pub mod web;

@@ -164,5 +164,6 @@ pub fn router(state: AppState) -> Router {
         .route("/presence", get(presence::get).post(presence::post))
         .fallback(api_not_found)
         .layer(middleware::from_fn_with_state(state.clone(), session_layer));
-    Router::new().nest("/api", api).with_state(state)
+    let web = crate::web::routes(&state.data_dir);
+    Router::new().nest("/api", api).merge(web).with_state(state)
 }
