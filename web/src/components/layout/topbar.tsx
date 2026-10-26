@@ -43,22 +43,24 @@ import { LoadingState } from "@/components/ui/loading-state";
 
 // ── Constantes ───────────────────────────────────────────────────────────────
 
+// arkyo-server: habillage Strata — teintes de rôle conservées, nuances ajustées pour un
+// contraste >= 4,5:1 en clair et en sombre (vérifié par theme-sweep.test.ts).
 const ROLE_BADGE: Record<MemberRole, { label: string; cls: string }> = {
   OWNER: {
     label: "PROPRIÉTAIRE",
-    cls: "text-purple-500 bg-purple-50 dark:bg-purple-950/30",
+    cls: "text-purple-600 bg-purple-50 dark:text-purple-400 dark:bg-purple-950/30", // arkyo-server: habillage Strata
   },
   CHEF_PROJET: {
     label: "CHEF DE PROJET",
-    cls: "text-indigo-500 bg-indigo-50 dark:bg-indigo-950/30",
+    cls: "text-indigo-600 bg-indigo-50 dark:text-indigo-400 dark:bg-indigo-950/30", // arkyo-server: habillage Strata
   },
   TECHNICIEN: {
     label: "TECHNICIEN",
-    cls: "text-emerald-500 bg-emerald-50 dark:bg-emerald-950/30",
+    cls: "text-emerald-700 bg-emerald-50 dark:text-emerald-500 dark:bg-emerald-950/30", // arkyo-server: habillage Strata
   },
   CONSULTATION: {
     label: "CONSULTATION",
-    cls: "text-slate-500 bg-slate-50 dark:bg-slate-950/30",
+    cls: "text-slate-500 bg-slate-50 dark:text-slate-400 dark:bg-slate-950/30", // arkyo-server: habillage Strata
   },
 };
 
