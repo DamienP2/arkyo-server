@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Arkyo — Windows Installer package (WiX Toolset v5).
+  Build: wix build arkyo.wxs -arch x64 -ext WixToolset.Util.wixext -ext WixToolset.Firewall.wixext
+         -d Version=0.1.0 -d BinDir=<dir with arkyo-server.exe and arkyo-tray.exe> -d DocsDir=<repo root>
+         [-d InstallDoc=<repo root>\docs\INSTALL.md] -o Arkyo.msi
+  The service listens on 0.0.0.0:8090 (config.json in %ProgramData%\Arkyo changes it).
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util"
+     xmlns:fire="http://wixtoolset.org/schemas/v4/wxs/firewall">
+  <Package Name="Arkyo"
+           Manufacturer="Arkyo"
+           Version="$(var.Version)"
+           UpgradeCode="8bc8a01b-3228-44f1-9145-aa50d0b8d058"
+           Scope="perMachine"
+           Codepage="1252"
+           Compressed="yes">
+    <SummaryInformation Description="Arkyo, serveur de gestion de projets et d'équipes" />
+    <MajorUpgrade DowngradeErrorMessage="Une version plus récente de [ProductName] est déjà installée." />
+    <MediaTemplate EmbedCab="yes" />
+
+    <Property Id="ARPNOMODIFY" Value="1" />
+    <!-- Icon in "Installed apps" / Add-Remove Programs. -->
+    <Icon Id="Arkyo.ico" SourceFile="$(var.DocsDir)\assets\icons\arkyo.ico" />
+    <Property Id="ARPPRODUCTICON" Value="Arkyo.ico" />
+
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="Arkyo" />
+    </StandardDirectory>
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Directory Id="MenuFolder" Name="Arkyo" />
+    </StandardDirectory>
+
+    <ComponentGroup Id="Product" Directory="INSTALLFOLDER">
+      <Component Id="Server">
+        <File Id="ServerExe" Source="$(var.BinDir)\arkyo-server.exe" KeyPath="yes">
+          <!-- The web interface, reachable from the other machines of the network. -->
+          <fire:FirewallException Id="FirewallServer" Name="Arkyo Server (TCP 8090)" Port="8090" Protocol="tcp" Scope="any" Profile="all" />
+        </File>
+        <ServiceInstall Id="ServiceInstall"
+                        Name="arkyo-server"
+                        DisplayName="Arkyo Server"
+                        Description="Arkyo project and team management server"
+                        Type="ownProcess"
+                        Start="auto"
+                        ErrorControl="normal"
+                        Vital="yes"
+                        Arguments="run --service --data-dir &quot;[CommonAppDataFolder]Arkyo&quot;">
+          <util:ServiceConfig FirstFailureActionType="restart"
+                              SecondFailureActionType="restart"
+                              ThirdFailureActionType="restart"
+                              RestartServiceDelayInSeconds="2"
+                              ResetPeriodInDays="1" />
+        </ServiceInstall>
+        <ServiceControl Id="ServiceControl" Name="arkyo-server" Start="install" Stop="both" Remove="uninstall" Wait="yes" />
+        <Environment Id="PathEntry" Name="PATH" Value="[INSTALLFOLDER]" Part="last" Action="set" System="yes" Permanent="no" />
+      </Component>
+      <!-- Notification-area app, started at every logon. -->
+      <Component Id="TrayApp">
+        <File Id="TrayExe" Source="$(var.BinDir)\arkyo-tray.exe" KeyPath="yes" />
+        <RegistryValue Root="HKLM" Key="Software\Microsoft\Windows\CurrentVersion\Run" Name="Arkyo" Type="string" Value="&quot;[#TrayExe]&quot; --background" />
+      </Component>
+      <?ifdef InstallDoc ?>
+      <!-- One unversioned file per component (auto-generated GUIDs). -->
+      <Component Id="DocInstall">
+        <File Id="InstallMd" Source="$(var.InstallDoc)" Name="INSTALL.md" KeyPath="yes" />
+      </Component>
+      <?endif ?>
+      <Component Id="StartMenu" Directory="MenuFolder">
+        <Shortcut Id="TrayShortcut" Name="Arkyo" Description="État du serveur Arkyo et accès à l'interface web" Target="[#TrayExe]" WorkingDirectory="INSTALLFOLDER" />
+        <Shortcut Id="UninstallShortcut" Name="Désinstaller Arkyo" Description="Supprimer Arkyo (vos données sont conservées)" Target="[System64Folder]msiexec.exe" Arguments="/x [ProductCode]" Icon="Arkyo.ico" />
+        <util:InternetShortcut Id="WebShortcut" Name="Arkyo (navigateur)" Target="http://localhost:8090" Type="url" />
+        <RemoveFolder Id="RemoveMenuFolder" On="uninstall" />
+        <RegistryValue Root="HKLM" Key="Software\Arkyo" Name="StartMenu" Type="integer" Value="1" KeyPath="yes" />
+      </Component>
+    </ComponentGroup>
+
+    <!-- Upgrades / uninstall: close the tray app so its exe can be replaced. -->
+    <util:CloseApplication Id="CloseTray" Target="arkyo-tray.exe" CloseMessage="yes" TerminateProcess="0" RebootPrompt="no" />
+
+    <!-- Start the tray app for the installing user right away. -->
+    <CustomAction Id="LaunchTray" FileRef="TrayExe" ExeCommand="--background" Return="asyncNoWait" Impersonate="yes" Execute="immediate" />
+    <InstallExecuteSequence>
+      <Custom Action="LaunchTray" After="InstallFinalize" Condition="NOT (REMOVE~=&quot;ALL&quot;)" />
+    </InstallExecuteSequence>
+
+    <Feature Id="Main" Title="Arkyo">
+      <ComponentGroupRef Id="Product" />
+    </Feature>
+  </Package>
+</Wix>

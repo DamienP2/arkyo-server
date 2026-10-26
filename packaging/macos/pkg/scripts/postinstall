@@ -1,0 +1,34 @@
+#!/bin/sh
+# Runs as root after the payload is copied.
+set -e
+PREFIX=/usr/local/arkyo
+mkdir -p /usr/local/bin
+ln -sf "$PREFIX/arkyo-server" /usr/local/bin/arkyo-server
+# Let other machines reach the web UI through the macOS firewall. Done here,
+# before the service starts: it signs the program in place, which must never
+# happen to a running one.
+FW=/usr/libexec/ApplicationFirewall/socketfilterfw
+if "$FW" --getglobalstate 2>/dev/null | grep -q "State = [12]"; then
+  "$FW" --add "$PREFIX/arkyo-server" >/dev/null 2>&1 || true
+  "$FW" --unblockapp "$PREFIX/arkyo-server" >/dev/null 2>&1 || true
+fi
+# launchd daemon com.arkyo.server, data in /Library/Application Support/Arkyo.
+"$PREFIX/arkyo-server" service install
+
+# Let administrators start and stop the server from the menu bar app without
+# a password prompt (it runs `sudo -n arkyo-server service start|stop`). Only
+# these exact commands, and only if sudo accepts the file.
+RULE=/etc/sudoers.d/arkyo
+TMP=$(mktemp)
+echo "%admin ALL=(root) NOPASSWD: $PREFIX/arkyo-server service start, $PREFIX/arkyo-server service stop" > "$TMP"
+if visudo -cf "$TMP" >/dev/null 2>&1; then
+  install -m 0440 -o root -g wheel "$TMP" "$RULE"
+fi
+rm -f "$TMP"
+
+# Start the menu bar app for the logged-in user (it also starts at login).
+USER_ID=$(stat -f %u /dev/console 2>/dev/null || echo 0)
+if [ "$USER_ID" != "0" ]; then
+  launchctl bootstrap "gui/$USER_ID" /Library/LaunchAgents/com.arkyo.tray.plist 2>/dev/null || true
+fi
+exit 0
