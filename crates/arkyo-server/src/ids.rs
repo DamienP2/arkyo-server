@@ -7,7 +7,9 @@ pub fn new_id() -> String {
 
 /// Current UTC time as ISO 8601 with milliseconds, e.g. `2026-10-26T10:00:00.000Z`.
 pub fn now_iso() -> String {
-    jiff::Timestamp::now().strftime("%Y-%m-%dT%H:%M:%S%.3fZ").to_string()
+    jiff::Timestamp::now()
+        .strftime("%Y-%m-%dT%H:%M:%S%.3fZ")
+        .to_string()
 }
 
 #[cfg(test)]

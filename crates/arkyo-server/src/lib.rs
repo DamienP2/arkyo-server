@@ -5,3 +5,4 @@ pub mod db;
 pub mod ids;
 #[allow(dead_code)]
 pub mod paths;
+pub mod users;

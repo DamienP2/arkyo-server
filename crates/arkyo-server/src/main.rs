@@ -1,4 +1,5 @@
-use arkyo_server::{config, paths};
+use arkyo_core::password;
+use arkyo_server::{config, db, paths, users};
 
 use std::net::{IpAddr, SocketAddr};
 use std::path::PathBuf;
@@ -27,9 +28,152 @@ enum Command {
     },
     /// Manage users.
     User {
-        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
-        args: Vec<String>,
+        #[command(subcommand)]
+        cmd: UserCmd,
     },
+}
+
+#[derive(Subcommand, Debug)]
+enum UserCmd {
+    /// Create an account (the password is asked twice).
+    Add {
+        email: String,
+        #[arg(long)]
+        name: Option<String>,
+        #[arg(long)]
+        username: Option<String>,
+        /// owner, chef-projet, technicien, consultation or a custom role key.
+        #[arg(long, default_value = "owner")]
+        role: String,
+        /// Force a password change at first login.
+        #[arg(long)]
+        temporary: bool,
+        #[arg(long, env = "ARKYO_DATA_DIR")]
+        data_dir: Option<PathBuf>,
+    },
+    /// Change a password.
+    Passwd {
+        /// Email or username.
+        user: String,
+        #[arg(long)]
+        temporary: bool,
+        #[arg(long, env = "ARKYO_DATA_DIR")]
+        data_dir: Option<PathBuf>,
+    },
+    /// List accounts.
+    List {
+        #[arg(long, env = "ARKYO_DATA_DIR")]
+        data_dir: Option<PathBuf>,
+    },
+    /// Delete an account.
+    Remove {
+        user: String,
+        #[arg(long, env = "ARKYO_DATA_DIR")]
+        data_dir: Option<PathBuf>,
+    },
+    /// Disable an account.
+    Disable {
+        user: String,
+        #[arg(long, env = "ARKYO_DATA_DIR")]
+        data_dir: Option<PathBuf>,
+    },
+    /// Re-enable an account.
+    Enable {
+        user: String,
+        #[arg(long, env = "ARKYO_DATA_DIR")]
+        data_dir: Option<PathBuf>,
+    },
+}
+
+fn prompt_password() -> anyhow::Result<String> {
+    let pw = rpassword::prompt_password("Mot de passe : ")?;
+    password::validate(&pw).map_err(|e| anyhow::anyhow!(e))?;
+    if rpassword::prompt_password("Confirmation : ")? != pw {
+        anyhow::bail!("Les mots de passe ne correspondent pas");
+    }
+    Ok(pw)
+}
+
+async fn user_command(cmd: UserCmd) -> anyhow::Result<()> {
+    let open = |d: Option<PathBuf>| async move {
+        let dir = paths::cli_data_dir(d);
+        std::fs::create_dir_all(&dir)?;
+        let pool = db::open(&dir).await?;
+        anyhow::Ok((dir, pool))
+    };
+    let find = |pool: sqlx::SqlitePool, ident: String| async move {
+        users::find_by_identifier(&pool, &ident)
+            .await
+            .map(|(u, _)| u)
+            .ok_or_else(|| anyhow::anyhow!("Utilisateur introuvable"))
+    };
+    match cmd {
+        UserCmd::Add {
+            email,
+            name,
+            username,
+            role,
+            temporary,
+            data_dir,
+        } => {
+            let (dir, pool) = open(data_dir).await?;
+            let password = prompt_password()?;
+            let u = users::create(
+                &pool,
+                users::NewUser {
+                    email,
+                    name,
+                    username,
+                    role_key: role,
+                    password,
+                    must_change_password: temporary,
+                },
+            )
+            .await?;
+            println!("Utilisateur {} créé dans {}.", u.email, dir.display());
+        }
+        UserCmd::Passwd {
+            user,
+            temporary,
+            data_dir,
+        } => {
+            let (_, pool) = open(data_dir).await?;
+            let u = find(pool.clone(), user).await?;
+            let pw = prompt_password()?;
+            users::set_password(&pool, &u.id, &pw, temporary).await?;
+            println!("Mot de passe modifié.");
+        }
+        UserCmd::List { data_dir } => {
+            let (_, pool) = open(data_dir).await?;
+            for u in users::list(&pool).await {
+                println!(
+                    "{}  {}{}",
+                    u.email,
+                    u.role_key,
+                    if u.is_active { "" } else { " (désactivé)" }
+                );
+            }
+        }
+        UserCmd::Remove { user, data_dir } => {
+            let (_, pool) = open(data_dir).await?;
+            let u = find(pool.clone(), user).await?;
+            users::delete(&pool, &u.id).await?;
+            println!("Utilisateur {} supprimé.", u.email);
+        }
+        UserCmd::Disable { user, data_dir } => {
+            let (_, pool) = open(data_dir).await?;
+            let u = find(pool.clone(), user).await?;
+            users::set_active(&pool, &u.id, false).await?;
+            println!("Utilisateur {} désactivé.", u.email);
+        }
+        UserCmd::Enable { user, data_dir } => {
+            let (_, pool) = open(data_dir).await?;
+            let u = find(pool.clone(), user).await?;
+            users::set_active(&pool, &u.id, true).await?;
+            println!("Utilisateur {} activé.", u.email);
+        }
+    }
+    Ok(())
 }
 
 #[derive(Args, Debug, Clone, Default)]
@@ -92,7 +236,8 @@ async fn main() -> anyhow::Result<()> {
     match cli.command {
         None => run(cli.run).await,
         Some(Command::Run(args)) => run(args).await,
-        Some(Command::Service { .. }) | Some(Command::User { .. }) => {
+        Some(Command::User { cmd }) => user_command(cmd).await,
+        Some(Command::Service { .. }) => {
             eprintln!("not implemented yet");
             std::process::exit(2);
         }

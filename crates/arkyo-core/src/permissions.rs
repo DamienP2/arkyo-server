@@ -138,8 +138,16 @@ mod tests {
 
     #[test]
     fn level_ordering() {
-        assert!(has_permission(&owner_permissions(), Domain::Members, Level::Admin));
+        assert!(has_permission(
+            &owner_permissions(),
+            Domain::Members,
+            Level::Admin
+        ));
         assert!(Level::Read < Level::Write);
-        assert!(!has_permission(&parse_permissions("{}"), Domain::Projects, Level::Read));
+        assert!(!has_permission(
+            &parse_permissions("{}"),
+            Domain::Projects,
+            Level::Read
+        ));
     }
 }

@@ -61,12 +61,14 @@ async fn two_pools_can_write_concurrently() {
             let pool = pool.clone();
             let key = format!("{tag}-{i}");
             set.spawn(async move {
-                sqlx::query("INSERT INTO AppConfig (id, key, value, updatedAt) VALUES (?, ?, 'v', ?)")
-                    .bind(arkyo_server::ids::new_id())
-                    .bind(key)
-                    .bind(arkyo_server::ids::now_iso())
-                    .execute(&pool)
-                    .await
+                sqlx::query(
+                    "INSERT INTO AppConfig (id, key, value, updatedAt) VALUES (?, ?, 'v', ?)",
+                )
+                .bind(arkyo_server::ids::new_id())
+                .bind(key)
+                .bind(arkyo_server::ids::now_iso())
+                .execute(&pool)
+                .await
             });
         }
         while let Some(r) = set.join_next().await {

@@ -26,6 +26,8 @@ directories = "6"
 sqlx.workspace = true
 cuid.workspace = true
 jiff.workspace = true
+argon2 = "0.5"
+rpassword = "7"
 
 [dev-dependencies]
 tempfile = "3"
