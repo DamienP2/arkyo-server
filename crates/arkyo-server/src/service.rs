@@ -17,13 +17,25 @@ static SUPERVISED: AtomicBool = AtomicBool::new(false);
 /// Records whether this process runs under a service manager that restarts it.
 /// `windows_service` is true when started by the Windows SCM.
 pub fn set_supervised(windows_service: bool) {
-    // systemd sets INVOCATION_ID, launchd sets XPC_SERVICE_NAME to the label.
-    let env = |k: &str| std::env::var(k).ok();
-    let supervised = windows_service
-        || env("ARKYO_SUPERVISED").is_some_and(|v| v == "1")
-        || env("INVOCATION_ID").is_some()
-        || env("XPC_SERVICE_NAME").is_some_and(|v| v == LAUNCHD_LABEL);
+    let supervised = supervised_from(windows_service, |k| std::env::var(k).ok());
     SUPERVISED.store(supervised, Ordering::Relaxed);
+}
+
+/// Environment variable set by the systemd unit and the launchd plist.
+pub const SUPERVISED_ENV: &str = "ARKYO_SUPERVISED";
+
+/// The supervision rule, `env` reading the environment. `ARKYO_SUPERVISED`
+/// decides when it is set; the systemd / launchd heuristics only serve units
+/// installed before it existed (systemd sets INVOCATION_ID, launchd sets
+/// XPC_SERVICE_NAME to the label).
+fn supervised_from(windows_service: bool, env: impl Fn(&str) -> Option<String>) -> bool {
+    if windows_service {
+        return true;
+    }
+    if let Some(v) = env(SUPERVISED_ENV) {
+        return v == "1";
+    }
+    env("INVOCATION_ID").is_some() || env("XPC_SERVICE_NAME").is_some_and(|v| v == LAUNCHD_LABEL)
 }
 
 pub fn is_supervised() -> bool {
@@ -42,6 +54,16 @@ pub struct InstallOptions {
 /// Creates the data directory and persists the requested port/bind.
 fn prepare_data_dir(o: &InstallOptions) -> Result<()> {
     std::fs::create_dir_all(&o.data_dir).map_err(|e| permission_hint(e.into(), &o.data_dir))?;
+    #[cfg(unix)]
+    {
+        // The base holds the password hashes: the folder is the service's.
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(
+            &o.data_dir,
+            std::fs::Permissions::from_mode(data_dir_mode(cfg!(target_os = "macos"))),
+        )
+        .map_err(|e| permission_hint(e.into(), &o.data_dir))?;
+    }
     if o.port.is_some() || o.bind.is_some() {
         let mut cfg = crate::config::Config::load(&o.data_dir);
         if let Some(p) = o.port {
@@ -54,6 +76,19 @@ fn prepare_data_dir(o: &InstallOptions) -> Result<()> {
             .map_err(|e| permission_hint(e, &o.data_dir))?;
     }
     Ok(())
+}
+
+/// Mode of the service data directory. Linux: the service account only.
+/// macOS: others may still reach a file they name (0711, no listing), as the
+/// menu bar app of the logged-in user reads `config.json` for the port; the
+/// base itself is created 0600 (`db::open`).
+#[cfg_attr(not(unix), allow(dead_code))]
+fn data_dir_mode(macos: bool) -> u32 {
+    if macos {
+        0o711
+    } else {
+        0o700
+    }
 }
 
 fn exe() -> Result<PathBuf> {
@@ -120,7 +155,9 @@ pub fn unit_file(exe: &Path, data_dir: &Path) -> String {
          Wants=network-online.target\n\n\
          [Service]\n\
          ExecStart={exe} run --data-dir {data}\n\
+         Environment={SUPERVISED_ENV}=1\n\
          User=arkyo\n\
+         UMask=0077\n\
          Restart=on-failure\n\
          RestartSec=2\n\
          AmbientCapabilities=CAP_NET_BIND_SERVICE\n\
@@ -161,6 +198,8 @@ pub fn launchd_plist(exe: &Path, data_dir: &Path) -> String {
   <key>ProgramArguments</key>
   <array>
 {args_xml}  </array>
+  <key>EnvironmentVariables</key>
+  <dict><key>{SUPERVISED_ENV}</key><string>1</string></dict>
   <key>RunAtLoad</key><true/>
   <key>KeepAlive</key><dict><key>SuccessfulExit</key><false/></dict>
   <key>ProcessType</key><string>Interactive</string>
@@ -605,6 +644,8 @@ mod tests {
         );
         assert!(u.contains("Restart=on-failure"));
         assert!(u.contains("ReadWritePaths=/var/lib/arkyo"));
+        assert!(u.contains("\nEnvironment=ARKYO_SUPERVISED=1\n"), "{u}");
+        assert!(u.contains("\nUMask=0077\n"), "{u}");
     }
 
     #[test]
@@ -628,6 +669,56 @@ mod tests {
         assert!(p.contains("<string>/usr/local/bin/arkyo-server</string>"));
         assert!(p.contains("<string>/Library/Application Support/Arkyo</string>"));
         assert!(p.contains("<key>SuccessfulExit</key><false/>"));
+        assert!(
+            p.contains(
+                "<key>EnvironmentVariables</key>\n  <dict><key>ARKYO_SUPERVISED</key><string>1</string></dict>"
+            ),
+            "{p}"
+        );
+    }
+
+    #[test]
+    fn supervision_marker_wins_over_heuristics() {
+        let env = |vars: &'static [(&'static str, &'static str)]| {
+            move |k: &str| {
+                vars.iter()
+                    .find(|(name, _)| *name == k)
+                    .map(|(_, v)| v.to_string())
+            }
+        };
+        // Units installed by this version.
+        assert!(supervised_from(false, env(&[("ARKYO_SUPERVISED", "1")])));
+        // The marker decides, even inside a systemd / launchd session.
+        assert!(!supervised_from(
+            false,
+            env(&[("ARKYO_SUPERVISED", "0"), ("INVOCATION_ID", "abc")])
+        ));
+        assert!(!supervised_from(
+            false,
+            env(&[
+                ("ARKYO_SUPERVISED", ""),
+                ("XPC_SERVICE_NAME", "com.arkyo.server")
+            ])
+        ));
+        // Units installed before the marker: the old heuristics.
+        assert!(supervised_from(false, env(&[("INVOCATION_ID", "abc")])));
+        assert!(supervised_from(
+            false,
+            env(&[("XPC_SERVICE_NAME", "com.arkyo.server")])
+        ));
+        assert!(!supervised_from(
+            false,
+            env(&[("XPC_SERVICE_NAME", "com.apple.Terminal")])
+        ));
+        assert!(!supervised_from(false, env(&[])));
+        // Started by the Windows SCM.
+        assert!(supervised_from(true, env(&[("ARKYO_SUPERVISED", "0")])));
+    }
+
+    #[test]
+    fn service_data_dir_is_private() {
+        assert_eq!(data_dir_mode(false), 0o700);
+        assert_eq!(data_dir_mode(true), 0o711);
     }
 
     #[test]
