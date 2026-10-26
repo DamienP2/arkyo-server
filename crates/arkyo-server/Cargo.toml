@@ -4,6 +4,10 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 
+[lib]
+name = "arkyo_server"
+path = "src/lib.rs"
+
 [[bin]]
 name = "arkyo-server"
 path = "src/main.rs"
@@ -19,6 +23,9 @@ tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "signal
 axum = "0.8"
 clap = { version = "4", features = ["derive", "env"] }
 directories = "6"
+sqlx.workspace = true
+cuid.workspace = true
+jiff.workspace = true
 
 [dev-dependencies]
 tempfile = "3"

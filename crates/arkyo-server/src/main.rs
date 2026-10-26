@@ -1,8 +1,4 @@
-// Consumed by the service and user commands (Tasks 3 and 9).
-#[allow(dead_code)]
-mod config;
-#[allow(dead_code)]
-mod paths;
+use arkyo_server::{config, paths};
 
 use std::net::{IpAddr, SocketAddr};
 use std::path::PathBuf;
