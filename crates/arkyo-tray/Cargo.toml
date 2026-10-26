@@ -1,0 +1,23 @@
+[package]
+name = "arkyo-tray"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Arkyo desktop companion: menu bar / system tray app"
+
+[[bin]]
+name = "arkyo-tray"
+path = "src/main.rs"
+
+# The tray UI targets the desktop platforms the installers ship for.
+[target.'cfg(any(target_os = "macos", windows))'.dependencies]
+tray-icon = "0.26"
+tao = "0.37"
+ureq = { version = "3", default-features = false }
+serde_json.workspace = true
+
+[target.'cfg(windows)'.build-dependencies]
+winresource = "0.1"
+
+[dev-dependencies]
+tempfile = "3"

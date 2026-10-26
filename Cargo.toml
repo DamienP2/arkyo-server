@@ -1,6 +1,7 @@
 [workspace]
 resolver = "2"
-members = ["crates/arkyo-core", "crates/arkyo-server"]
+members = ["crates/arkyo-core", "crates/arkyo-server", "crates/arkyo-tray"]
+exclude = ["tools/make-icons"]
 
 [workspace.package]
 version = "0.1.0"

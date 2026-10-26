@@ -1,0 +1,13 @@
+# Dev-only tool (not a workspace member, not shipped): renders
+# web/public/favicon.svg into every icon asset under assets/icons/.
+[package]
+name = "make-icons"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+resvg = "0.45"
+ico = "0.4"
+
+[workspace]
