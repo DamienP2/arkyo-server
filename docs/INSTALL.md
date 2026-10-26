@@ -58,7 +58,7 @@ Désinstallation : `sudo ./uninstall.sh` (`--purge` pour supprimer aussi `/var/l
    sudo arkyo-server user add admin@exemple.fr --name "Admin"              # macOS
    sudo -u arkyo arkyo-server user add admin@exemple.fr --name "Admin"     # Ubuntu
    ```
-   (dans un terminal administrateur sous Windows). Le mot de passe est demandé deux fois. Sous Ubuntu, `-u arkyo` est la forme recommandée ; lancée avec `sudo` seul, la commande rend ensuite les fichiers de base au propriétaire du dossier (`arkyo`), pour que le service puisse toujours les ouvrir.
+   (dans un terminal administrateur sous Windows). Le mot de passe est demandé deux fois. Sous Ubuntu, `-u arkyo` est la forme recommandée ; lancée avec `sudo` seul, la commande rend ensuite les fichiers de base au propriétaire du dossier (`arkyo`), pour que le service puisse toujours les ouvrir. Par sécurité, elle refuse alors de s'exécuter si `arkyo.db`, `arkyo.db-wal` ou `arkyo.db-shm` n'est pas un fichier ordinaire (lien symbolique ou physique), et ne touche jamais à un tel fichier.
 2. Créez ensuite les autres comptes (rôles `owner`, `chef-projet`, `technicien`, `consultation` ou rôle personnalisé) : `arkyo-server user add <email> --role technicien`.
 3. Un compte créé avec **`--temporary`** (`user add` ou `user passwd`) doit **changer son mot de passe à sa première connexion**. À utiliser quand l'administrateur choisit le mot de passe d'un tiers.
 4. Les autres machines utilisent `http://<serveur>:8090/`. L'écran **Système** (administrateurs) affiche la version, le dossier de données et les adresses d'accès.
@@ -73,7 +73,7 @@ arkyo-server user enable  <email|identifiant>
 arkyo-server user remove  <email|identifiant>
 ```
 
-Ces commandes (à lancer comme ci-dessus : `sudo` sur macOS, `sudo -u arkyo` sous Ubuntu) agissent sur le dossier de données du service s'il est installé (il contient un `config.json`), sinon sur celui de l'utilisateur courant. `--data-dir <dossier>` (ou `ARKYO_DATA_DIR`) cible un autre dossier. `user passwd` ferme aussi toutes les sessions ouvertes du compte.
+Ces commandes (à lancer comme ci-dessus : `sudo` sur macOS, `sudo -u arkyo` sous Ubuntu) agissent sur le dossier de données du service s'il est installé (il contient un `config.json`), sinon sur celui de l'utilisateur courant. `--data-dir <dossier>` (ou `ARKYO_DATA_DIR`) cible un autre dossier. Si le dossier du service existe mais n'est pas lisible par le compte courant (sous Ubuntu, sans `sudo`), la commande s'arrête avec une erreur au lieu de viser le dossier personnel. `user passwd` ferme aussi toutes les sessions ouvertes du compte.
 
 ## Gérer le service
 

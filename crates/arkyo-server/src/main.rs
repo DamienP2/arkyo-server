@@ -160,7 +160,11 @@ impl UserCmd {
 }
 
 async fn user_command(cmd: UserCmd) -> anyhow::Result<()> {
-    let dir = paths::cli_data_dir(cmd.data_dir());
+    let dir = paths::cli_data_dir(cmd.data_dir())?;
+    // `sudo` in the service account's directory: refuse planted symlinks or
+    // hard links before SQLite (running as root) opens them.
+    #[cfg(unix)]
+    db::check_root_open(&dir)?;
     let result = async {
         let pool = db::open(&dir).await?;
         let r = user_command_on(&pool, &dir, cmd).await;
