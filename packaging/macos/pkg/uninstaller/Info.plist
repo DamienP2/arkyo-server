@@ -2,8 +2,8 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-  <key>CFBundleName</key><string>Uninstall Arkyo</string>
-  <key>CFBundleDisplayName</key><string>Uninstall Arkyo</string>
+  <key>CFBundleName</key><string>Uninstall Strata Arkyo</string>
+  <key>CFBundleDisplayName</key><string>Uninstall Strata Arkyo</string>
   <key>CFBundleIdentifier</key><string>com.arkyo.uninstaller</string>
   <key>CFBundleExecutable</key><string>uninstall</string>
   <key>CFBundleIconFile</key><string>AppIcon</string>

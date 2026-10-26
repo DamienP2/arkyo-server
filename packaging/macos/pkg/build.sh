@@ -48,8 +48,8 @@ if [ -f "$ROOT/docs/INSTALL.md" ]; then cp "$ROOT/docs/INSTALL.md" "$PAYLOAD/"; 
 # The menu bar app and the uninstaller, straight in /Applications.
 APPS="$WORK/root/Applications"
 mkdir -p "$APPS"
-make_app "Arkyo" "$TRAY" arkyo-tray "$HERE/app" "$ROOT/assets/icons/arkyo-macos-1024.png"
-make_app "Uninstall Arkyo" "$HERE/uninstaller/uninstall" uninstall "$HERE/uninstaller" "$ROOT/assets/icons/uninstall-macos-1024.png"
+make_app "Strata Arkyo" "$TRAY" arkyo-tray "$HERE/app" "$ROOT/assets/icons/arkyo-macos-1024.png"
+make_app "Uninstall Strata Arkyo" "$HERE/uninstaller/uninstall" uninstall "$HERE/uninstaller" "$ROOT/assets/icons/uninstall-macos-1024.png"
 
 mkdir -p "$WORK/root/Library/LaunchAgents"
 cp "$HERE/com.arkyo.tray.plist" "$WORK/root/Library/LaunchAgents/"
@@ -58,8 +58,8 @@ cp "$HERE/com.arkyo.tray.plist" "$WORK/root/Library/LaunchAgents/"
 if [ -n "${MACOS_APP_IDENTITY:-}" ]; then
   sign() { codesign --force --options runtime --timestamp --sign "$MACOS_APP_IDENTITY" "$@"; }
   sign "$PAYLOAD/arkyo-server"
-  sign "$APPS/Arkyo.app"
-  sign "$APPS/Uninstall Arkyo.app"
+  sign "$APPS/Strata Arkyo.app"
+  sign "$APPS/Uninstall Strata Arkyo.app"
 fi
 
 # --- package ---------------------------------------------------------------------

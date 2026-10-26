@@ -5,7 +5,7 @@
   <key>Label</key><string>com.arkyo.tray</string>
   <key>ProgramArguments</key>
   <array>
-    <string>/Applications/Arkyo.app/Contents/MacOS/arkyo-tray</string>
+    <string>/Applications/Strata Arkyo.app/Contents/MacOS/arkyo-tray</string>
     <string>--background</string>
   </array>
   <key>RunAtLoad</key><true/>

@@ -19,8 +19,8 @@ enum UserEvent {
 
 // ---------------------------------------------------------------- words ----
 
-const TITLE: &str = "Arkyo";
-const OPEN: &str = "Ouvrir Arkyo";
+const TITLE: &str = "Strata Arkyo";
+const OPEN: &str = "Ouvrir Strata Arkyo";
 const START: &str = "Démarrer le service";
 const STOP: &str = "Arrêter le service";
 const QUIT: &str = "Quitter";
@@ -95,7 +95,7 @@ fn alert(message: &str) {
     {
         let esc = |t: &str| t.replace('\\', "\\\\").replace('"', "\\\"");
         let script = format!(
-            "display alert \"Arkyo\" message \"{}\" as critical",
+            "display alert \"Strata Arkyo\" message \"{}\" as critical",
             esc(message)
         );
         let _ = Command::new("osascript").args(["-e", &script]).spawn();
@@ -105,7 +105,7 @@ fn alert(message: &str) {
         use std::os::windows::process::CommandExt;
         const CREATE_NO_WINDOW: u32 = 0x0800_0000;
         let ps = format!(
-            "Add-Type -AssemblyName PresentationFramework; [System.Windows.MessageBox]::Show('{}', 'Arkyo', 'OK', 'Error')",
+            "Add-Type -AssemblyName PresentationFramework; [System.Windows.MessageBox]::Show('{}', 'Strata Arkyo', 'OK', 'Error')",
             message.replace('\'', "''")
         );
         let _ = Command::new("powershell")
@@ -183,7 +183,7 @@ fn server_action(start: bool, refresh: EventLoopProxy<UserEvent>) {
         let action = if start { "start" } else { "stop" };
         if let Err(e) = service_as_admin(action) {
             let what = if start { "démarrer" } else { "arrêter" };
-            alert(&format!("Impossible de {what} le service Arkyo.\n\n{e}"));
+            alert(&format!("Impossible de {what} le service Strata Arkyo.\n\n{e}"));
         }
         let _ = refresh.send_event(UserEvent::Status(is_running()));
     });
@@ -335,7 +335,7 @@ mod tests {
 
     #[test]
     fn status_labels_are_french() {
-        assert_eq!(status_label(true), "Arkyo — En marche");
-        assert_eq!(status_label(false), "Arkyo — Arrêté");
+        assert_eq!(status_label(true), "Strata Arkyo — En marche");
+        assert_eq!(status_label(false), "Strata Arkyo — Arrêté");
     }
 }

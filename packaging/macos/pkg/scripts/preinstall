@@ -1,9 +1,12 @@
 #!/bin/sh
 # Upgrade: stop the running daemon and menu bar app; data is kept.
+# v0.1.0 installed "Arkyo.app" and "Uninstall Arkyo.app": remove them, the
+# app is now "Strata Arkyo.app".
 launchctl bootout system/com.arkyo.server 2>/dev/null || true
 USER_ID=$(stat -f %u /dev/console 2>/dev/null || echo 0)
 if [ "$USER_ID" != "0" ]; then
   launchctl bootout "gui/$USER_ID/com.arkyo.tray" 2>/dev/null || true
 fi
 pkill -x arkyo-tray 2>/dev/null || true
+rm -rf "/Applications/Arkyo.app" "/Applications/Uninstall Arkyo.app"
 exit 0

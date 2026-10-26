@@ -1,5 +1,5 @@
 #!/bin/sh
-# Wraps the installer in a disk image with the Arkyo icon on the volume
+# Wraps the installer in a disk image with the Strata Arkyo icon on the volume
 # and on the package (icons survive the download inside a .dmg, not a .zip).
 # Usage: packaging/macos/pkg/make-dmg.sh <installer.pkg> <version> <output.dmg>
 set -eu
@@ -44,7 +44,7 @@ osascript -l JavaScript -e "ObjC.import('AppKit'); \$.NSWorkspace.sharedWorkspac
 # The volume's own icon needs the image mounted (the custom-icon flag sits on
 # the volume root). The icon file itself travels in the source folder.
 cp "$WORK/icon.icns" "$STAGE/.VolumeIcon.icns"
-retry hdiutil create -ov -quiet -fs HFS+ -volname "Arkyo $VERSION" -srcfolder "$STAGE" -format UDRW "$WORK/rw.dmg"
+retry hdiutil create -ov -quiet -fs HFS+ -volname "Strata Arkyo $VERSION" -srcfolder "$STAGE" -format UDRW "$WORK/rw.dmg"
 mkdir -p "$WORK/mnt"
 rm -f "$OUT"
 if retry hdiutil attach -quiet -nobrowse -noautoopen -mountpoint "$WORK/mnt" "$WORK/rw.dmg"; then
@@ -59,11 +59,11 @@ if retry hdiutil attach -quiet -nobrowse -noautoopen -mountpoint "$WORK/mnt" "$W
     # The volume stays busy: an image straight from the folder (no custom
     # icon on the volume, the package keeps its own) rather than no image.
     echo "the image cannot be unmounted: building it without the volume icon" >&2
-    retry hdiutil create -ov -quiet -fs HFS+ -volname "Arkyo $VERSION" -srcfolder "$STAGE" -format UDZO "$OUT"
+    retry hdiutil create -ov -quiet -fs HFS+ -volname "Strata Arkyo $VERSION" -srcfolder "$STAGE" -format UDZO "$OUT"
   fi
 else
   echo "the image cannot be mounted: building it without the volume icon" >&2
-  retry hdiutil create -ov -quiet -fs HFS+ -volname "Arkyo $VERSION" -srcfolder "$STAGE" -format UDZO "$OUT"
+  retry hdiutil create -ov -quiet -fs HFS+ -volname "Strata Arkyo $VERSION" -srcfolder "$STAGE" -format UDZO "$OUT"
 fi
 echo "built $OUT"
 exit 0

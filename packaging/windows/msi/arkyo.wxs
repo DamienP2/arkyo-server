@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Arkyo — Windows Installer package (WiX Toolset v5).
+  Strata Arkyo — Windows Installer package (WiX Toolset v5).
   Build: wix build arkyo.wxs -arch x64 -ext WixToolset.Util.wixext -ext WixToolset.Firewall.wixext
          -d Version=0.1.0 -d BinDir=<dir with arkyo-server.exe and arkyo-tray.exe> -d DocsDir=<repo root>
          [-d InstallDoc=<repo root>\docs\INSTALL.md] -o Arkyo.msi
@@ -9,14 +9,14 @@
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
      xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util"
      xmlns:fire="http://wixtoolset.org/schemas/v4/wxs/firewall">
-  <Package Name="Arkyo"
-           Manufacturer="Arkyo"
+  <Package Name="Strata Arkyo"
+           Manufacturer="Strata"
            Version="$(var.Version)"
            UpgradeCode="8bc8a01b-3228-44f1-9145-aa50d0b8d058"
            Scope="perMachine"
            Codepage="1252"
            Compressed="yes">
-    <SummaryInformation Description="Arkyo, serveur de gestion de projets et d'équipes" />
+    <SummaryInformation Description="Strata Arkyo, conception, câblage et recette d'installations broadcast" />
     <MajorUpgrade DowngradeErrorMessage="Une version plus récente de [ProductName] est déjà installée." />
     <MediaTemplate EmbedCab="yes" />
 
@@ -29,7 +29,7 @@
       <Directory Id="INSTALLFOLDER" Name="Arkyo" />
     </StandardDirectory>
     <StandardDirectory Id="ProgramMenuFolder">
-      <Directory Id="MenuFolder" Name="Arkyo" />
+      <Directory Id="MenuFolder" Name="Strata Arkyo" />
     </StandardDirectory>
 
     <ComponentGroup Id="Product" Directory="INSTALLFOLDER">
@@ -40,8 +40,8 @@
         </File>
         <ServiceInstall Id="ServiceInstall"
                         Name="arkyo-server"
-                        DisplayName="Arkyo Server"
-                        Description="Arkyo project and team management server"
+                        DisplayName="Strata Arkyo Server"
+                        Description="Strata Arkyo server"
                         Type="ownProcess"
                         Start="auto"
                         ErrorControl="normal"
@@ -68,9 +68,9 @@
       </Component>
       <?endif ?>
       <Component Id="StartMenu" Directory="MenuFolder">
-        <Shortcut Id="TrayShortcut" Name="Arkyo" Description="État du serveur Arkyo et accès à l'interface web" Target="[#TrayExe]" WorkingDirectory="INSTALLFOLDER" />
-        <Shortcut Id="UninstallShortcut" Name="Désinstaller Arkyo" Description="Supprimer Arkyo (vos données sont conservées)" Target="[System64Folder]msiexec.exe" Arguments="/x [ProductCode]" Icon="Arkyo.ico" />
-        <util:InternetShortcut Id="WebShortcut" Name="Arkyo (navigateur)" Target="http://localhost:8090" Type="url" />
+        <Shortcut Id="TrayShortcut" Name="Strata Arkyo" Description="État du serveur Strata Arkyo et accès à l'interface web" Target="[#TrayExe]" WorkingDirectory="INSTALLFOLDER" />
+        <Shortcut Id="UninstallShortcut" Name="Désinstaller Strata Arkyo" Description="Supprimer Strata Arkyo (vos données sont conservées)" Target="[System64Folder]msiexec.exe" Arguments="/x [ProductCode]" Icon="Arkyo.ico" />
+        <util:InternetShortcut Id="WebShortcut" Name="Strata Arkyo (navigateur)" Target="http://localhost:8090" Type="url" />
         <RemoveFolder Id="RemoveMenuFolder" On="uninstall" />
         <RegistryValue Root="HKLM" Key="Software\Arkyo" Name="StartMenu" Type="integer" Value="1" KeyPath="yes" />
       </Component>
@@ -85,7 +85,7 @@
       <Custom Action="LaunchTray" After="InstallFinalize" Condition="NOT (REMOVE~=&quot;ALL&quot;)" />
     </InstallExecuteSequence>
 
-    <Feature Id="Main" Title="Arkyo">
+    <Feature Id="Main" Title="Strata Arkyo">
       <ComponentGroupRef Id="Product" />
     </Feature>
   </Package>
