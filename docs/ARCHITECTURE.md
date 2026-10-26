@@ -29,7 +29,7 @@ Les chemins, les formes JSON, les codes HTTP et les messages d'erreur des routes
 
 ## Le front : copie fidèle et shims Next.js
 
-Les fichiers d'arkyo sont copiés **à l'identique, au même chemin relatif sous `web/src/`** (alias `@/*` → `web/src/*`). On ne modifie un fichier copié que pour retirer ce qui relève du SaaS (tenant, plan, impersonation, support…) ou pour l'habillage Strata ; chaque modification est commentée (`// arkyo-server: <raison>` ou `// arkyo-server: habillage Strata`, `/* … */` en CSS). On ne reformate jamais un fichier copié (pas de prettier) : le diff avec arkyo doit rester lisible.
+Les fichiers d'arkyo sont copiés **au même chemin relatif sous `web/src/`** (alias `@/*` → `web/src/*`). On ne modifie un fichier copié que pour retirer ce qui relève du SaaS (tenant, plan, impersonation, support…) ou pour l'habillage Strata ; chaque modification est commentée (`// arkyo-server: <raison>` ou `// arkyo-server: habillage Strata`, `/* … */` en CSS). On ne reformate jamais un fichier copié (pas de prettier) : le diff avec arkyo doit rester lisible.
 
 Arkyo étant en Next.js, ses imports `next/navigation`, `next/link`, `next/image`, `next-auth/react` et `next-intl` sont **redirigés vers des shims** plutôt que réécrits :
 
