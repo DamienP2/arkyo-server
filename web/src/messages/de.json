@@ -1,0 +1,59 @@
+{
+  "auth": {
+    "emailLabel": "E-Mail-Adresse",
+    "emailPlaceholder": "sie@firma.com",
+    "continue": "Weiter",
+    "codeSent": "Wenn ein Konto mit dieser E-Mail existiert, wurde ein Code gesendet.",
+    "codeInvalid": "Ungültiger oder abgelaufener Code",
+    "resendIn": "Erneut senden in {seconds}s",
+    "resend": "Code erneut senden",
+    "welcome": "Willkommen! Vervollständigen Sie Ihr Profil.",
+    "firstName": "Vorname",
+    "lastName": "Nachname",
+    "createAccount": "Konto erstellen",
+    "sending": "Senden...",
+    "verifying": "Überprüfung...",
+    "creating": "Erstellen...",
+    "slogan": "Der Broadcast-Architekt",
+    "connectionError": "Verbindungsfehler",
+    "serverError": "Serverfehler",
+    "accountExists": "Konto existiert bereits",
+    "codeNotVerified": "Code nicht verifiziert",
+    "createdButFailed": "Konto erstellt, aber Anmeldung fehlgeschlagen"
+  },
+  "common": {
+    "loading": "Laden...",
+    "error": "Fehler",
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "delete": "Löschen",
+    "confirm": "Bestätigen",
+    "search": "Suchen...",
+    "noResults": "Keine Ergebnisse",
+    "back": "Zurück",
+    "next": "Weiter",
+    "previous": "Zurück",
+    "yes": "Ja",
+    "no": "Nein",
+    "close": "Schließen",
+    "add": "Hinzufügen"
+  },
+  "platform": {
+    "yourSpaces": "Ihre Bereiche",
+    "noSpaces": "Sie gehören keinem Bereich an",
+    "createSpace": "Bereich erstellen",
+    "newSpace": "+ Neuer Bereich",
+    "logout": "Abmelden",
+    "owner": "Eigentümer",
+    "projectManager": "Projektleiter",
+    "technician": "Techniker",
+    "viewer": "Ansicht"
+  },
+  "language": {
+    "fr": "Français",
+    "en": "English",
+    "es": "Español",
+    "de": "Deutsch",
+    "it": "Italiano"
+  }
+}

@@ -1,0 +1,59 @@
+{
+  "auth": {
+    "emailLabel": "Email address",
+    "emailPlaceholder": "you@company.com",
+    "continue": "Continue",
+    "codeSent": "If an account exists with this email, a code has been sent.",
+    "codeInvalid": "Invalid or expired code",
+    "resendIn": "Resend in {seconds}s",
+    "resend": "Resend code",
+    "welcome": "Welcome! Complete your profile.",
+    "firstName": "First name",
+    "lastName": "Last name",
+    "createAccount": "Create my account",
+    "sending": "Sending...",
+    "verifying": "Verifying...",
+    "creating": "Creating...",
+    "slogan": "The broadcast architect",
+    "connectionError": "Connection error",
+    "serverError": "Server error",
+    "accountExists": "Account already exists",
+    "codeNotVerified": "Code not verified",
+    "createdButFailed": "Account created but login failed"
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "confirm": "Confirm",
+    "search": "Search...",
+    "noResults": "No results",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "yes": "Yes",
+    "no": "No",
+    "close": "Close",
+    "add": "Add"
+  },
+  "platform": {
+    "yourSpaces": "Your spaces",
+    "noSpaces": "You don't belong to any space",
+    "createSpace": "Create a space",
+    "newSpace": "+ New space",
+    "logout": "Log out",
+    "owner": "Owner",
+    "projectManager": "Project Manager",
+    "technician": "Technician",
+    "viewer": "Viewer"
+  },
+  "language": {
+    "fr": "Français",
+    "en": "English",
+    "es": "Español",
+    "de": "Deutsch",
+    "it": "Italiano"
+  }
+}

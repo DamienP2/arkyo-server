@@ -1,0 +1,469 @@
+/* arkyo-server: import Google Fonts retiré (serveur hors ligne, sur le réseau local) —
+   les polices sont auto-hébergées par src/fonts.css (équivalent de next/font dans
+   arkyo:app/layout.tsx). */
+@import "tailwindcss";
+@source "./**/*.{tsx,ts,jsx,js}";
+@source "../components/**/*.{tsx,ts,jsx,js}";
+
+:root {
+  --arkyo-ink: #141218;
+  --arkyo-deep: #1a1730;
+  --arkyo-slate: #2a2740;
+  --arkyo-mid: #6b6880;
+  --arkyo-soft: #a09db2;
+  --arkyo-mist: #e8e6f0;
+  --arkyo-cloud: #f4f3f8;
+  --arkyo-blue: #3654ff;
+  --arkyo-blue-light: #5a74ff;
+  --arkyo-blue-soft: #eef0ff;
+  --arkyo-signal-video: #3654ff;
+  --arkyo-signal-audio: #7c3aed;
+  --arkyo-signal-data: #10b981;
+  --arkyo-signal-distrib: #f59e0b;
+  --arkyo-signal-power: #ef4444;
+  --font-sans: "DM Sans", system-ui, -apple-system, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
+  --font-serif: "Instrument Serif", Georgia, serif;
+}
+
+body {
+  font-family: var(--font-sans);
+  letter-spacing: -0.005em;
+}
+
+@keyframes arkyo-pulse {
+  0%,
+  100% {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+}
+.arkyo-led {
+  animation: arkyo-pulse 2.4s ease-in-out infinite;
+}
+
+/* Apparition de l'infobulle d'interdiction du canvas rack (placement en U) :
+   la pill se pose sous l'aperçu draggé sans attirer l'œil brutalement. */
+@keyframes rack-drop-hint {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Pulse du pin de destination en cartographie — survol d'un câble dans le
+   menu contextuel "Choisir un câble". Halo accent qui respire pour localiser
+   le contenant d'arrivée sans déplacer le pin. */
+@keyframes carto-pin-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 55%, transparent),
+      0 0 0 5px color-mix(in srgb, var(--accent) 20%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 80%, transparent),
+      0 0 0 11px color-mix(in srgb, var(--accent) 0%, transparent);
+  }
+}
+.carto-pin-pulse {
+  animation: carto-pin-pulse 1.1s ease-in-out infinite;
+}
+
+:root {
+  --background: #f8f8fa;
+  --surface: #ffffff;
+  --surface-raised: #ffffff;
+  --canvas-bg: #fafafa; /* fond canvas synoptique — très léger */
+  --foreground: #0a0a0a;
+  --card: #ffffff;
+  --card-foreground: #0a0a0a;
+  --popover: #ffffff;
+  --popover-foreground: #0a0a0a;
+  --primary: #0a0a0a;
+  --primary-foreground: #fafafa;
+  --secondary: #f1f1f3;
+  --secondary-foreground: #0a0a0a;
+  --muted: #f1f1f3;
+  --muted-foreground: #71717a;
+  --accent: #3b82f6;
+  --accent-foreground: #ffffff;
+  --destructive: #ef4444;
+  --destructive-foreground: #fafafa;
+  --border: #e4e4e7;
+  --input: #e4e4e7;
+  --ring: #3b82f6;
+  --radius: 0.5rem;
+  /* Layout */
+  --rail-width: 48px;
+  --topbar-height: 44px;
+  /* Hauteur de la bannière "Mode développement actif" — overridée à
+     `var(--topbar-height)` par <DevModeBanner /> quand le mode dev runtime est
+     actif. Tous les éléments fixed (topbar, sidebar) et offsets de contenu
+     consomment `--topbar-bottom` pour rester sous la bannière + topbar. */
+  --dev-banner-height: 0px;
+  /* Hauteur de la bannière "Mode support" (impersonation) — overridée par
+     <ImpersonationBanner /> quand une impersonation est active. */
+  --impersonation-banner-height: 0px;
+  /* Offset cumulé des bannières fixes en haut (dev + support). Le topbar se
+     positionne à `top: calc(dev + support)`, sous les deux bannières.
+     Calc direct sur les deux vars de base (toujours définies) — pas de var
+     intermédiaire (qui, non résolue, casserait `top` en `auto`). */
+  --topbar-bottom: calc(
+    var(--topbar-height) + var(--dev-banner-height) + var(--impersonation-banner-height, 0px)
+  );
+  /* Rail colors */
+  --rail-bg: #1a1a1f;
+  --rail-icon: rgba(255, 255, 255, 0.45);
+  --rail-icon-active: #ffffff;
+  --rail-active-bg: rgba(255, 255, 255, 0.1);
+
+  /* ── Tokens couleurs métier (centralisés) ─────────────────────────
+     Utilisés dans tout le module supervisor pour les rôles, plans,
+     statuts… Avant cette centralisation, ces hex étaient dupliqués dans
+     >20 fichiers (members-section, plan-section, revenue-chart, etc.). */
+
+  /* Rôles tenant (membres) */
+  --role-owner: #10b981; /* emerald — propriétaire */
+  --role-chef-projet: #6366f1; /* indigo — chef de projet */
+  --role-technicien: #06b6d4; /* cyan   — technicien */
+  --role-consultation: #94a3b8; /* slate  — consultation */
+
+  /* Plans facturés */
+  --plan-free: #94a3b8; /* slate */
+  --plan-pro: #6366f1; /* indigo */
+  --plan-enterprise: #8b5cf6; /* violet */
+
+  /* Rôles plateforme (collaborateurs Arkyo) */
+  --collab-superadmin: #ef4444; /* red */
+  --collab-admin: #6366f1; /* indigo */
+  --collab-support: #3b82f6; /* blue */
+  --collab-tech: #10b981; /* emerald */
+
+  /* Crédits premium / mises en avant commerciales */
+  --premium: #f59e0b; /* amber */
+}
+
+.dark {
+  /* Palette dark inspirée Photoshop/Figma : contrastes forts, surfaces bien différenciées. */
+  --background: #1a1a1e; /* fond global — gris très sombre, pas pur noir */
+  --surface: #26262b; /* panels, topbar — nettement plus clair que bg */
+  --surface-raised: #333338; /* hover, inputs, surélevés */
+  --canvas-bg: #2a2a2f; /* canvas synoptique — gris moyen, confort visuel */
+
+  --foreground: #f5f5f7; /* texte principal — quasi blanc */
+  --card: #26262b;
+  --card-foreground: #f5f5f7;
+  --popover: #333338;
+  --popover-foreground: #f5f5f7;
+  --primary: #f5f5f7;
+  --primary-foreground: #1a1a1e;
+  --secondary: #333338;
+  --secondary-foreground: #f5f5f7;
+  --muted: #333338;
+  --muted-foreground: #c0c0c8; /* muted bien lisible — contraste 10+ sur bg */
+  --accent: #5b9dff; /* bleu plus lumineux, saturation retenue */
+  --accent-foreground: #ffffff;
+  --destructive: #f87171;
+  --destructive-foreground: #1a1a1e;
+  --border: #44444c; /* bordures clairement visibles */
+  --input: #333338;
+  --ring: #5b9dff;
+  /* Rail */
+  --rail-bg: #0f0f12;
+  --rail-icon: rgba(255, 255, 255, 0.55);
+  --rail-icon-active: #ffffff;
+  --rail-active-bg: rgba(255, 255, 255, 0.12);
+
+  /* ── Tokens couleurs métier — variantes dark légèrement ajustées
+     pour conserver le contraste sur fond sombre. */
+  --role-owner: #34d399; /* emerald-400 */
+  --role-chef-projet: #818cf8; /* indigo-400 */
+  --role-technicien: #22d3ee; /* cyan-400 */
+  --role-consultation: #a1a1aa; /* zinc-400 */
+
+  --plan-free: #a1a1aa;
+  --plan-pro: #818cf8;
+  --plan-enterprise: #a78bfa; /* violet-400 */
+
+  --collab-superadmin: #f87171; /* red-400 */
+  --collab-admin: #818cf8;
+  --collab-support: #60a5fa; /* blue-400 */
+  --collab-tech: #34d399;
+
+  --premium: #fbbf24; /* amber-400 */
+}
+
+/* Dark mode géré par next-themes via classe .dark sur <html> */
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-foreground: var(--foreground);
+  --color-border: var(--border);
+  --color-accent: var(--accent);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-popover: var(--popover, var(--background));
+  --color-popover-foreground: var(--popover-foreground, var(--foreground));
+  --color-card: var(--card, var(--background));
+  --color-card-foreground: var(--card-foreground, var(--foreground));
+  --color-primary: var(--primary, var(--accent));
+  --color-primary-foreground: var(--primary-foreground, #ffffff);
+  --color-secondary: var(--secondary, var(--muted));
+  --color-secondary-foreground: var(--secondary-foreground, var(--foreground));
+
+  --text-xs: 0.8rem;
+  --text-sm: 0.9rem;
+  --text-base: 1.05rem;
+  --text-lg: 1.2rem;
+  --text-xl: 1.35rem;
+  --text-2xl: 1.6rem;
+  --text-3xl: 2rem;
+}
+
+* {
+  border-color: var(--border);
+  box-sizing: border-box;
+}
+
+button,
+a,
+[role="button"],
+label[for],
+select {
+  cursor: pointer;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family:
+    var(--font-sans),
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    system-ui,
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 99px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--muted-foreground);
+}
+
+/* Dark — amélioration de la lisibilité globale */
+.dark {
+  color-scheme: dark;
+}
+.dark ::selection {
+  background: rgba(79, 142, 247, 0.3);
+  color: #f0f0f5;
+}
+
+/* Ombres portées plus visibles en dark */
+.dark .shadow-xl {
+  box-shadow:
+    0 20px 40px rgba(0, 0, 0, 0.6),
+    0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+.dark .shadow-lg {
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.03);
+}
+.dark .shadow-sm {
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.2s ease-out;
+}
+
+/* Sheet / Overlay animations (Radix data-state driven) */
+@keyframes overlayIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes overlayOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+@keyframes sheetIn {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+@keyframes sheetOut {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+.sheet-overlay[data-state="open"] {
+  animation: overlayIn 200ms ease-out;
+}
+.sheet-overlay[data-state="closed"] {
+  animation: overlayOut 150ms ease-in forwards;
+}
+.sheet-content[data-state="open"] {
+  animation: sheetIn 250ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+@keyframes arkyo-slide-up {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+.arkyo-slide-up {
+  animation: arkyo-slide-up 220ms cubic-bezier(0.22, 0.88, 0.35, 1);
+}
+
+@keyframes arkyo-slide-down {
+  from {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+}
+.arkyo-slide-down {
+  animation: arkyo-slide-down 180ms cubic-bezier(0.22, 0.88, 0.35, 1) forwards;
+}
+.sheet-content[data-state="closed"] {
+  animation: sheetOut 200ms cubic-bezier(0.32, 0.72, 0, 1) forwards;
+}
+
+/* ── Arkyo Slider ──────────────────────────────────────────────────────────── */
+.arkyo-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  background: color-mix(in srgb, var(--border) 80%, transparent);
+  border-radius: 9999px;
+  outline: none;
+  cursor: pointer;
+}
+.arkyo-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 9999px;
+  background: var(--accent);
+  cursor: pointer;
+  transition: transform 150ms ease-out;
+  box-shadow: 0 0 0 2px var(--background);
+}
+.arkyo-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+.arkyo-slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 9999px;
+  background: var(--accent);
+  border: 2px solid var(--background);
+  cursor: pointer;
+  transition: transform 150ms ease-out;
+}
+.arkyo-slider::-moz-range-thumb:hover {
+  transform: scale(1.2);
+}
+
+/* ── Micro-interaction keyframes ───────────────────────────────────────────── */
+@keyframes shortcut-fadein {
+  from {
+    opacity: 0;
+    transform: translateY(-2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── Synoptic erase mode — curseur gomme + feedback hover uniquement sur les éléments effaçables ── */
+.synoptic-erase-mode [data-cable]:hover,
+.synoptic-erase-mode [data-cable] *:hover,
+.synoptic-erase-mode [data-canvas-label]:hover,
+.synoptic-erase-mode [data-canvas-label] *:hover,
+.synoptic-erase-mode [data-zone]:hover,
+.synoptic-erase-mode [data-zone] *:hover,
+.synoptic-erase-mode [data-adapter]:hover,
+.synoptic-erase-mode [data-adapter] *:hover {
+  cursor:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='22' height='22' viewBox='0 0 22 22'><circle cx='11' cy='11' r='7.5' fill='none' stroke='%23dc2626' stroke-width='1.5'/><path d='M8.2 8.2 L13.8 13.8 M13.8 8.2 L8.2 13.8' stroke='%23dc2626' stroke-width='1.5' stroke-linecap='round'/></svg>")
+      11 11,
+    pointer !important;
+}
+
+/* Feedback visuel subtil : léger surlignement rouge sur l'élément hover en erase mode */
+.synoptic-erase-mode [data-cable]:hover path,
+.synoptic-erase-mode [data-cable]:hover line {
+  stroke: #ef4444 !important;
+  stroke-width: 2 !important;
+  opacity: 0.85;
+}
+.synoptic-erase-mode [data-zone]:hover rect,
+.synoptic-erase-mode [data-canvas-label]:hover rect,
+.synoptic-erase-mode [data-adapter]:hover rect {
+  stroke: #ef4444 !important;
+  stroke-width: 1.25 !important;
+  stroke-dasharray: 3 2 !important;
+}

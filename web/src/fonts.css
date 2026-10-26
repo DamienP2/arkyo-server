@@ -1,0 +1,21 @@
+/*
+ * Polices auto-hébergées — équivalent des `next/font/google` de
+ * arkyo:app/layout.tsx (sous-ensemble latin) :
+ *   DM_Sans (variable)                 → --font-sans
+ *   IBM_Plex_Mono 300, 400, 500, 600   → --font-mono
+ *   Instrument_Serif 400 italique      → --font-serif
+ * Importé après app/globals.css : ces variables remplacent celles de :root,
+ * comme les classes `.variable` de next/font posées sur <html>.
+ */
+@import "@fontsource-variable/dm-sans/wght.css";
+@import "@fontsource/ibm-plex-mono/latin-300.css";
+@import "@fontsource/ibm-plex-mono/latin-400.css";
+@import "@fontsource/ibm-plex-mono/latin-500.css";
+@import "@fontsource/ibm-plex-mono/latin-600.css";
+@import "@fontsource/instrument-serif/latin-400-italic.css";
+
+:root {
+  --font-sans: "DM Sans Variable", system-ui, -apple-system, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
+  --font-serif: "Instrument Serif", Georgia, serif;
+}

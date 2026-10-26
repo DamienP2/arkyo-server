@@ -1,0 +1,59 @@
+{
+  "auth": {
+    "emailLabel": "Dirección de email",
+    "emailPlaceholder": "tu@empresa.com",
+    "continue": "Continuar",
+    "codeSent": "Si existe una cuenta con este email, se ha enviado un código.",
+    "codeInvalid": "Código inválido o expirado",
+    "resendIn": "Reenviar en {seconds}s",
+    "resend": "Reenviar código",
+    "welcome": "¡Bienvenido! Completa tu perfil.",
+    "firstName": "Nombre",
+    "lastName": "Apellido",
+    "createAccount": "Crear mi cuenta",
+    "sending": "Enviando...",
+    "verifying": "Verificando...",
+    "creating": "Creando...",
+    "slogan": "El arquitecto del broadcast",
+    "connectionError": "Error de conexión",
+    "serverError": "Error del servidor",
+    "accountExists": "La cuenta ya existe",
+    "codeNotVerified": "Código no verificado",
+    "createdButFailed": "Cuenta creada pero error de conexión"
+  },
+  "common": {
+    "loading": "Cargando...",
+    "error": "Error",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "delete": "Eliminar",
+    "confirm": "Confirmar",
+    "search": "Buscar...",
+    "noResults": "Sin resultados",
+    "back": "Volver",
+    "next": "Siguiente",
+    "previous": "Anterior",
+    "yes": "Sí",
+    "no": "No",
+    "close": "Cerrar",
+    "add": "Añadir"
+  },
+  "platform": {
+    "yourSpaces": "Tus espacios",
+    "noSpaces": "No perteneces a ningún espacio",
+    "createSpace": "Crear un espacio",
+    "newSpace": "+ Nuevo espacio",
+    "logout": "Cerrar sesión",
+    "owner": "Propietario",
+    "projectManager": "Jefe de proyecto",
+    "technician": "Técnico",
+    "viewer": "Consulta"
+  },
+  "language": {
+    "fr": "Français",
+    "en": "English",
+    "es": "Español",
+    "de": "Deutsch",
+    "it": "Italiano"
+  }
+}
