@@ -334,3 +334,22 @@ async fn unknown_api_route_is_json_404() {
     assert_eq!(r.status, StatusCode::NOT_FOUND);
     assert_eq!(r.body, json!({"error": "Not found"}));
 }
+
+#[tokio::test]
+async fn locale_stays_reachable_while_password_change_is_required() {
+    let e = env().await;
+    add_user(&e.pool, "o@b.fr", "owner", false).await;
+    add_user(&e.pool, "t@b.fr", "technicien", true).await;
+    let tok = login(&e.app, "t@b.fr").await;
+    let r = call(
+        &e.app,
+        "POST",
+        "/api/platform/locale",
+        LOCAL,
+        Some(&tok),
+        Some(json!({"locale":"en"})),
+    )
+    .await;
+    assert_eq!(r.status, StatusCode::OK, "{:?}", r.body);
+    assert!(r.cookie.unwrap().starts_with("locale=en"));
+}

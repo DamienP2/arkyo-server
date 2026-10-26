@@ -1,6 +1,6 @@
 use arkyo_core::password;
 use arkyo_server::http::{self, AppState};
-use arkyo_server::{config, db, paths, users};
+use arkyo_server::{config, db, paths, service, update, users};
 
 use std::net::{IpAddr, SocketAddr};
 use std::path::PathBuf;
@@ -199,7 +199,10 @@ fn router(state: AppState) -> Router {
 }
 
 async fn run(args: RunArgs) -> anyhow::Result<()> {
+    service::set_supervised(false);
     let dir = args.data_dir.unwrap_or_else(paths::user_data_dir);
+    // A fresh update that keeps failing is rolled back here.
+    update::startup_guard(&dir);
     let cfg = config::Config::load(&dir);
     let pool = db::open(&dir).await?;
     let state = AppState {
@@ -209,6 +212,8 @@ async fn run(args: RunArgs) -> anyhow::Result<()> {
     };
     let addr = SocketAddr::new(args.bind.unwrap_or(cfg.bind), args.port.unwrap_or(cfg.port));
     let listener = tokio::net::TcpListener::bind(addr).await?;
+    update::confirm_after(dir.clone(), std::time::Duration::from_secs(60));
+    update::spawn_auto_check(dir.clone());
     tracing::info!("listening on http://{addr} (data dir {})", dir.display());
     axum::serve(
         listener,

@@ -5,18 +5,20 @@ mod events;
 mod me;
 mod notifications;
 mod presence;
+mod system;
 
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
 
 use arkyo_core::permissions::{has_permission, owner_permissions, parse_permissions};
 use arkyo_core::permissions::{Domain, Level, Permissions};
+use axum::extract::DefaultBodyLimit;
 use axum::extract::{FromRequestParts, Request, State};
 use axum::http::request::Parts;
 use axum::http::{header, StatusCode};
 use axum::middleware::{self, Next};
 use axum::response::{IntoResponse, Response};
-use axum::routing::{get, post};
+use axum::routing::{get, post, put};
 use axum::{Json, Router};
 use serde_json::json;
 use sqlx::SqlitePool;
@@ -98,7 +100,7 @@ pub async fn require(
 }
 
 /// Resolves the session cookie to an active user and enforces the password-change gate
-/// on everything but `/auth/*` (the layer sees paths relative to the `/api` nest).
+/// on everything but `/auth/*` and `/platform/locale` (the layer sees paths relative to the `/api` nest).
 async fn session_layer(State(st): State<AppState>, mut req: Request, next: Next) -> Response {
     let token = req
         .headers()
@@ -120,8 +122,10 @@ async fn session_layer(State(st): State<AppState>, mut req: Request, next: Next)
             }
         }
     }
-    let is_auth = req.uri().path().starts_with("/auth/");
-    if !is_auth {
+    // The sign-in language selector and the password-change page both need these.
+    let path = req.uri().path();
+    let exempt = path.starts_with("/auth/") || path == "/platform/locale";
+    if !exempt {
         if let Some(r) = req.extensions().get::<Resolved>() {
             if r.user.must_change_password {
                 return (
@@ -169,6 +173,16 @@ pub fn router(state: AppState) -> Router {
         )
         .route("/presence", get(presence::get).post(presence::post))
         .route("/events", get(events::stream))
+        .route("/system", get(system::info))
+        .route("/system/update", get(system::update_info))
+        .route("/system/update/settings", put(system::update_settings))
+        .route("/system/update/check", post(system::update_check))
+        .route("/system/update/install", post(system::update_install))
+        .route(
+            "/system/update/upload",
+            post(system::update_upload).layer(DefaultBodyLimit::max(system::MAX_UPLOAD)),
+        )
+        .route("/system/update/rollback", post(system::update_rollback))
         .fallback(api_not_found)
         .layer(middleware::from_fn_with_state(state.clone(), session_layer));
     let web = crate::web::routes(&state.data_dir);

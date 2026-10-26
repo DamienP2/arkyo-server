@@ -35,6 +35,10 @@ mime_guess = "2"
 flate2 = "1"
 percent-encoding = "2"
 futures-util = { version = "0.3", default-features = false }
+if-addrs = "0.15"
+ureq = { version = "3", default-features = false, features = ["rustls", "platform-verifier"] }
+tar = "0.4"
+zip = { version = "9", default-features = false, features = ["deflate-flate2"] }
 
 [dev-dependencies]
 tempfile = "3"

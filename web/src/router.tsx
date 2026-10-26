@@ -24,6 +24,7 @@ import FullscreenLayout from "@/app/(fullscreen)/fullscreen-layout";
 import AuthPage from "@/app/auth/auth-page";
 import SetupPage from "@/app/auth/setup-page";
 import PasswordPage from "@/app/auth/password-page";
+import SystemePage from "@/app/(app)/admin/systeme/systeme-page";
 import { ComingSoon } from "@/components/coming-soon";
 
 const errorElement = <NavigationErrorElement />;
@@ -54,7 +55,7 @@ export const routes: RouteObject[] = [
           soon("rigs/*"),
           soon("panels"),
           soon("templates"),
-          soon("admin/systeme"),
+          { path: "admin/systeme", element: <SystemePage />, errorElement },
           soon("admin/*"),
           soon("settings/*"),
           soon("profile"),

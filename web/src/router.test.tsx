@@ -68,9 +68,21 @@ describe("routeur et coquille", () => {
     expect(within(techAside).queryByText("Support")).toBeNull();
   });
 
-  test("/admin/systeme affiche « Bientôt disponible »", async () => {
-    renderApp("/admin/systeme", signedInApi());
-    expect(await screen.findByText("Bientôt disponible")).toBeInTheDocument();
+  test("/admin/systeme affiche l'écran Système", async () => {
+    renderApp("/admin/systeme", {
+      ...signedInApi(),
+      "GET /api/system": { body: { version: "0.1.0", dataDir: "/d", urls: [] } },
+      "GET /api/system/update": {
+        body: {
+          current: "0.1.0",
+          repo: "a/b",
+          autoCheck: true,
+          previous: null,
+          status: { phase: "idle", progress: 0, message: "", latest: null },
+        },
+      },
+    });
+    expect(await screen.findByText("Mises à jour")).toBeInTheDocument();
   });
 
   test("le site sans nom n'affiche que le lockup arkyo.io", async () => {

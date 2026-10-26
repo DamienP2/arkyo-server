@@ -6,6 +6,8 @@ pub mod http;
 pub mod ids;
 #[allow(dead_code)]
 pub mod paths;
+pub mod service;
 pub mod sessions;
+pub mod update;
 pub mod users;
 pub mod web;
