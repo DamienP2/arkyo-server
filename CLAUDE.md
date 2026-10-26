@@ -18,6 +18,7 @@ Documents : `README.md`, `docs/INSTALL.md`, `docs/ARCHITECTURE.md`, `UI_PATTERNS
 - Versions npm : celles de `arkyo:package.json` pour toute dépendance reprise.
 - Textes UI en français, comme arkyo.
 - La phase 1 ne crée que les tables `User`, `UserProfile`, `Role`, `AuthSession`, `Notification`, `AppConfig`. (Chaque phase suivante ajoute, dans une nouvelle migration, uniquement les tables qu'elle consomme.)
+- Migrations **additives uniquement** : une version plus ancienne (retour arrière, restauration automatique) doit rouvrir la base d'une version plus récente et tolérer ses nouvelles tables et colonnes. Jamais de renommage ni de suppression de table ou de colonne, jamais de colonne `NOT NULL` sans valeur par défaut (voir `docs/ARCHITECTURE.md`).
 
 ## Reprendre un fichier d'arkyo
 

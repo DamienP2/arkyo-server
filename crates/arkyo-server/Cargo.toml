@@ -53,3 +53,6 @@ winresource = "0.1"
 
 [target.'cfg(windows)'.dependencies]
 windows-service = "0.8"
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"

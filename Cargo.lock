@@ -138,6 +138,7 @@ dependencies = [
  "http-body-util",
  "if-addrs",
  "jiff",
+ "libc",
  "mime_guess",
  "percent-encoding",
  "rpassword",

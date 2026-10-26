@@ -95,3 +95,81 @@ async fn foreign_keys_enforced() {
     .await;
     assert!(r.is_err());
 }
+
+#[tokio::test]
+async fn opens_a_base_migrated_by_a_newer_version() {
+    // After a rollback, the base carries a migration this binary does not know.
+    let d = tempfile::tempdir().unwrap();
+    let pool = open(d.path()).await.unwrap();
+    sqlx::query(
+        "INSERT INTO _sqlx_migrations (version, description, success, checksum, execution_time) \
+         VALUES (9999, 'future phase', 1, X'00', 0)",
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
+    sqlx::query("CREATE TABLE \"FutureTable\" (id TEXT PRIMARY KEY)")
+        .execute(&pool)
+        .await
+        .unwrap();
+    pool.close().await;
+    let pool = open(d.path())
+        .await
+        .expect("older binary opens a newer base");
+    assert_eq!(keys(&pool).await.len(), 4);
+}
+
+#[tokio::test]
+async fn open_errors_name_the_base() {
+    let d = tempfile::tempdir().unwrap();
+    // The data directory is a file.
+    let file = d.path().join("plain-file");
+    std::fs::write(&file, b"x").unwrap();
+    let e = open(&file).await.unwrap_err();
+    let msg = format!("{e:#}");
+    assert!(
+        msg.starts_with(&format!("cannot open {}", file.join("arkyo.db").display())),
+        "{msg}"
+    );
+    // Not a SQLite file.
+    let bad = d.path().join("bad");
+    std::fs::create_dir_all(&bad).unwrap();
+    std::fs::write(bad.join("arkyo.db"), vec![b'z'; 4096]).unwrap();
+    let e = open(&bad).await.unwrap_err();
+    let msg = format!("{e:#}");
+    assert!(
+        msg.starts_with(&format!("cannot open {}", bad.join("arkyo.db").display())),
+        "{msg}"
+    );
+}
+
+#[cfg(unix)]
+#[tokio::test]
+async fn base_is_private_to_its_owner() {
+    use std::os::unix::fs::PermissionsExt;
+    let d = tempfile::tempdir().unwrap();
+    let pool = open(d.path()).await.unwrap();
+    for name in ["arkyo.db", "arkyo.db-wal", "arkyo.db-shm"] {
+        let p = d.path().join(name);
+        if p.exists() {
+            let mode = std::fs::metadata(&p).unwrap().permissions().mode() & 0o777;
+            assert_eq!(mode, 0o600, "{name}");
+        }
+    }
+    pool.close().await;
+    // A base created readable by all is tightened on the next open.
+    let p = d.path().join("arkyo.db");
+    std::fs::set_permissions(&p, std::fs::Permissions::from_mode(0o644)).unwrap();
+    let _pool = open(d.path()).await.unwrap();
+    let mode = std::fs::metadata(&p).unwrap().permissions().mode() & 0o777;
+    assert_eq!(mode, 0o600);
+}
+
+#[test]
+fn only_root_in_a_directory_it_does_not_own_hands_files_back() {
+    use arkyo_server::db::should_chown;
+    assert!(should_chown(0, 998)); // sudo in /var/lib/arkyo (owned by arkyo)
+    assert!(!should_chown(0, 0)); // root in a root-owned directory (macOS service)
+    assert!(!should_chown(998, 998)); // sudo -u arkyo
+    assert!(!should_chown(501, 998)); // another account: cannot chown anyway
+}
