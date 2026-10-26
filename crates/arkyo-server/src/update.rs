@@ -815,6 +815,8 @@ pub fn install(data_dir: &Path, binary: &[u8], allow_older: bool) -> Result<Stri
     }
     let previous = folder.join(PREVIOUS);
     swap_in(&exe, &staged, &previous).map_err(|e| permission_hint(e, &folder))?;
+    // The new file, not yet running (this process keeps its old image).
+    crate::firewall::allow(&exe);
     write_json(
         &dir(data_dir).join("pending.json"),
         &Pending {
@@ -877,6 +879,8 @@ pub fn rollback(data_dir: &Path, outcome: &str) -> Result<String> {
     let staged = folder.join(STAGED);
     std::fs::copy(&previous, &staged).map_err(|e| permission_hint(e, &folder))?;
     swap_in(&exe, &staged, &previous).map_err(|e| permission_hint(e, &folder))?;
+    // The new file, not yet running (this process keeps its old image).
+    crate::firewall::allow(&exe);
     let _ = std::fs::remove_file(dir(data_dir).join("pending.json"));
     write_json(
         &dir(data_dir).join("history.json"),
@@ -1022,34 +1026,36 @@ mod tests {
     #[test]
     fn extract_binary_from_update_tarball() {
         let body = b"\x7fELF fake binary";
+        let folder = format!("Arkyo-0.2.0-{PLATFORM}");
         let archive = tar_gz(&[
-            ("Arkyo-0.2.0-linux-x86_64/README.md", b"hello"),
-            ("Arkyo-0.2.0-linux-x86_64/arkyo-server", body),
+            (&format!("{folder}/README.md"), b"hello"),
+            (&format!("{folder}/{EXE}"), body),
         ]);
         assert_eq!(extract_binary(&archive).unwrap(), body);
         // A bare binary is accepted, anything else is refused.
         assert_eq!(extract_binary(b"\x7fELF raw").unwrap(), b"\x7fELF raw");
         assert!(extract_binary(b"not a package").is_err());
         // An archive without the server says so.
-        let empty = tar_gz(&[("Arkyo-0.2.0-linux-x86_64/README.md", b"hi")]);
+        let empty = tar_gz(&[(&format!("{folder}/README.md"), b"hi")]);
         assert!(extract_binary(&empty).is_err());
     }
 
     #[test]
     fn extract_binary_from_update_zip() {
         use std::io::Write;
+        let folder = format!("Arkyo-0.2.0-{PLATFORM}");
         let mut buf = std::io::Cursor::new(Vec::new());
         {
             let mut z = zip::ZipWriter::new(&mut buf);
             let o = zip::write::SimpleFileOptions::default();
-            z.start_file("Arkyo-0.2.0-windows-x86_64/arkyo-server.exe", o)
-                .unwrap();
+            z.start_file(format!("{folder}/README.md"), o).unwrap();
+            z.write_all(b"hello").unwrap();
+            z.start_file(format!("{folder}/{EXE}"), o).unwrap();
             z.write_all(b"MZ fake").unwrap();
             z.finish().unwrap();
         }
         let zip_bytes = buf.into_inner();
-        let found = from_archive(&zip_bytes, |n| n.ends_with("arkyo-server.exe")).unwrap();
-        assert_eq!(found, Some(Some(b"MZ fake".to_vec())));
+        assert_eq!(extract_binary(&zip_bytes).unwrap(), b"MZ fake");
     }
 
     #[test]

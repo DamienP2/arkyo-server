@@ -1,5 +1,6 @@
 pub mod config;
 pub mod db;
+pub mod firewall;
 pub mod http;
 pub mod ids;
 pub mod paths;
