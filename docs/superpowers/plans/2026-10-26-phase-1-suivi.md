@@ -33,3 +33,19 @@ Ce fichier liste ce que les revues de la phase 1 ont laissé en suspens. Aucun p
   - Le journal Windows n'a pas de rotation.
   - Le tray suppose `localhost` même quand le serveur écoute sur une IP précise.
   - Bug v0.1.0 : la page Système liste les adresses d'accès avec le port 8090 même quand le serveur tourne avec un autre `--port` (les URL sont construites depuis le défaut de la configuration au lieu du port réellement lié).
+
+## Habillage Strata Arkyo — points reportés
+
+- **Badges sur fond `--muted`.** Le contraste n'a été vérifié que sur `--surface`. Le badge succès tombe à environ 4,0:1 sur `--muted` en clair. Il faut étendre le test avant d'utiliser des badges sur des lignes grisées (phase 2).
+- **`catalog-badges.tsx`.** L'étiquette de plan « fantôme » en violet est à environ 2,7:1 en clair. À revoir quand le catalogue arrivera (phase 2).
+- **Marges minces.** Badge de rôle CONSULTATION en clair (4,55:1), badges succès et alerte (4,59 et 4,61:1).
+- **macOS.** Le `preinstall` supprime `/Applications/Arkyo.app` sans vérifier l'identifiant de bundle (`com.arkyo.app`).
+- **Tests.**
+  - Pas de test sur la couleur de bordure des toasts.
+  - Le test du commentaire d'habillage ne couvre pas quatre fichiers.
+  - Le compositing rgba n'est pas exercé dans `theme.test.ts`.
+- **Divers.**
+  - En-tête et pied des dialogues seulement en partie au style `.modal` de Strata.
+  - Opacité désactivée à 0,5 au lieu de 0,4.
+  - Piste d'interrupteur inactif peu visible (comme dans Strata).
+  - État partagé `thread_local` dans `tools/make-icons`.
