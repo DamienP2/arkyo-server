@@ -1151,3 +1151,83 @@ async fn signals_are_guarded_by_design_write_like_arkyo() {
     .await;
     assert_eq!(no.status, StatusCode::FORBIDDEN);
 }
+
+#[tokio::test]
+async fn cabling_null_reference_duplicates_are_409() {
+    let c = ctx().await;
+    let name: String = sqlx::query_scalar(
+        r#"SELECT "name" FROM "TenantCableModel" WHERE "reference" IS NULL LIMIT 1"#,
+    )
+    .fetch_one(&c.e.pool)
+    .await
+    .unwrap();
+    let r = c.req("POST", "/cabling", Some(json!({"name": name}))).await;
+    assert_eq!(r.status, StatusCode::CONFLICT, "{:?}", r.body);
+    assert_eq!(
+        r.body,
+        json!({"error": "Un modèle de câble avec ce nom et cette référence existe déjà dans votre espace."})
+    );
+    let r = c
+        .req(
+            "POST",
+            "/cabling",
+            Some(json!({"name": name.to_uppercase() + "x"})),
+        )
+        .await;
+    assert_eq!(r.status, StatusCode::CREATED);
+    let id = r.body["id"].as_str().unwrap().to_string();
+    let p = c
+        .req(
+            "PATCH",
+            &format!("/cabling/{id}"),
+            Some(json!({"name": name})),
+        )
+        .await;
+    assert_eq!(p.status, StatusCode::CONFLICT);
+    let p = c
+        .req(
+            "PATCH",
+            &format!("/cabling/{id}"),
+            Some(json!({"name": name.to_lowercase()})),
+        )
+        .await;
+    if name.to_lowercase() != name {
+        assert_eq!(
+            p.body,
+            json!({"error": "Un modèle de câble avec ce nom existe déjà dans le catalogue Arkyo."})
+        );
+    }
+}
+
+#[tokio::test]
+async fn duplicate_checks_are_unicode_aware() {
+    let c = ctx().await;
+    let a = c
+        .req("POST", "/brands", Some(json!({"name": "Éclairage Zz"})))
+        .await;
+    assert_eq!(a.status, StatusCode::CREATED);
+    let b = c
+        .req("POST", "/brands", Some(json!({"name": "éclairage zz"})))
+        .await;
+    assert_eq!(b.status, StatusCode::CONFLICT);
+    assert_eq!(
+        b.body,
+        json!({"error": "Ce fabricant existe déjà dans le catalogue Arkyo."})
+    );
+    let f = c
+        .req(
+            "POST",
+            "/categories/function",
+            Some(json!({"key": "FN_U1", "label": "Éclairage Fn"})),
+        )
+        .await;
+    assert_eq!(f.status, StatusCode::CREATED);
+    let f = c
+        .req(
+            "POST",
+            "/categories/function",
+            Some(json!({"key": "FN_U2", "label": "éclairage fn"})),
+        )
+        .await;
+    assert_eq!(f.status, StatusCode::CONFLICT);
+}

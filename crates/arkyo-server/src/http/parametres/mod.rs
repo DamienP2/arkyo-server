@@ -268,22 +268,6 @@ fn bind<'q>(
     }
 }
 
-/// Whether the query (with `?` binds) returns a row.
-pub async fn any_row(
-    conn: &mut SqliteConnection,
-    sql: &str,
-    binds: &[&str],
-) -> Result<bool, Response> {
-    let mut q = sqlx::query_scalar::<_, i64>(sql);
-    for b in binds {
-        q = q.bind(*b);
-    }
-    q.fetch_optional(conn)
-        .await
-        .map(|r| r.is_some())
-        .map_err(db_error)
-}
-
 pub fn db_error(e: sqlx::Error) -> Response {
     tracing::error!("parametres: {e}");
     server_error()
@@ -561,11 +545,19 @@ pub fn refuse_if_used(
     Ok(())
 }
 
+/// Unicode-aware comparison key: NFC then Unicode lower case ("Éclairage"
+/// and "éclairage" fold alike; SQLite `lower()` is ASCII-only).
+pub fn fold(s: &str) -> String {
+    use unicode_normalization::UnicodeNormalization;
+    s.nfc().collect::<String>().to_lowercase()
+}
+
 /// Duplicate name check against the single catalogue: another row (not
-/// `exclude`) with the same value ignoring case. An exact match is left to
+/// `exclude`) whose value folds alike ([`fold`]). An exact match is left to
 /// the unique index (the "dans votre espace" message of arkyo); a match that
 /// only differs by case gets arkyo's "catalogue Arkyo" message, which
-/// arkyo's own catalogue check returned for it.
+/// arkyo's own catalogue check returned for it. Compared in Rust over the
+/// table's values (referentials are small).
 pub async fn case_only_duplicate(
     conn: &mut SqliteConnection,
     table: &str,
@@ -574,10 +566,16 @@ pub async fn case_only_duplicate(
     exclude: Option<&str>,
     msg: &str,
 ) -> Result<(), Response> {
-    let sql = format!(
-        r#"SELECT 1 FROM "{table}" WHERE lower("{col}") = lower(?) AND "{col}" <> ? AND "id" <> ? LIMIT 1"#
-    );
-    if any_row(conn, &sql, &[value, value, exclude.unwrap_or("")]).await? {
+    let rows: Vec<(String, String)> =
+        sqlx::query_as(&format!(r#"SELECT "id", "{col}" FROM "{table}""#))
+            .fetch_all(conn)
+            .await
+            .map_err(db_error)?;
+    let f = fold(value);
+    if rows
+        .iter()
+        .any(|(id, v)| Some(id.as_str()) != exclude && v != value && fold(v) == f)
+    {
         return Err(conflict(msg));
     }
     Ok(())

@@ -12,8 +12,8 @@ use sqlx::{Row, SqliteConnection};
 use unicode_normalization::UnicodeNormalization;
 
 use super::{
-    any_row, bad, conflict, db_error, list_rows, refuse_if_used, str_of, Def, Field, Fut, Hooks,
-    Kind, NoHooks, Obj, Res, Table, KEY, LABEL, NAME,
+    bad, conflict, db_error, fold, list_rows, refuse_if_used, str_of, Def, Field, Fut, Hooks, Kind,
+    NoHooks, Obj, Res, Table, KEY, LABEL, NAME,
 };
 use crate::catalogue::in_use;
 use crate::http::{AppState, CurrentUser};
@@ -224,7 +224,7 @@ static PHASE: Res = Res {
 };
 
 /// arkyo refused a key or label present in the Arkyo catalogue (ignoring
-/// case). Here: another row whose label matches ignoring case, or whose key
+/// case). Here: another row whose label folds alike ([`fold`]), or whose key
 /// only differs by case; an identical key is left to the unique index
 /// ("clé … dans votre espace").
 async fn key_label_duplicate(
@@ -235,26 +235,21 @@ async fn key_label_duplicate(
     msg: &str,
 ) -> Result<(), Response> {
     let own = existing.and_then(|e| str_of(e, "id")).unwrap_or("");
-    let mut conds = Vec::new();
-    let mut binds: Vec<&str> = Vec::new();
-    if let Some(k) = str_of(body, "key") {
-        conds.push(r#"(lower("key") = lower(?) AND "key" <> ?)"#);
-        binds.push(k);
-        binds.push(k);
-    }
-    if let Some(l) = str_of(body, "label") {
-        conds.push(r#"lower("label") = lower(?)"#);
-        binds.push(l);
-    }
-    if conds.is_empty() {
+    let (key, label) = (str_of(body, "key"), str_of(body, "label"));
+    if key.is_none() && label.is_none() {
         return Ok(());
     }
-    binds.push(own);
-    let sql = format!(
-        r#"SELECT 1 FROM "{table}" WHERE ({}) AND "id" <> ? LIMIT 1"#,
-        conds.join(" OR ")
-    );
-    if any_row(conn, &sql, &binds).await? {
+    let rows: Vec<(String, String, String)> =
+        sqlx::query_as(&format!(r#"SELECT "id", "key", "label" FROM "{table}""#))
+            .fetch_all(conn)
+            .await
+            .map_err(db_error)?;
+    let hit = rows.iter().any(|(id, k, l)| {
+        id != own
+            && (key.is_some_and(|v| k != v && fold(k) == fold(v))
+                || label.is_some_and(|v| fold(l) == fold(v)))
+    });
+    if hit {
         return Err(conflict(msg));
     }
     Ok(())

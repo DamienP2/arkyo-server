@@ -13,7 +13,7 @@ use serde_json::{json, Value};
 use sqlx::{Row, SqliteConnection};
 
 use super::{
-    any_row, arkyo_personal, db_error, list_rows, row_map, str_of, Def, Field, Fut, Hooks, Kind,
+    arkyo_personal, db_error, fold, list_rows, row_map, str_of, Def, Field, Fut, Hooks, Kind,
     NoHooks, Obj, Res, Table, NAME,
 };
 use crate::http::parametres::conflict;
@@ -98,14 +98,33 @@ impl Hooks for H {
                     None => existing.and_then(|e| str_of(e, k)).map(str::to_string),
                 }
             };
-            let (Some(name), Some(reference)) = (pick("name"), pick("reference")) else {
+            let Some(name) = pick("name") else {
                 return Ok(());
             };
+            let reference = pick("reference");
             let own = existing.and_then(|e| str_of(e, "id")).unwrap_or("");
-            let sql = r#"SELECT 1 FROM "TenantCableModel"
-                WHERE lower("name") = lower(?) AND "reference" IS NOT NULL AND lower("reference") = lower(?)
-                  AND NOT ("name" = ? AND "reference" = ?) AND "id" <> ? LIMIT 1"#;
-            if any_row(conn, sql, &[&name, &reference, &name, &reference, own]).await? {
+            let rows: Vec<(String, String, Option<String>)> =
+                sqlx::query_as(r#"SELECT "id", "name", "reference" FROM "TenantCableModel""#)
+                    .fetch_all(&mut *conn)
+                    .await
+                    .map_err(db_error)?;
+            for (id, n, r) in &rows {
+                if id == own || fold(n) != fold(&name) {
+                    continue;
+                }
+                let same_ref = match (&reference, r) {
+                    (None, None) => true,
+                    (Some(a), Some(b)) => fold(a) == fold(b),
+                    _ => false,
+                };
+                if !same_ref {
+                    continue;
+                }
+                // The unique index ignores NULL references, so an exact
+                // (name, NULL) duplicate is refused here.
+                if *n == name && reference.as_deref() == r.as_deref() {
+                    return Err(conflict(RES.unique_msg));
+                }
                 return Err(conflict(
                     "Un modèle de câble avec ce nom existe déjà dans le catalogue Arkyo.",
                 ));
