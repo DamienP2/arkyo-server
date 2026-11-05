@@ -23,7 +23,7 @@
 //! - a failing section still logs the audit row and publishes the event
 //!   when earlier sections were committed.
 
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, HashMap, HashSet};
 
 use arkyo_core::permissions::{Domain, Level};
 use axum::body::Bytes;
@@ -668,27 +668,28 @@ async fn delete_all(conn: &mut SqliteConnection, t: &Table) -> Result<i64, sqlx:
 /// no user, kept as is by a restore.
 const SEED_AUTHOR: &str = "system";
 
-/// Author of a restored row: the file's one when it exists here (a user or
-/// [`SEED_AUTHOR`]), else `fallback` (the restoring user).
-async fn known_author(
-    conn: &mut SqliteConnection,
-    data: &Obj,
-    fallback: &str,
-) -> Result<String, sqlx::Error> {
-    let Some(by) = str_of(data, "createdById") else {
-        return Ok(fallback.into());
-    };
-    if by == SEED_AUTHOR {
-        return Ok(by.into());
-    }
-    let found: Option<i64> = sqlx::query_scalar(r#"SELECT 1 FROM "User" WHERE "id" = ?"#)
-        .bind(by)
-        .fetch_optional(&mut *conn)
-        .await?;
-    Ok(if found.is_some() { by } else { fallback }.into())
+/// Authors a restored row may keep: every user of this server plus
+/// [`SEED_AUTHOR`]. Loaded once per section.
+async fn known_authors(conn: &mut SqliteConnection) -> Result<HashSet<String>, sqlx::Error> {
+    let mut ids: HashSet<String> = sqlx::query_scalar(r#"SELECT "id" FROM "User""#)
+        .fetch_all(&mut *conn)
+        .await?
+        .into_iter()
+        .collect();
+    ids.insert(SEED_AUTHOR.into());
+    Ok(ids)
 }
 
-/// `restoreSimpleModel`, with `createdById` resolved by [`known_author`]
+/// Author of a restored row: the file's one when it is in `known`, else
+/// `fallback` (the restoring user).
+fn author_of(data: &Obj, known: &HashSet<String>, fallback: &str) -> String {
+    match str_of(data, "createdById") {
+        Some(by) if known.contains(by) => by.into(),
+        _ => fallback.into(),
+    }
+}
+
+/// `restoreSimpleModel`, with `createdById` resolved by [`author_of`]
 /// when `author` is given.
 async fn restore_simple(
     conn: &mut SqliteConnection,
@@ -702,10 +703,14 @@ async fn restore_simple(
     if mode == Mode::Replace {
         rep.deleted = delete_all(conn, t).await?;
     }
+    let known = match author {
+        Some(_) => known_authors(conn).await?,
+        None => HashSet::new(),
+    };
     for (mut data, raw) in valid_rows(rows, allowed) {
         let id = str_of(&data, "id").unwrap_or("").to_string();
         if let Some(a) = author {
-            let by = known_author(conn, &data, a).await?;
+            let by = author_of(&data, &known, a);
             data.insert("createdById".into(), Value::String(by));
         }
         if mode == Mode::Replace || !exists(conn, t, &id).await? {
