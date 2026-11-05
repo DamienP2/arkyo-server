@@ -345,16 +345,8 @@ pub async fn invite(
                     }
                 }
             }
-            let res = async {
-                users::reset_password(&st.pool, &id, &password, true).await?;
-                users::set_role(&st.pool, &id, &role_key).await?;
-                users::set_active(&st.pool, &id, true).await
-            }
-            .await;
-            if let Err(e) = res {
-                return user_error(e);
-            }
-            // a sent name / username replaces the old ones
+            // a sent name / username replaces the old ones; written first,
+            // so that a taken username (409) leaves the account untouched
             if v.contains_key("name") || username.is_some() {
                 let upd = sqlx::query(
                     r#"UPDATE "User" SET "name" = COALESCE(?, "name"), "username" = COALESCE(?, "username") WHERE "id" = ?"#,
@@ -372,6 +364,15 @@ pub async fn invite(
                 if let Err(e) = upd {
                     return db_error(e);
                 }
+            }
+            let res = async {
+                users::reset_password(&st.pool, &id, &password, true).await?;
+                users::set_role(&st.pool, &id, &role_key).await?;
+                users::set_active(&st.pool, &id, true).await
+            }
+            .await;
+            if let Err(e) = res {
+                return user_error(e);
             }
             id
         }
@@ -481,6 +482,14 @@ pub async fn update(
         }
         if active == Some(false) && me.id == target.id {
             return bad("Impossible de vous retirer vous-même");
+        }
+        // reactivating grants the account's rights: its current role (a new
+        // one was checked above) must not exceed the caller's
+        if active == Some(true) && !target.is_active && !me_owner && new_key.is_none() {
+            let (_, target_perms) = role_permissions(&st.pool, &target.role_key).await;
+            if exceeds(&my_perms, &target_perms) {
+                return error(StatusCode::FORBIDDEN, NO_MORE_RIGHTS);
+            }
         }
     }
     if let Some(k) = &new_key {

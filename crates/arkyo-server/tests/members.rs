@@ -603,3 +603,115 @@ async fn reinvite_of_disabled_owner_needs_owner() {
     assert_eq!(r.body["name"], "Nouveau Nom");
     assert_eq!(r.body["username"], "nouveau");
 }
+
+/// Final review, Important 2: reactivating an account grants its rights, so a
+/// non-owner cannot reactivate a member whose current role exceeds their own.
+#[tokio::test]
+async fn non_owner_cannot_reactivate_member_above_own_rights() {
+    let (c, tm) = mgr_env().await;
+    let msg = "Vous ne pouvez pas accorder plus de droits que les vôtres";
+    sqlx::query(
+        r#"INSERT INTO "Role" ("id","key","label","permissions","createdAt","updatedAt")
+           VALUES ('r3','lecteur','Lecteur','{"projects":"read"}','2026-01-01T00:00:00.000Z','2026-01-01T00:00:00.000Z')"#,
+    )
+    .execute(&c.e.pool)
+    .await
+    .unwrap();
+    let marc = add_user(&c.e.pool, "marc@b.fr", "chef-projet", false).await;
+    let lea = add_user(&c.e.pool, "lea@b.fr", "lecteur", false).await;
+    for id in [&marc.id, &lea.id] {
+        let d = c.req("DELETE", &format!("{MEMBERS}/{id}"), None).await;
+        assert_eq!(d.status, StatusCode::OK);
+    }
+    let active = |id: String| {
+        let pool = c.e.pool.clone();
+        async move {
+            sqlx::query_scalar::<_, bool>(r#"SELECT "isActive" FROM "User" WHERE "id" = ?"#)
+                .bind(id)
+                .fetch_one(&pool)
+                .await
+                .unwrap()
+        }
+    };
+    let r = call(
+        &c.e.app,
+        "PATCH",
+        &format!("{MEMBERS}/{}", marc.id),
+        LOCAL,
+        Some(&tm),
+        Some(json!({"isActive": true})),
+    )
+    .await;
+    assert_eq!(r.status, StatusCode::FORBIDDEN, "{:?}", r.body);
+    assert_eq!(r.body["error"], msg);
+    assert!(!active(marc.id.clone()).await);
+    // a member within the caller's rights comes back
+    let r = call(
+        &c.e.app,
+        "PATCH",
+        &format!("{MEMBERS}/{}", lea.id),
+        LOCAL,
+        Some(&tm),
+        Some(json!({"isActive": true})),
+    )
+    .await;
+    assert_eq!(r.status, StatusCode::OK, "{:?}", r.body);
+    assert!(active(lea.id.clone()).await);
+    // the owner stays unrestricted
+    let r = c
+        .req(
+            "PATCH",
+            &format!("{MEMBERS}/{}", marc.id),
+            Some(json!({"isActive": true})),
+        )
+        .await;
+    assert_eq!(r.status, StatusCode::OK, "{:?}", r.body);
+    assert!(active(marc.id).await);
+}
+
+/// Final review, Minor 2: a re-invitation whose username is taken answers
+/// 409 and leaves the removed account untouched (password, role, state).
+#[tokio::test]
+async fn reinvite_with_taken_username_changes_nothing() {
+    let c = ctx().await;
+    let r = c
+        .req(
+            "POST",
+            MEMBERS,
+            Some(json!({"email":"m@b.fr","name":"M","roleKey":"consultation"})),
+        )
+        .await;
+    let id = r.body["id"].as_str().unwrap().to_string();
+    let r = c
+        .req(
+            "POST",
+            MEMBERS,
+            Some(json!({"email":"p@b.fr","name":"P","username":"pris","roleKey":"consultation"})),
+        )
+        .await;
+    assert_eq!(r.status, StatusCode::CREATED, "{:?}", r.body);
+    let d = c.req("DELETE", &format!("{MEMBERS}/{id}"), None).await;
+    assert_eq!(d.status, StatusCode::OK);
+    let snapshot = || {
+        let (pool, id) = (c.e.pool.clone(), id.clone());
+        async move {
+            sqlx::query_as::<_, (String, String, bool, bool, Option<String>, Option<String>)>(
+                r#"SELECT "passwordHash","roleKey","isActive","mustChangePassword","name","username" FROM "User" WHERE "id" = ?"#,
+            )
+            .bind(id)
+            .fetch_one(&pool)
+            .await
+            .unwrap()
+        }
+    };
+    let before = snapshot().await;
+    let r = c
+        .req(
+            "POST",
+            MEMBERS,
+            Some(json!({"email":"m@b.fr","name":"Autre","username":"pris","roleKey":"technicien"})),
+        )
+        .await;
+    assert_eq!(r.status, StatusCode::CONFLICT, "{:?}", r.body);
+    assert_eq!(snapshot().await, before);
+}
