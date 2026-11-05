@@ -232,7 +232,7 @@ async fn must_change_password_blocks_api_until_changed() {
     assert_eq!(ok.body, json!({"ok": true}));
     let site = call(&e.app, "GET", "/api/site", LOCAL, Some(&tok), None).await;
     assert_eq!(site.status, StatusCode::OK);
-    assert_eq!(site.body, json!({"name": ""}));
+    assert_eq!(site.body, json!({"name": "", "logoUrl": null}));
     // other sessions were revoked
     let gone = call(
         &e.app,

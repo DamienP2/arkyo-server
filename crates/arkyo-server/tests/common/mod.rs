@@ -102,13 +102,17 @@ pub async fn call(
 
 /// Logs in and returns the raw session token.
 pub async fn login(app: &Router, ident: &str) -> String {
+    login_with(app, ident, "secret123").await
+}
+
+pub async fn login_with(app: &Router, ident: &str, password: &str) -> String {
     let r = call(
         app,
         "POST",
         "/api/auth/login",
         LOCAL,
         None,
-        Some(serde_json::json!({"identifier": ident, "password": "secret123"})),
+        Some(serde_json::json!({"identifier": ident, "password": password})),
     )
     .await;
     assert_eq!(r.status, StatusCode::OK, "{:?}", r.body);

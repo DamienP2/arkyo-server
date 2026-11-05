@@ -3,11 +3,15 @@
 mod admin;
 mod auth;
 mod catalogue;
+mod espace;
 mod events;
 mod me;
+mod members;
 mod notifications;
 pub(crate) mod parametres;
 mod presence;
+mod profile;
+mod roles;
 mod system;
 mod upload;
 
@@ -166,6 +170,21 @@ pub fn router(state: AppState) -> Router {
         .route("/auth/password", post(auth::change_password))
         .route("/tenant/me/permissions", get(me::permissions))
         .route("/site", get(me::site))
+        .route("/tenant/members", get(members::list).post(members::invite))
+        .route(
+            "/tenant/members/{id}",
+            axum::routing::patch(members::update).delete(members::remove),
+        )
+        .route("/tenant/roles", get(roles::list).post(roles::create))
+        .route(
+            "/tenant/roles/{id}",
+            axum::routing::patch(roles::update).delete(roles::remove),
+        )
+        .route("/tenant/profile", get(profile::get).patch(profile::patch))
+        .route(
+            "/tenant/espace/informations",
+            get(espace::get).patch(espace::patch),
+        )
         .route("/platform/locale", post(me::locale))
         .route(
             "/notifications",

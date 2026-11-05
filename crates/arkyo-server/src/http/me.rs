@@ -16,13 +16,8 @@ pub async fn permissions(State(st): State<AppState>, CurrentUser(u): CurrentUser
 }
 
 pub async fn site(State(st): State<AppState>, _: CurrentUser) -> Json<Value> {
-    let name: Option<String> =
-        sqlx::query_scalar(r#"SELECT "value" FROM "AppConfig" WHERE "key" = 'site.name'"#)
-            .fetch_optional(&st.pool)
-            .await
-            .ok()
-            .flatten();
-    Json(json!({ "name": name.unwrap_or_default() }))
+    let (name, logo_url) = super::espace::read(&st.pool).await;
+    Json(json!({ "name": name, "logoUrl": logo_url }))
 }
 
 const LOCALES: [&str; 5] = ["fr", "en", "es", "de", "it"];
