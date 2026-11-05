@@ -462,11 +462,28 @@ const printSettings = {
   watermarkUrl: null, watermarkOpacity: 0.1, pdfOptions: {},
 };
 
+// System anchors of the functions (CatalogFunction.systemCategory, unique):
+// in arkyo only the supervisor assigns them (functions-panel), never a seed.
+// arkyo-server has no supervisor, and the project tabs Vidéo / Audio /
+// Lumières / Réseau (lib/services/schema-sync.ts) look them up, so the seeds
+// set them (arkyo-server ruling, 2026-11-05). Function key → anchor:
+const SYSTEM_CATEGORIES = {
+  VIDEO: "VIDEO", // « Vidéo »
+  AUDIO: "AUDIO", // « Audio »
+  LUMIERES: "LUMIERES", // « Lumières »
+  DATA: "RESEAU", // « Data (IT) » : the network function of the seeds
+};
+for (const key of Object.keys(SYSTEM_CATEGORIES)) {
+  if (!store.catalogFunction.some((f) => f.key === key)) throw new Error(`fonction ${key} absente des seeds`);
+}
+
 const FAMILIES = [
   {
     family: "functions", source: "app/api/supervisor/dev/seed-functions/route.ts",
     tables: [["TenantFunction", store.catalogFunction.map((r) => ({
-      ...pick(r, ["id", "key", "label", "color", "cablePrefix", "cableSuffix", "systemCategory", "sortOrder"]),
+      ...pick(r, ["id", "key", "label", "color", "cablePrefix", "cableSuffix"]),
+      systemCategory: SYSTEM_CATEGORIES[r.key] ?? r.systemCategory,
+      ...pick(r, ["sortOrder"]),
       isActive: true,
     }))]],
   },

@@ -6,40 +6,40 @@
       "table": "TenantFunction",
       "rows": [
         {
-          "id": "cmw3l7xmg0001mydisfhpmpdg",
+          "id": "cmw3lgks60001gbdif27mvipl",
           "key": "VIDEO",
           "label": "Vidéo",
           "color": "#3b82f6",
           "cablePrefix": "V",
           "cableSuffix": null,
-          "systemCategory": null,
+          "systemCategory": "VIDEO",
           "sortOrder": 1,
           "isActive": true
         },
         {
-          "id": "cmw3l7xmg0002mydihyfu3n1k",
+          "id": "cmw3lgks60002gbdimngnv3ir",
           "key": "AUDIO",
           "label": "Audio",
           "color": "#f59e0b",
           "cablePrefix": "A",
           "cableSuffix": null,
-          "systemCategory": null,
+          "systemCategory": "AUDIO",
           "sortOrder": 2,
           "isActive": true
         },
         {
-          "id": "cmw3l7xmg0003mydiia2kzr9o",
+          "id": "cmw3lgks60003gbdi9qmr9hvo",
           "key": "LUMIERES",
           "label": "Lumières",
           "color": "#facc15",
           "cablePrefix": "L",
           "cableSuffix": null,
-          "systemCategory": null,
+          "systemCategory": "LUMIERES",
           "sortOrder": 3,
           "isActive": true
         },
         {
-          "id": "cmw3l7xmg0004mydist83yzue",
+          "id": "cmw3lgks60004gbdi1md8npdg",
           "key": "CONTROLE",
           "label": "Contrôle",
           "color": "#a855f7",
@@ -50,7 +50,7 @@
           "isActive": true
         },
         {
-          "id": "cmw3l7xmg0005mydiigozc28p",
+          "id": "cmw3lgks60005gbdizkdrjpxw",
           "key": "ENERGIE",
           "label": "Énergie",
           "color": "#ef4444",
@@ -61,18 +61,18 @@
           "isActive": true
         },
         {
-          "id": "cmw3l7xmg0006mydiqv6774yl",
+          "id": "cmw3lgks60006gbdivi49ngcp",
           "key": "DATA",
           "label": "Data (IT)",
           "color": "#06b6d4",
           "cablePrefix": "N",
           "cableSuffix": null,
-          "systemCategory": null,
+          "systemCategory": "RESEAU",
           "sortOrder": 6,
           "isActive": true
         },
         {
-          "id": "cmw3l7xmg0007mydi6jjmjgud",
+          "id": "cmw3lgks60007gbdi0tnvmwg5",
           "key": "SYNC",
           "label": "Synchronisation",
           "color": "#10b981",
@@ -83,7 +83,7 @@
           "isActive": true
         },
         {
-          "id": "cmw3l7xmg0008mydimfbc1gjf",
+          "id": "cmw3lgks60008gbdiwmu4wfja",
           "key": "RF",
           "label": "RF / Sans-fil",
           "color": "#ec4899",
@@ -94,7 +94,7 @@
           "isActive": true
         },
         {
-          "id": "cmw3l7xmg0009mydivpvljlpu",
+          "id": "cmw3lgks60009gbdi5rsi5eai",
           "key": "INTERCOM",
           "label": "Intercom",
           "color": "#8b5cf6",
@@ -105,7 +105,7 @@
           "isActive": true
         },
         {
-          "id": "cmw3l7xmg000amydif3nkms0a",
+          "id": "cmw3lgks6000agbdi6xyo19w8",
           "key": "FLUX_IP",
           "label": "Flux IP",
           "color": "#14b8a6",
@@ -116,7 +116,7 @@
           "isActive": true
         },
         {
-          "id": "cmw3l7xmg000bmydiqdazjta2",
+          "id": "cmw3lgks6000bgbdi9vledv4x",
           "key": "AUTRES",
           "label": "Autres",
           "color": "#71717a",

@@ -6,7 +6,7 @@
       "table": "CatalogSymbol",
       "rows": [
         {
-          "id": "cmw3l7xn100czmydi22gs878a",
+          "id": "cmw3lgksr00czgbdiy2b3ipoz",
           "key": "bnc",
           "label": "BNC",
           "isBuiltin": true,
@@ -15,7 +15,7 @@
           "sortOrder": 0
         },
         {
-          "id": "cmw3l7xn100d0mydi6duhjcxk",
+          "id": "cmw3lgksr00d0gbdi5hatq23w",
           "key": "microbnc",
           "label": "Micro-BNC (HD-BNC)",
           "isBuiltin": true,
@@ -24,7 +24,7 @@
           "sortOrder": 1
         },
         {
-          "id": "cmw3l7xn100d1mydihgs0e6yl",
+          "id": "cmw3lgksr00d1gbdip9d8krx6",
           "key": "din102",
           "label": "DIN 1.0/2.3",
           "isBuiltin": true,
@@ -33,7 +33,7 @@
           "sortOrder": 2
         },
         {
-          "id": "cmw3l7xn100d2mydixpsx90oa",
+          "id": "cmw3lgksr00d2gbdij9souzbz",
           "key": "triax",
           "label": "Triax",
           "isBuiltin": true,
@@ -42,7 +42,7 @@
           "sortOrder": 3
         },
         {
-          "id": "cmw3l7xn100d3mydif5r4tqav",
+          "id": "cmw3lgksr00d3gbdiy6dimpo9",
           "key": "smpte",
           "label": "SMPTE 311M",
           "isBuiltin": true,
@@ -51,7 +51,7 @@
           "sortOrder": 4
         },
         {
-          "id": "cmw3l7xn100d4mydivyer4vwk",
+          "id": "cmw3lgksr00d4gbdii8iuqvq5",
           "key": "f",
           "label": "Fiche F",
           "isBuiltin": true,
@@ -60,7 +60,7 @@
           "sortOrder": 5
         },
         {
-          "id": "cmw3l7xn100d5mydieje1pf5m",
+          "id": "cmw3lgksr00d5gbdidde9db0a",
           "key": "n",
           "label": "Fiche N",
           "isBuiltin": true,
@@ -69,7 +69,7 @@
           "sortOrder": 6
         },
         {
-          "id": "cmw3l7xn100d6mydipwimjq7w",
+          "id": "cmw3lgksr00d6gbdims3wnrwe",
           "key": "sma",
           "label": "SMA",
           "isBuiltin": true,
@@ -78,7 +78,7 @@
           "sortOrder": 7
         },
         {
-          "id": "cmw3l7xn100d7mydinqm8r1a2",
+          "id": "cmw3lgksr00d7gbdie9orach1",
           "key": "rca",
           "label": "RCA",
           "isBuiltin": true,
@@ -87,7 +87,7 @@
           "sortOrder": 8
         },
         {
-          "id": "cmw3l7xn100d8mydimpvvj1zi",
+          "id": "cmw3lgksr00d8gbdiyqmzm5qg",
           "key": "hdmi",
           "label": "HDMI",
           "isBuiltin": true,
@@ -96,7 +96,7 @@
           "sortOrder": 9
         },
         {
-          "id": "cmw3l7xn100d9mydi69g4py1f",
+          "id": "cmw3lgksr00d9gbdi6o7ke1nn",
           "key": "microhdmi",
           "label": "Micro-HDMI",
           "isBuiltin": true,
@@ -105,7 +105,7 @@
           "sortOrder": 10
         },
         {
-          "id": "cmw3l7xn100damydicjyr2ih3",
+          "id": "cmw3lgksr00dagbdishff1jbt",
           "key": "dp",
           "label": "DisplayPort",
           "isBuiltin": true,
@@ -114,7 +114,7 @@
           "sortOrder": 11
         },
         {
-          "id": "cmw3l7xn200dbmydi78zzib63",
+          "id": "cmw3lgksr00dbgbdivq547bpg",
           "key": "minidp",
           "label": "Mini-DisplayPort",
           "isBuiltin": true,
@@ -123,7 +123,7 @@
           "sortOrder": 12
         },
         {
-          "id": "cmw3l7xn200dcmydi1d0x1tck",
+          "id": "cmw3lgksr00dcgbdiqlx9gbei",
           "key": "dvi",
           "label": "DVI",
           "isBuiltin": true,
@@ -132,7 +132,7 @@
           "sortOrder": 13
         },
         {
-          "id": "cmw3l7xn200ddmydi6hc3eyum",
+          "id": "cmw3lgksr00ddgbdivbb7orwa",
           "key": "dsub",
           "label": "D-sub (VGA/DB9/DB25)",
           "isBuiltin": true,
@@ -141,7 +141,7 @@
           "sortOrder": 14
         },
         {
-          "id": "cmw3l7xn200demydispe3kdyr",
+          "id": "cmw3lgksr00degbdi873cmld0",
           "key": "xlr3",
           "label": "XLR 3",
           "isBuiltin": true,
@@ -150,7 +150,7 @@
           "sortOrder": 15
         },
         {
-          "id": "cmw3l7xn200dfmydita253msi",
+          "id": "cmw3lgksr00dfgbdi5utnvt50",
           "key": "xlr4",
           "label": "XLR 4",
           "isBuiltin": true,
@@ -159,7 +159,7 @@
           "sortOrder": 16
         },
         {
-          "id": "cmw3l7xn200dgmydit6oez55i",
+          "id": "cmw3lgksr00dggbdieeru4tcm",
           "key": "xlr5",
           "label": "XLR 5",
           "isBuiltin": true,
@@ -168,7 +168,7 @@
           "sortOrder": 17
         },
         {
-          "id": "cmw3l7xn200dhmydii4neew45",
+          "id": "cmw3lgksr00dhgbdi53fk3m8s",
           "key": "minixlr",
           "label": "Mini-XLR",
           "isBuiltin": true,
@@ -177,7 +177,7 @@
           "sortOrder": 18
         },
         {
-          "id": "cmw3l7xn200dimydi2blbsdxv",
+          "id": "cmw3lgksr00digbdit4h8n7qt",
           "key": "jack635",
           "label": "Jack 6.35",
           "isBuiltin": true,
@@ -186,7 +186,7 @@
           "sortOrder": 19
         },
         {
-          "id": "cmw3l7xn200djmydiotpyr2i0",
+          "id": "cmw3lgksr00djgbdi3gm854ju",
           "key": "jack35",
           "label": "Mini-jack 3.5",
           "isBuiltin": true,
@@ -195,7 +195,7 @@
           "sortOrder": 20
         },
         {
-          "id": "cmw3l7xn200dkmydipyhdpbl5",
+          "id": "cmw3lgksr00dkgbdin28fy2bd",
           "key": "bantam",
           "label": "Bantam TT",
           "isBuiltin": true,
@@ -204,7 +204,7 @@
           "sortOrder": 21
         },
         {
-          "id": "cmw3l7xn200dlmydimw1i9yxh",
+          "id": "cmw3lgksr00dlgbdiv015cydf",
           "key": "speakon",
           "label": "speakON",
           "isBuiltin": true,
@@ -213,7 +213,7 @@
           "sortOrder": 22
         },
         {
-          "id": "cmw3l7xn200dmmydiaywrwssb",
+          "id": "cmw3lgksr00dmgbdidamgjpzf",
           "key": "din5",
           "label": "DIN 5 (MIDI)",
           "isBuiltin": true,
@@ -222,7 +222,7 @@
           "sortOrder": 23
         },
         {
-          "id": "cmw3l7xn200dnmydigr14dweo",
+          "id": "cmw3lgksr00dngbdi2x8jcape",
           "key": "euroblock",
           "label": "Euroblock",
           "isBuiltin": true,
@@ -231,7 +231,7 @@
           "sortOrder": 24
         },
         {
-          "id": "cmw3l7xn200domydi1uo1xbrb",
+          "id": "cmw3lgksr00dogbdixfza23fp",
           "key": "toslink",
           "label": "TOSLINK",
           "isBuiltin": true,
@@ -240,7 +240,7 @@
           "sortOrder": 25
         },
         {
-          "id": "cmw3l7xn200dpmydia51gtret",
+          "id": "cmw3lgksr00dpgbdi5tpuq7an",
           "key": "rj45",
           "label": "RJ45",
           "isBuiltin": true,
@@ -249,7 +249,7 @@
           "sortOrder": 26
         },
         {
-          "id": "cmw3l7xn200dqmydi1a1e3dz1",
+          "id": "cmw3lgksr00dqgbdin2if8jrs",
           "key": "usba",
           "label": "USB-A",
           "isBuiltin": true,
@@ -258,7 +258,7 @@
           "sortOrder": 27
         },
         {
-          "id": "cmw3l7xn200drmydiwsyu90zv",
+          "id": "cmw3lgksr00drgbdilulc7klk",
           "key": "usbb",
           "label": "USB-B",
           "isBuiltin": true,
@@ -267,7 +267,7 @@
           "sortOrder": 28
         },
         {
-          "id": "cmw3l7xn200dsmydif53y84vu",
+          "id": "cmw3lgksr00dsgbdieq1z54zz",
           "key": "usbc",
           "label": "USB-C",
           "isBuiltin": true,
@@ -276,7 +276,7 @@
           "sortOrder": 29
         },
         {
-          "id": "cmw3l7xn200dtmydim6iqcl8v",
+          "id": "cmw3lgksr00dtgbdi9f7a0n60",
           "key": "microusb",
           "label": "Micro-USB",
           "isBuiltin": true,
@@ -285,7 +285,7 @@
           "sortOrder": 30
         },
         {
-          "id": "cmw3l7xn200dumydizv1z395h",
+          "id": "cmw3lgksr00dugbdirzrhdtzj",
           "key": "sfp",
           "label": "SFP",
           "isBuiltin": true,
@@ -294,7 +294,7 @@
           "sortOrder": 31
         },
         {
-          "id": "cmw3l7xn200dvmydi8p9spi04",
+          "id": "cmw3lgkss00dvgbdijlsqt8yr",
           "key": "lc",
           "label": "LC",
           "isBuiltin": true,
@@ -303,7 +303,7 @@
           "sortOrder": 32
         },
         {
-          "id": "cmw3l7xn200dwmydichjsi8ii",
+          "id": "cmw3lgkss00dwgbdi39m4ehwg",
           "key": "sc",
           "label": "SC",
           "isBuiltin": true,
@@ -312,7 +312,7 @@
           "sortOrder": 33
         },
         {
-          "id": "cmw3l7xn200dxmydiqbyneif7",
+          "id": "cmw3lgkss00dxgbdiz9dqcx2t",
           "key": "st",
           "label": "ST",
           "isBuiltin": true,
@@ -321,7 +321,7 @@
           "sortOrder": 34
         },
         {
-          "id": "cmw3l7xn200dymydif7rvedly",
+          "id": "cmw3lgkss00dygbdiyxt2gsbp",
           "key": "mtp",
           "label": "MPO/MTP",
           "isBuiltin": true,
@@ -330,7 +330,7 @@
           "sortOrder": 35
         },
         {
-          "id": "cmw3l7xn200dzmydi741fot00",
+          "id": "cmw3lgkss00dzgbdi8bfr6yym",
           "key": "powercon",
           "label": "powerCON",
           "isBuiltin": true,
@@ -339,7 +339,7 @@
           "sortOrder": 36
         },
         {
-          "id": "cmw3l7xn200e0mydi9e0jee0t",
+          "id": "cmw3lgkss00e0gbdi7cu25940",
           "key": "true1",
           "label": "powerCON TRUE1",
           "isBuiltin": true,
@@ -348,7 +348,7 @@
           "sortOrder": 37
         },
         {
-          "id": "cmw3l7xn200e1mydidqalfq9c",
+          "id": "cmw3lgkss00e1gbdixiyqmeh8",
           "key": "iec13",
           "label": "IEC C13",
           "isBuiltin": true,
@@ -357,7 +357,7 @@
           "sortOrder": 38
         },
         {
-          "id": "cmw3l7xn200e2mydihtwot134",
+          "id": "cmw3lgkss00e2gbdiy6fww936",
           "key": "iec19",
           "label": "IEC C19",
           "isBuiltin": true,
@@ -366,7 +366,7 @@
           "sortOrder": 39
         },
         {
-          "id": "cmw3l7xn200e3mydilvcrojme",
+          "id": "cmw3lgkss00e3gbdiqa0iliyk",
           "key": "schuko",
           "label": "Schuko",
           "isBuiltin": true,
@@ -375,7 +375,7 @@
           "sortOrder": 40
         },
         {
-          "id": "cmw3l7xn200e4mydihir76e37",
+          "id": "cmw3lgkss00e4gbdis4longfy",
           "key": "cee16",
           "label": "CEE P17 mono",
           "isBuiltin": true,
@@ -384,7 +384,7 @@
           "sortOrder": 41
         },
         {
-          "id": "cmw3l7xn200e5mydiw5kfkac1",
+          "id": "cmw3lgkss00e5gbdicmelgwgk",
           "key": "cee32",
           "label": "CEE P17 tri",
           "isBuiltin": true,
@@ -393,7 +393,7 @@
           "sortOrder": 42
         },
         {
-          "id": "cmw3l7xn200e6mydi9zewwb38",
+          "id": "cmw3lgkss00e6gbdidn60h8e3",
           "key": "socapex",
           "label": "Socapex",
           "isBuiltin": true,
@@ -402,7 +402,7 @@
           "sortOrder": 43
         },
         {
-          "id": "cmw3l7xn200e7mydiem1fqcxz",
+          "id": "cmw3lgkss00e7gbdijaxlqs5i",
           "key": "harting",
           "label": "Harting",
           "isBuiltin": true,
@@ -411,7 +411,7 @@
           "sortOrder": 44
         },
         {
-          "id": "cmw3l7xn200e8mydi0mer8xvp",
+          "id": "cmw3lgkss00e8gbdibk0jlzff",
           "key": "gst18",
           "label": "Wieland GST18",
           "isBuiltin": true,
@@ -420,7 +420,7 @@
           "sortOrder": 45
         },
         {
-          "id": "cmw3l7xn200e9mydiinbg13pi",
+          "id": "cmw3lgkss00e9gbdiirac77wk",
           "key": "camlock",
           "label": "Camlock/Powerlock",
           "isBuiltin": true,
@@ -429,7 +429,7 @@
           "sortOrder": 46
         },
         {
-          "id": "cmw3l7xn200eamydifiue9rto",
+          "id": "cmw3lgkss00eagbdiz8pfmn8x",
           "key": "lemo",
           "label": "Lemo",
           "isBuiltin": true,
@@ -438,7 +438,7 @@
           "sortOrder": 47
         },
         {
-          "id": "cmw3l7xn200ebmydil0ar42v6",
+          "id": "cmw3lgkss00ebgbdiws6djmw1",
           "key": "hirose",
           "label": "Hirose HR10",
           "isBuiltin": true,

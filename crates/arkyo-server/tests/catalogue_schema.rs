@@ -603,3 +603,64 @@ async fn type_names_are_unique_per_parent() {
     );
     insert("s3", "Racine", Some("r1")).await.unwrap();
 }
+
+#[tokio::test]
+async fn seeded_functions_carry_system_anchors() {
+    // arkyo-server ruling: no supervisor here, so the seeds set the four
+    // system anchors the project tabs look up (schema-sync).
+    let d = tempfile::tempdir().unwrap();
+    let pool = open(d.path()).await.unwrap();
+    let anchors: Vec<(String, String)> = sqlx::query_as(
+        "SELECT key, systemCategory FROM TenantFunction WHERE systemCategory IS NOT NULL ORDER BY systemCategory",
+    )
+    .fetch_all(&pool)
+    .await
+    .unwrap();
+    let anchors: Vec<(&str, &str)> = anchors
+        .iter()
+        .map(|(k, c)| (k.as_str(), c.as_str()))
+        .collect();
+    assert_eq!(
+        anchors,
+        [
+            ("AUDIO", "AUDIO"),
+            ("LUMIERES", "LUMIERES"),
+            ("DATA", "RESEAU"),
+            ("VIDEO", "VIDEO"),
+        ]
+    );
+    // The column stays unique.
+    let dup = sqlx::query("UPDATE TenantFunction SET systemCategory = 'VIDEO' WHERE key = 'AUDIO'")
+        .execute(&pool)
+        .await;
+    assert!(dup.is_err(), "systemCategory must stay unique");
+}
+
+#[tokio::test]
+async fn seeded_rows_are_dated_in_file_order() {
+    // arkyo lists adapters, cords… by createdAt: seeded rows get increasing
+    // dates in file order, so the order is deterministic.
+    let d = tempfile::tempdir().unwrap();
+    let pool = open(d.path()).await.unwrap();
+    let files = seed_files();
+    for (family, f) in &files {
+        let mut previous: Option<String> = None;
+        for t in f["tables"].as_array().unwrap() {
+            let table = t["table"].as_str().unwrap();
+            for r in t["rows"].as_array().unwrap() {
+                let (created, updated): (String, String) = sqlx::query_as(&format!(
+                    "SELECT createdAt, updatedAt FROM \"{table}\" WHERE id = ?"
+                ))
+                .bind(r["id"].as_str().unwrap())
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+                assert_eq!(created, updated, "{family}");
+                if let Some(p) = &previous {
+                    assert!(created > *p, "{family}: {created} not after {p}");
+                }
+                previous = Some(created);
+            }
+        }
+    }
+}

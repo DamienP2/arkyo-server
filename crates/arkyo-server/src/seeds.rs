@@ -280,12 +280,19 @@ async fn is_empty(conn: &mut SqliteConnection, family: &Family) -> anyhow::Resul
 
 /// Inserts the rows of a family; a row that collides with an existing one
 /// (same id, or same unique key) is skipped. Returns the rows inserted.
+///
+/// `createdAt` / `updatedAt` are staggered by one millisecond per row in file
+/// order: arkyo lists several referentials by `createdAt` (adapters,
+/// cords…), and its rows were created one after the other in seed order.
 async fn insert_family(conn: &mut SqliteConnection, family: &Family) -> anyhow::Result<u64> {
     let mut inserted = 0;
-    let now = now_iso();
+    let base = jiff::Timestamp::now();
+    let mut index: i64 = 0;
     for t in &family.tables {
         let table = quote(&t.table)?;
         for row in &t.rows {
+            let stamp = stamp_at(base, index);
+            index += 1;
             let mut cols = Vec::with_capacity(row.len() + 2);
             for c in row.keys() {
                 cols.push(quote(c)?);
@@ -316,7 +323,7 @@ async fn insert_family(conn: &mut SqliteConnection, family: &Family) -> anyhow::
                 };
             }
             for _ in &stamps {
-                q = q.bind(now.as_str());
+                q = q.bind(stamp.as_str());
             }
             let r = q
                 .execute(&mut *conn)
@@ -326,6 +333,13 @@ async fn insert_family(conn: &mut SqliteConnection, family: &Family) -> anyhow::
         }
     }
     Ok(inserted)
+}
+
+/// `base + millis` in the format of [`now_iso`].
+fn stamp_at(base: jiff::Timestamp, millis: i64) -> String {
+    (base + jiff::SignedDuration::from_millis(millis))
+        .strftime("%Y-%m-%dT%H:%M:%S%.3fZ")
+        .to_string()
 }
 
 /// Quotes an identifier of a seed file (letters only: they come from the

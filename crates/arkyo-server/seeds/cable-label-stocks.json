@@ -6,10 +6,10 @@
       "table": "TenantCableLabelStock",
       "rows": [
         {
-          "id": "cmw3l7xnp00pqmydiv7k0em3y",
+          "id": "cmw3lgkte00pqgbdi4hwt9e7u",
           "name": "LCK 19 4 YE",
           "reference": "83256135",
-          "brandId": "cmw3l7xnp00ppmydiiikfm24c",
+          "brandId": "cmw3lgkte00ppgbdiypt0f244",
           "description": "Valeurs estimées sur la nomenclature LAPP — à corriger avec datasheet officielle.",
           "datasheetUrl": null,
           "paperFormat": "A4",
@@ -34,10 +34,10 @@
           "isActive": true
         },
         {
-          "id": "cmw3l7xnp00prmydixk07iu4i",
+          "id": "cmw3lgkte00prgbdixfoji6xm",
           "name": "LCK 25 8 YE",
           "reference": "83256138",
-          "brandId": "cmw3l7xnp00ppmydiiikfm24c",
+          "brandId": "cmw3lgkte00ppgbdiypt0f244",
           "description": "Valeurs estimées sur la nomenclature LAPP — à corriger avec datasheet officielle.",
           "datasheetUrl": null,
           "paperFormat": "A4",
@@ -62,10 +62,10 @@
           "isActive": true
         },
         {
-          "id": "cmw3l7xnp00psmydi41s4wsjs",
+          "id": "cmw3lgkte00psgbdiwvmzw46l",
           "name": "LCK 32 12 YE",
           "reference": "83256140",
-          "brandId": "cmw3l7xnp00ppmydiiikfm24c",
+          "brandId": "cmw3lgkte00ppgbdiypt0f244",
           "description": "Valeurs estimées sur la nomenclature LAPP — à corriger avec datasheet officielle.",
           "datasheetUrl": null,
           "paperFormat": "A4",
@@ -90,10 +90,10 @@
           "isActive": true
         },
         {
-          "id": "cmw3l7xnp00ptmydiphxde38l",
+          "id": "cmw3lgkte00ptgbdia437b2nc",
           "name": "LCK 32 12.5+30 YE",
           "reference": "83256144",
-          "brandId": "cmw3l7xnp00ppmydiiikfm24c",
+          "brandId": "cmw3lgkte00ppgbdiypt0f244",
           "description": "Valeurs estimées sur la nomenclature LAPP — à corriger avec datasheet officielle.",
           "datasheetUrl": null,
           "paperFormat": "A4",
@@ -118,10 +118,10 @@
           "isActive": true
         },
         {
-          "id": "cmw3l7xnq00pumydi3erwbet9",
+          "id": "cmw3lgkte00pugbdi2980c15e",
           "name": "LCK 40 YE",
           "reference": "83256146",
-          "brandId": "cmw3l7xnp00ppmydiiikfm24c",
+          "brandId": "cmw3lgkte00ppgbdiypt0f244",
           "description": "Valeurs vérifiées via datasheet LAPP officielle.",
           "datasheetUrl": null,
           "paperFormat": "A4",
@@ -146,10 +146,10 @@
           "isActive": true
         },
         {
-          "id": "cmw3l7xnq00pvmydijir9cesh",
+          "id": "cmw3lgkte00pvgbdit0pz2fpo",
           "name": "LCK 50 16+50 YE",
           "reference": "83256150",
-          "brandId": "cmw3l7xnp00ppmydiiikfm24c",
+          "brandId": "cmw3lgkte00ppgbdiypt0f244",
           "description": "Valeurs estimées sur la nomenclature LAPP — à corriger avec datasheet officielle.",
           "datasheetUrl": null,
           "paperFormat": "A4",
@@ -174,10 +174,10 @@
           "isActive": true
         },
         {
-          "id": "cmw3l7xnq00pwmydizyp6ubwh",
+          "id": "cmw3lgkte00pwgbdit09v2bzm",
           "name": "LCK 65 19+60 YE",
           "reference": "83256152",
-          "brandId": "cmw3l7xnp00ppmydiiikfm24c",
+          "brandId": "cmw3lgkte00ppgbdiypt0f244",
           "description": "Valeurs estimées sur la nomenclature LAPP — à corriger avec datasheet officielle.",
           "datasheetUrl": null,
           "paperFormat": "A4",
@@ -202,10 +202,10 @@
           "isActive": true
         },
         {
-          "id": "cmw3l7xnq00pxmydisgw5l83r",
+          "id": "cmw3lgkte00pxgbditdxc3j3d",
           "name": "LCK 100 25+90 YE",
           "reference": "83256156",
-          "brandId": "cmw3l7xnp00ppmydiiikfm24c",
+          "brandId": "cmw3lgkte00ppgbdiypt0f244",
           "description": "Valeurs estimées sur la nomenclature LAPP — à corriger avec datasheet officielle.",
           "datasheetUrl": null,
           "paperFormat": "A4",
