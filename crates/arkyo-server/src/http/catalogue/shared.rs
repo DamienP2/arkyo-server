@@ -75,7 +75,7 @@ impl Spec {
 }
 
 /// `null` on a JSON-array column is stored as `[]` (arkyo's `toJson`).
-fn null_arrays_to_empty(vals: &mut Obj, fields: &[Field]) {
+pub(super) fn null_arrays_to_empty(vals: &mut Obj, fields: &[Field]) {
     for f in fields {
         if matches!(f.kind, Kind::AnyArr | Kind::StrArr | Kind::NumArr)
             && vals.get(f.name) == Some(&Value::Null)
@@ -85,7 +85,7 @@ fn null_arrays_to_empty(vals: &mut Obj, fields: &[Field]) {
     }
 }
 
-async fn insert(
+pub(super) async fn insert(
     tx: &mut SqliteConnection,
     table: &Table,
     id: &str,
@@ -120,7 +120,7 @@ async fn insert(
     Ok(())
 }
 
-async fn commit(tx: sqlx::Transaction<'static, sqlx::Sqlite>) -> Result<(), Response> {
+pub(super) async fn commit(tx: sqlx::Transaction<'static, sqlx::Sqlite>) -> Result<(), Response> {
     tx.commit().await.map_err(db_error)
 }
 

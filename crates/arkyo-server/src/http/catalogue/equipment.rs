@@ -17,13 +17,14 @@ use serde_json::{json, Value};
 use sqlx::SqliteConnection;
 
 use super::assert_can_write;
+use super::shared;
 use crate::audit;
 use crate::catalogue::duplicate::{copy_values, matches};
 use crate::catalogue::enrich::{enrich_equipment, Refs, CATEGORY, EQUIPMENT};
 use crate::catalogue::in_use;
 use crate::http::parametres::{
     bad, begin, bind, db_error, fold, get_row, list_rows, parse_body, str_of, validate, Def, Field,
-    Kind, Obj,
+    Kind,
 };
 use crate::http::{error, server_error, AppState, CurrentUser};
 use crate::ids::{new_id, now_iso};
@@ -118,15 +119,6 @@ fn truthy(v: Option<&Value>) -> bool {
     v == Some(&Value::Bool(true))
 }
 
-/// `null` on a JSON-array column is stored as `[]` (arkyo's `toJson`).
-fn null_arrays_to_empty(vals: &mut Obj, fields: &[Field]) {
-    for f in fields {
-        if matches!(f.kind, Kind::AnyArr) && vals.get(f.name) == Some(&Value::Null) {
-            vals.insert(f.name.into(), Value::Array(vec![]));
-        }
-    }
-}
-
 /// `category` (a name) → the id of the category with that name.
 async fn category_id_by_name(
     conn: &mut SqliteConnection,
@@ -140,44 +132,6 @@ async fn category_id_by_name(
     .fetch_optional(conn)
     .await
     .map_err(db_error)
-}
-
-async fn insert(
-    tx: &mut SqliteConnection,
-    id: &str,
-    cols: Vec<(String, Value)>,
-) -> Result<(), Response> {
-    let now = now_iso();
-    let mut names = vec![
-        "\"id\"".to_string(),
-        "\"createdAt\"".into(),
-        "\"updatedAt\"".into(),
-    ];
-    let mut values = vec![
-        Value::String(id.into()),
-        Value::String(now.clone()),
-        Value::String(now),
-    ];
-    for (k, v) in cols {
-        names.push(format!("\"{k}\""));
-        values.push(v);
-    }
-    let sql = format!(
-        r#"INSERT INTO "{}" ({}) VALUES ({})"#,
-        EQUIPMENT.name,
-        names.join(", "),
-        vec!["?"; names.len()].join(", ")
-    );
-    let mut q = sqlx::query(&sql);
-    for v in &values {
-        q = bind(q, v);
-    }
-    q.execute(tx).await.map_err(db_error)?;
-    Ok(())
-}
-
-async fn commit(tx: sqlx::Transaction<'static, sqlx::Sqlite>) -> Result<(), Response> {
-    tx.commit().await.map_err(db_error)
 }
 
 // ── GET /equipment ──────────────────────────────────────────────────────────
@@ -262,7 +216,7 @@ async fn create_inner(st: &AppState, user: &User, body: Bytes) -> Result<Respons
     if truthy(vals.get("isComponentHost")) && truthy(vals.get("isComponent")) {
         return Err(bad(HOST_AND_COMPONENT));
     }
-    null_arrays_to_empty(&mut vals, &fields);
+    shared::null_arrays_to_empty(&mut vals, &fields);
     let mut tx = begin(&st.pool).await?;
 
     // `category` (name) only fills in a missing `categoryId`.
@@ -288,7 +242,7 @@ async fn create_inner(st: &AppState, user: &User, body: Bytes) -> Result<Respons
         })
         .collect();
     cols.push(("createdById".into(), Value::String(user.id.clone())));
-    insert(&mut tx, &id, cols).await?;
+    shared::insert(&mut tx, &EQUIPMENT, &id, cols).await?;
 
     let row = get_row(&mut tx, &EQUIPMENT, &id)
         .await
@@ -299,7 +253,7 @@ async fn create_inner(st: &AppState, user: &User, body: Bytes) -> Result<Respons
     )
     .await
     .map_err(db_error)?;
-    commit(tx).await?;
+    shared::commit(tx).await?;
     st.events.publish(EVENT, "created", Some(&id));
     Ok((StatusCode::CREATED, Json(Value::Object(row))).into_response())
 }
@@ -324,7 +278,7 @@ async fn update_inner(
     assert_can_write(st, user).await?;
     let fields = schema(false);
     let mut vals = validate(&parse_body(&body)?, &fields)?;
-    null_arrays_to_empty(&mut vals, &fields);
+    shared::null_arrays_to_empty(&mut vals, &fields);
     let mut tx = begin(&st.pool).await?;
     let existing = get_row(&mut tx, &EQUIPMENT, id)
         .await
@@ -392,7 +346,7 @@ async fn update_inner(
     )
     .await
     .map_err(db_error)?;
-    commit(tx).await?;
+    shared::commit(tx).await?;
     st.events.publish(EVENT, "updated", Some(id));
     Ok(Json(Value::Object(row)).into_response())
 }
@@ -443,7 +397,7 @@ async fn delete_inner(st: &AppState, user: &User, id: &str) -> Result<Response, 
     )
     .await
     .map_err(db_error)?;
-    commit(tx).await?;
+    shared::commit(tx).await?;
     st.events.publish(EVENT, "deleted", Some(id));
     Ok(Json(json!({ "success": true })).into_response())
 }
@@ -468,7 +422,7 @@ async fn duplicate_inner(st: &AppState, user: &User, id: &str) -> Result<Respons
     let new = new_id();
     let mut cols = copy_values(&source);
     cols.push(("createdById".into(), Value::String(user.id.clone())));
-    insert(&mut tx, &new, cols).await?;
+    shared::insert(&mut tx, &EQUIPMENT, &new, cols).await?;
     let row = get_row(&mut tx, &EQUIPMENT, &new)
         .await
         .map_err(db_error)?
@@ -488,7 +442,7 @@ async fn duplicate_inner(st: &AppState, user: &User, id: &str) -> Result<Respons
     )
     .await
     .map_err(db_error)?;
-    commit(tx).await?;
+    shared::commit(tx).await?;
     st.events.publish(EVENT, "created", Some(&new));
     Ok((StatusCode::CREATED, Json(Value::Object(row))).into_response())
 }
@@ -568,7 +522,7 @@ async fn bulk_inner(st: &AppState, user: &User, body: Bytes) -> Result<Response,
     )
     .await
     .map_err(db_error)?;
-    commit(tx).await?;
+    shared::commit(tx).await?;
     st.events.publish(EVENT, "deleted", Some("batch"));
     Ok(Json(json!({ "deleted": deleted, "failed": failed })).into_response())
 }
