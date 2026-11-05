@@ -121,41 +121,136 @@ async fn folder_defaults_to_misc_and_svg_is_sandboxed() {
     assert_eq!(h.get("x-content-type-options").unwrap(), "nosniff");
 }
 
-#[tokio::test]
-async fn svg_with_script_is_rejected() {
-    let (e, tok) = setup().await;
-    let svg =
-        br#"<svg xmlns="http://www.w3.org/2000/svg" onload="alert(1)"><script>1</script></svg>"#;
+async fn upload_svg(e: &Env, tok: &str, svg: &[u8]) -> (StatusCode, Value, String) {
     let (st, v) = post_upload(
-        &e,
-        Some(&tok),
+        e,
+        Some(tok),
         &[("file", Some(("a.svg", "image/svg+xml")), svg)],
     )
     .await;
-    assert_eq!(st, StatusCode::BAD_REQUEST);
-    assert_eq!(
-        v["error"],
-        "Le fichier SVG est invalide ou a été entièrement rejeté par le filtre de sécurité"
-    );
+    let stored = v["url"]
+        .as_str()
+        .map(|u| std::fs::read_to_string(e._dir.path().join(u.trim_start_matches('/'))).unwrap())
+        .unwrap_or_default();
+    (st, v, stored)
 }
 
 #[tokio::test]
-async fn upload_rejects_bad_folder_and_traversal() {
+async fn svg_is_sanitized_not_rejected() {
     let (e, tok) = setup().await;
-    for bad in ["../etc", "a/b", "a\\b", "..", "x y", "é"] {
+    let svg = br##"<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 10 10" onload="alert(1)">
+<script>alert(1)</script>
+<a xlink:href="&#106;avascript:alert(1)"><rect id="r" width="5" height="5" fill="#f00" onclick="x()"/></a>
+<use href="http://evil.example/x.svg#a"/>
+<use href="#r"/>
+<image href="data:image/png;base64,AAAA"/>
+<foreignObject><div>hi</div></foreignObject>
+<set attributeName="href" to="javascript:alert(1)"/>
+<style>@import url(http://evil.example/a.css);</style>
+<rect width="1" height="1" style="fill:url(http://evil.example/p)"/>
+<text x="1" y="2">turn on=1 and go</text>
+</svg>"##;
+    let (st, v, out) = upload_svg(&e, &tok, svg).await;
+    assert_eq!(st, StatusCode::OK, "{v}");
+    for gone in [
+        "script",
+        "alert",
+        "javascript",
+        "onload",
+        "onclick",
+        "evil.example",
+        "foreignObject",
+        "image",
+        "<set",
+        "@import",
+        "data:",
+    ] {
+        assert!(!out.contains(gone), "{gone} kept in {out}");
+    }
+    for kept in [
+        "viewBox=\"0 0 10 10\"",
+        "<rect id=\"r\" width=\"5\" height=\"5\" fill=\"#f00\">",
+        "<use href=\"#r\">",
+        "<text x=\"1\" y=\"2\">turn on=1 and go</text>",
+    ] {
+        assert!(out.contains(kept), "{kept} missing in {out}");
+    }
+}
+
+#[tokio::test]
+async fn harmless_svg_keeps_its_elements() {
+    let (e, tok) = setup().await;
+    let svg = br##"<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"><defs><linearGradient id="g"><stop offset="0" stop-color="#000"/></linearGradient></defs><g transform="translate(1 1)"><path d="M0 0L5 5" fill="url(#g)"/><circle cx="3" cy="3" r="2"/></g></svg>"##;
+    let (st, _, out) = upload_svg(&e, &tok, svg).await;
+    assert_eq!(st, StatusCode::OK);
+    for kept in [
+        "<linearGradient id=\"g\">",
+        "<stop offset=\"0\" stop-color=\"#000\">",
+        "<g transform=\"translate(1 1)\">",
+        "<path d=\"M0 0L5 5\" fill=\"url(#g)\">",
+        "<circle cx=\"3\" cy=\"3\" r=\"2\">",
+    ] {
+        assert!(out.contains(kept), "{kept} missing in {out}");
+    }
+}
+
+#[tokio::test]
+async fn invalid_svg_is_rejected() {
+    let (e, tok) = setup().await;
+    for bad in [
+        &b"<svg><g></svg>"[..],
+        b"not xml",
+        b"<html xmlns=\"http://www.w3.org/1999/xhtml\"/>",
+        b"<!DOCTYPE svg [<!ENTITY a \"b\">]><svg xmlns=\"http://www.w3.org/2000/svg\"/>",
+    ] {
+        let (st, v, _) = upload_svg(&e, &tok, bad).await;
+        assert_eq!(st, StatusCode::BAD_REQUEST);
+        assert_eq!(
+            v["error"],
+            "Le fichier SVG est invalide ou a été entièrement rejeté par le filtre de sécurité"
+        );
+    }
+}
+
+#[tokio::test]
+async fn folder_is_stripped_like_arkyo_and_never_escapes() {
+    let (e, tok) = setup().await;
+    for (raw, dir) in [
+        ("../etc", "etc"),
+        ("a/b", "ab"),
+        ("a\\b", "ab"),
+        ("..", "misc"),
+        ("x y", "xy"),
+        ("brands/logos", "brandslogos"),
+        ("catalog/types/icons", "catalogtypesicons"),
+    ] {
         let (st, v) = post_upload(
             &e,
             Some(&tok),
             &[
-                ("folder", None, bad.as_bytes()),
+                ("folder", None, raw.as_bytes()),
                 ("file", Some(("a.png", "image/png")), PNG),
             ],
         )
         .await;
-        assert_eq!(st, StatusCode::BAD_REQUEST, "{bad}: {v}");
-        assert_eq!(v["error"], "Dossier invalide", "{bad}");
+        assert_eq!(st, StatusCode::OK, "{raw}: {v}");
+        assert!(
+            v["url"]
+                .as_str()
+                .unwrap()
+                .starts_with(&format!("/uploads/{dir}/")),
+            "{raw}: {v}"
+        );
+        assert!(e._dir.path().join("uploads").join(dir).is_dir());
     }
     assert!(!e._dir.path().join("etc").exists());
+    assert!(!e
+        ._dir
+        .path()
+        .join("uploads")
+        .join("..")
+        .join("etc")
+        .exists());
 }
 
 #[tokio::test]
@@ -271,16 +366,6 @@ async fn from_url_rejects_non_http() {
             StatusCode::BAD_REQUEST,
             Some("URL invalide ou paramètres manquants")
         )
-    );
-    let (st, v) = from_url(
-        &e,
-        &tok,
-        json!({"url": "http://x.fr/a.png", "folder": "../x"}),
-    )
-    .await;
-    assert_eq!(
-        (st, v["error"].as_str()),
-        (StatusCode::BAD_REQUEST, Some("Dossier invalide"))
     );
 }
 

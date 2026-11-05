@@ -5,10 +5,9 @@
 //! from the validated MIME type, never from the client file name.
 //!
 //! Differences from arkyo, on purpose:
-//! - `folder` is refused (400 "Dossier invalide") when it holds anything but
-//!   letters, digits, `-` and `_`, instead of being silently stripped;
-//! - SVG files are rejected (not rewritten) when they hold scripts, event
-//!   handlers or `javascript:` links; served SVG also carries a sandbox CSP;
+//! - SVG files are rebuilt from an allow-list of elements and attributes
+//!   (DOMPurify-like) and rejected only when they are not valid XML; served
+//!   SVG also carries a sandbox CSP;
 //! - `from-url` does not block private addresses (LAN application) and its
 //!   timeout is 15 s instead of 10 s.
 
@@ -53,57 +52,194 @@ fn too_big(limit: usize) -> Response {
     bad(&format!("Fichier trop lourd (max {} Mo)", limit / MB))
 }
 
-/// `Some(folder)` when valid (`default` when empty/absent), `None` when it
-/// holds a separator, `..` or any character outside `[A-Za-z0-9_-]`.
-fn valid_folder(raw: Option<&str>, default: &str) -> Option<String> {
-    match raw {
-        None | Some("") => Some(default.to_string()),
-        Some(f)
-            if f.len() <= 64
-                && f.chars()
-                    .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_') =>
-        {
-            Some(f.to_string())
-        }
-        _ => None,
+/// arkyo `sanitizeFolder`: keeps `[A-Za-z0-9_-]` only (`brands/logos` becomes
+/// `brandslogos`), `default` when nothing is left. Never rejects.
+fn sanitize_folder(raw: Option<&str>, default: &str) -> String {
+    let mut f = raw.unwrap_or("").to_string();
+    f.retain(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_');
+    if f.is_empty() {
+        default.to_string()
+    } else {
+        f
     }
 }
 
-/// Conservative SVG screening: no script, foreignObject, event handler or
-/// `javascript:` URL, whatever the case.
-fn svg_is_safe(data: &[u8]) -> bool {
-    let Ok(text) = std::str::from_utf8(data) else {
-        return false;
-    };
-    let t = text.to_ascii_lowercase();
-    if !t.contains("<svg") || t.contains("<script") || t.contains("<foreignobject") {
+const SVG_NS: &str = "http://www.w3.org/2000/svg";
+const XLINK_NS: &str = "http://www.w3.org/1999/xlink";
+const XML_NS: &str = "http://www.w3.org/XML/1998/namespace";
+
+/// SVG elements kept by the sanitizer. Everything else (script, foreignObject,
+/// set/animate*, image, unknown) is dropped with its subtree.
+const ALLOWED_ELEMENTS: &[&str] = &[
+    "svg",
+    "a",
+    "g",
+    "defs",
+    "symbol",
+    "use",
+    "switch",
+    "view",
+    "title",
+    "desc",
+    "style",
+    "path",
+    "rect",
+    "circle",
+    "ellipse",
+    "line",
+    "polyline",
+    "polygon",
+    "text",
+    "tspan",
+    "textPath",
+    "linearGradient",
+    "radialGradient",
+    "stop",
+    "pattern",
+    "clipPath",
+    "mask",
+    "marker",
+    "filter",
+    "feBlend",
+    "feColorMatrix",
+    "feComponentTransfer",
+    "feComposite",
+    "feConvolveMatrix",
+    "feDiffuseLighting",
+    "feDisplacementMap",
+    "feDistantLight",
+    "feDropShadow",
+    "feFlood",
+    "feFuncA",
+    "feFuncB",
+    "feFuncG",
+    "feFuncR",
+    "feGaussianBlur",
+    "feMerge",
+    "feMergeNode",
+    "feMorphology",
+    "feOffset",
+    "fePointLight",
+    "feSpecularLighting",
+    "feSpotLight",
+    "feTile",
+    "feTurbulence",
+];
+
+/// CSS/attribute value check: no `@import`, `expression(`, `javascript:`,
+/// escapes, and every `url(...)` must point to a `#fragment`.
+fn css_safe(v: &str) -> bool {
+    let l = v.to_ascii_lowercase();
+    if l.contains("@import")
+        || l.contains("expression(")
+        || l.contains("javascript:")
+        || l.contains("behavior")
+        || l.contains('\\')
+    {
         return false;
     }
-    if t.contains("javascript:") || t.contains("<!entity") {
-        return false;
-    }
-    // `on<name>=` attribute (onload, onclick…), preceded by whitespace, a quote or `/`.
-    let b = t.as_bytes();
-    for i in 0..b.len().saturating_sub(3) {
-        if b[i] == b'o'
-            && b[i + 1] == b'n'
-            && (i == 0 || matches!(b[i - 1], b' ' | b'\t' | b'\n' | b'\r' | b'"' | b'\'' | b'/'))
-        {
-            let mut j = i + 2;
-            while j < b.len() && b[j].is_ascii_alphabetic() {
-                j += 1;
-            }
-            if j > i + 2 {
-                while j < b.len() && b[j].is_ascii_whitespace() {
-                    j += 1;
-                }
-                if j < b.len() && b[j] == b'=' {
-                    return false;
-                }
-            }
+    let mut rest = l.as_str();
+    while let Some(i) = rest.find("url(") {
+        rest = &rest[i + 4..];
+        let arg = rest.trim_start_matches(|c: char| c.is_whitespace() || c == '"' || c == '\'');
+        if !arg.starts_with('#') {
+            return false;
         }
     }
     true
+}
+
+fn escape(s: &str, out: &mut String) {
+    for c in s.chars() {
+        match c {
+            '&' => out.push_str("&amp;"),
+            '<' => out.push_str("&lt;"),
+            '>' => out.push_str("&gt;"),
+            '"' => out.push_str("&quot;"),
+            c => out.push(c),
+        }
+    }
+}
+
+fn clean_node(node: roxmltree::Node, out: &mut String) {
+    use roxmltree::NodeType;
+    match node.node_type() {
+        NodeType::Text => escape(node.text().unwrap_or(""), out),
+        NodeType::Element => {
+            let t = node.tag_name();
+            if t.namespace() != Some(SVG_NS) || !ALLOWED_ELEMENTS.contains(&t.name()) {
+                return;
+            }
+            let name = t.name();
+            if name == "style" {
+                let css: String = node.children().filter_map(|c| c.text()).collect();
+                if !css_safe(&css) {
+                    return;
+                }
+            }
+            out.push('<');
+            out.push_str(name);
+            if node
+                .parent()
+                .is_some_and(|p| p.node_type() == NodeType::Root)
+            {
+                out.push_str(" xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\"");
+            }
+            for a in node.attributes() {
+                let n = a.name();
+                let qname = match a.namespace() {
+                    None => n.to_string(),
+                    Some(XLINK_NS) if n == "href" => "xlink:href".to_string(),
+                    Some(XML_NS) if n == "space" => "xml:space".to_string(),
+                    Some(_) => continue,
+                };
+                let v = a.value();
+                if n.is_empty()
+                    || !n
+                        .chars()
+                        .all(|c| c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '.'))
+                    || n.to_ascii_lowercase().starts_with("on")
+                    || n == "xmlns"
+                {
+                    continue;
+                }
+                if n == "href" && !v.trim().starts_with('#') {
+                    continue;
+                }
+                if !css_safe(v) {
+                    continue;
+                }
+                out.push(' ');
+                out.push_str(&qname);
+                out.push_str("=\"");
+                escape(v, out);
+                out.push('"');
+            }
+            out.push('>');
+            for c in node.children() {
+                clean_node(c, out);
+            }
+            out.push_str("</");
+            out.push_str(name);
+            out.push('>');
+        }
+        _ => {}
+    }
+}
+
+/// Rebuilds the SVG keeping only allow-listed elements and safe attributes
+/// (no event handlers, links only to `#fragments`, no external `url()`).
+/// `None` when the document is not valid XML or its root is not `<svg>`.
+fn sanitize_svg(data: &[u8]) -> Option<Vec<u8>> {
+    let text = std::str::from_utf8(data).ok()?;
+    let doc = roxmltree::Document::parse(text).ok()?;
+    let root = doc.root_element();
+    if root.tag_name().namespace() != Some(SVG_NS) || root.tag_name().name() != "svg" {
+        return None;
+    }
+    let mut out = String::new();
+    clean_node(root, &mut out);
+    Some(out.into_bytes())
 }
 
 const SVG_REJECTED: &str =
@@ -149,9 +285,7 @@ pub async fn upload(State(st): State<AppState>, _: CurrentUser, mut mp: Multipar
             _ => {}
         }
     }
-    let Some(folder) = valid_folder(folder_raw.as_deref(), "misc") else {
-        return bad("Dossier invalide");
-    };
+    let folder = sanitize_folder(folder_raw.as_deref(), "misc");
     let Some((ctype, data)) = file else {
         return bad("Aucun fichier");
     };
@@ -166,9 +300,14 @@ pub async fn upload(State(st): State<AppState>, _: CurrentUser, mut mp: Multipar
     if data.len() > limit {
         return too_big(limit);
     }
-    if ctype == SVG && !svg_is_safe(&data) {
-        return bad(SVG_REJECTED);
-    }
+    let data = if ctype == SVG {
+        match sanitize_svg(&data) {
+            Some(clean) => Bytes::from(clean),
+            None => return bad(SVG_REJECTED),
+        }
+    } else {
+        data
+    };
     match store(&st, &folder, ext, &data).await {
         Ok(url) => Json(json!({ "url": url })).into_response(),
         Err(r) => r,
@@ -281,9 +420,7 @@ pub async fn from_url(State(st): State<AppState>, _: CurrentUser, body: Bytes) -
     if url.parse::<ureq::http::Uri>().is_err() {
         return bad("URL invalide");
     }
-    let Some(folder) = valid_folder(folder_raw, "equipment") else {
-        return bad("Dossier invalide");
-    };
+    let folder = sanitize_folder(folder_raw, "equipment");
     let owned = url.to_string();
     let fetched = tokio::task::spawn_blocking(move || fetch(&owned)).await;
     match fetched {
