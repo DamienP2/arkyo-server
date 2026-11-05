@@ -406,6 +406,7 @@ function EmailEditable({ userId, email: initialEmail }: { userId: string; email:
                 // arkyo-server: habillage Strata
                 className="inline-flex h-8 items-center gap-1.5 rounded-md bg-[var(--accent)] px-3 text-[11px] font-semibold text-[var(--accent-foreground)] transition-opacity hover:opacity-90 disabled:opacity-50"
               >
+                {/* arkyo-server: comptes locaux — icône Check (enregistrement) au lieu de Mail (envoi du code) */}
                 {loading ? (
                   <Loader2 className="h-3 w-3 animate-spin" />
                 ) : (

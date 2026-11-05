@@ -4,7 +4,6 @@
  * Topbar tenant — alignée sur le pattern visuel de la SupervisorTopbar.
  *
  * Lockup : StrataBrand (« Strata Arkyo ») + | + Nom du tenant (Title Case).
- * arkyo-server: logo du site (décision 9) entre le séparateur et le nom.
  * arkyo-server: habillage Strata — lockup Strata, topbar claire ou sombre selon
  * le thème (variante « Clair A »), couleurs aux variables du thème.
  * Actions : Theme toggle (Sun/Moon icon), NotificationsMenu, LanguageMenu,
@@ -478,7 +477,7 @@ function ProfileMenu({
 
 export function Topbar() {
   const { tabs: topbarTabs } = useTopbarTabs();
-  const { tenantName, tenantLogoUrl, role } = useTenantMembership(); // arkyo-server: logo du site
+  const { tenantName, role } = useTenantMembership();
   const { resolvedTheme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const { data: session } = useSession();
@@ -511,14 +510,10 @@ export function Topbar() {
       >
         {/* arkyo-server: habillage Strata */}
         <StrataBrand />
-        {(displayName || tenantLogoUrl) && ( // arkyo-server: logo du site
+        {displayName && (
           <>
             {/* arkyo-server: habillage Strata */}
             <span className="text-[13px] text-[var(--border-strong)]">|</span>
-            {/* arkyo-server: logo du site (décision 9) */}
-            {tenantLogoUrl && (
-              <img src={tenantLogoUrl} alt="" className="h-5 w-5 shrink-0 rounded object-contain" />
-            )}
             <span className="text-[13px] font-medium text-[var(--text-tertiary)]">
               {displayName}
             </span>

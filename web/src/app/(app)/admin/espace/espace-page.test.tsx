@@ -80,9 +80,8 @@ describe("/admin/espace", () => {
     );
     expect(await screen.findByText("Informations enregistrées")).toBeTruthy();
 
-    // La topbar relit le site (router.refresh) : nouveau nom et logo.
+    // La topbar relit le site (router.refresh) : nouveau nom.
     await waitFor(() => expect(within(header()).getByText("Régie B")).toBeTruthy());
-    expect(header().querySelector(`img[src="${LOGO}"]`)).not.toBeNull();
   });
 
   test("non propriétaire avec settings:admin : lecture seule", async () => {
@@ -137,28 +136,14 @@ describe("/settings", () => {
 
 describe("topbar", () => {
   test("topbar_shows_site_name", async () => {
-    renderApp(
-      "/admin/espace",
-      espaceApi({ "GET /api/site": { body: { name: "régie a", logoUrl: LOGO } } }),
-    );
-    // Lockup Strata, séparateur, puis logo et nom du site (Title Case comme arkyo).
+    renderApp("/admin/espace", espaceApi({ "GET /api/site": { body: { name: "régie a", logoUrl: LOGO } } }));
+    // Lockup Strata, séparateur, puis nom du site (Title Case), comme arkyo : pas de logo.
     await waitFor(() => expect(within(header()).getByText("Régie A")).toBeTruthy());
     const link = within(header()).getByText("Régie A").closest("a") as HTMLElement;
-    expect(link.textContent).toContain("|");
-    const img = link.querySelector("img") as HTMLImageElement;
-    expect(img.getAttribute("src")).toBe(LOGO);
-    // Ordre : séparateur avant le logo, logo avant le nom.
     const sep = within(link).getByText("|");
-    expect(sep.compareDocumentPosition(img) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(
-      img.compareDocumentPosition(within(link).getByText("Régie A")) & Node.DOCUMENT_POSITION_FOLLOWING,
+      sep.compareDocumentPosition(within(link).getByText("Régie A")) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
-  });
-
-  test("sans logo : lockup, séparateur et nom seulement", async () => {
-    renderApp("/admin/espace", espaceApi());
-    await waitFor(() => expect(within(header()).getByText("Régie A")).toBeTruthy());
-    const link = within(header()).getByText("Régie A").closest("a") as HTMLElement;
     expect(link.querySelector("img")).toBeNull();
   });
 });

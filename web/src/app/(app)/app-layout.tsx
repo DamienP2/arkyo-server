@@ -8,8 +8,7 @@
  *   - `GET /api/tenant/me/permissions` → 403 `PASSWORD_CHANGE_REQUIRED` →
  *     `/auth/password` (garde `mustChangePassword`) ;
  *   - sinon ces permissions sont les `initialPermissions` du provider (même
- *     anti-flash qu'arkyo), et `GET /api/site` donne le nom et le logo affichés
- *     en topbar.
+ *     anti-flash qu'arkyo), et `GET /api/site` donne le nom affiché en topbar.
  *
  * Contexte tenant unique : `TenantPlanProvider plan="ENTERPRISE"` (tout débloqué),
  * `TenantMembershipProvider tenantSlug="local"`, `GhostModeProvider isGhost={false}`.
@@ -37,13 +36,12 @@ import type { MemberRole } from "@/lib/prisma/main-client";
 const MEMBER_ROLES: readonly MemberRole[] = ["OWNER", "CHEF_PROJET", "TECHNICIEN", "CONSULTATION"];
 
 export type ShellGate =
-  | { kind: "ok"; permissions: TenantPermissions; siteName: string; siteLogoUrl: string | null }
+  | { kind: "ok"; permissions: TenantPermissions; siteName: string }
   | { kind: "auth" }
   | { kind: "password" };
 
 /**
- * Lit les permissions (et le garde `mustChangePassword`) puis le nom et le logo
- * du site.
+ * Lit les permissions (et le garde `mustChangePassword`) puis le nom du site.
  * Partagé avec le layout `(fullscreen)`.
  */
 export async function loadShell(): Promise<ShellGate> {
@@ -58,14 +56,9 @@ export async function loadShell(): Promise<ShellGate> {
   }
   const permissions = res.ok ? ((await res.json()) as TenantPermissions) : null;
   let siteName = "";
-  let siteLogoUrl: string | null = null;
   try {
     const site = await fetch("/api/site", { headers: { Accept: "application/json" } });
-    if (site.ok) {
-      const body = (await site.json()) as { name?: string; logoUrl?: string | null };
-      siteName = body.name ?? "";
-      siteLogoUrl = body.logoUrl ?? null;
-    }
+    if (site.ok) siteName = ((await site.json()) as { name?: string }).name ?? "";
   } catch {
     // Nom du site facultatif : la topbar n'affiche alors que le lockup.
   }
@@ -77,7 +70,6 @@ export async function loadShell(): Promise<ShellGate> {
       permissions: { projects: "none", design: "none", catalog: "none", members: "none", settings: "none" },
     },
     siteName,
-    siteLogoUrl,
   };
 }
 
@@ -164,7 +156,6 @@ export default function AppLayout() {
         <TenantMembershipProvider
           tenantSlug="local"
           tenantName={gate.siteName || null}
-          tenantLogoUrl={gate.siteLogoUrl}
           role={role}
         >
           <TenantPermissionsProvider initialPermissions={gate.permissions}>
