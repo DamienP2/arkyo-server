@@ -3,7 +3,6 @@
 
 #![allow(clippy::result_large_err)]
 
-use arkyo_core::permissions::{Domain, Level};
 use axum::body::Bytes;
 use axum::extract::State;
 use axum::http::StatusCode;
@@ -12,7 +11,7 @@ use axum::Json;
 use serde_json::{json, Value};
 
 use super::parametres::{begin, db_error, flat_json, parse_body, validate_flat, Field, Kind};
-use super::{error, require, AppState, CurrentUser};
+use super::{error, AppState, CurrentUser};
 use crate::ids::{new_id, now_iso};
 
 /// `(name, logoUrl)` of the site.
@@ -36,16 +35,14 @@ pub async fn get(State(st): State<AppState>, _u: CurrentUser) -> Response {
     Json(json!({ "id": "site", "name": name, "logoUrl": logo })).into_response()
 }
 
-/// settings:admin (arkyo: owner only, which is `settings:admin` here).
+/// Owner only, as arkyo.
 pub async fn patch(
     State(st): State<AppState>,
     CurrentUser(u): CurrentUser,
     body: Bytes,
 ) -> Response {
-    if require(&u, &st.pool, Domain::Settings, Level::Admin)
-        .await
-        .is_err()
-    {
+    // arkyo: owner only
+    if !super::role_permissions(&st.pool, &u.role_key).await.0 {
         return error(StatusCode::FORBIDDEN, "Réservé au propriétaire de l'espace");
     }
     let body = match parse_body(&body) {

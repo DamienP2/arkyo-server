@@ -218,3 +218,28 @@ async fn espace_name_logo_roundtrip() {
     assert_eq!(f.status, StatusCode::FORBIDDEN);
     assert_eq!(f.body["error"], "Réservé au propriétaire de l'espace");
 }
+
+#[tokio::test]
+async fn espace_patch_owner_only_even_with_settings_admin() {
+    let e = env().await;
+    sqlx::query(
+        r#"INSERT INTO "Role" ("id","key","label","permissions","createdAt","updatedAt")
+           VALUES ('r1','adm','Adm','{"settings":"admin"}','2026-01-01T00:00:00.000Z','2026-01-01T00:00:00.000Z')"#,
+    )
+    .execute(&e.pool)
+    .await
+    .unwrap();
+    add_user(&e.pool, "a@b.fr", "adm", false).await;
+    let t = login(&e.app, "a@b.fr").await;
+    let r = call(
+        &e.app,
+        "PATCH",
+        ESPACE,
+        LOCAL,
+        Some(&t),
+        Some(json!({"name":"X"})),
+    )
+    .await;
+    assert_eq!(r.status, StatusCode::FORBIDDEN);
+    assert_eq!(r.body["error"], "Réservé au propriétaire de l'espace");
+}
