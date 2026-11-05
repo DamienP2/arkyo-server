@@ -216,4 +216,5 @@ async fn espace_name_logo_roundtrip() {
     )
     .await;
     assert_eq!(f.status, StatusCode::FORBIDDEN);
+    assert_eq!(f.body["error"], "Réservé au propriétaire de l'espace");
 }

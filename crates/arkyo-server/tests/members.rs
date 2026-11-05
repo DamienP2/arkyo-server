@@ -113,7 +113,17 @@ async fn invite_creates_user_with_temp_password_must_change() {
     let bad = c.req("POST", MEMBERS, Some(json!({"email":"nope"}))).await;
     assert_eq!(bad.status, StatusCode::BAD_REQUEST);
     assert!(bad.body["error"]["fieldErrors"]["email"].is_array());
-    assert!(bad.body["error"]["fieldErrors"]["name"].is_array());
+    assert!(bad.body["error"]["fieldErrors"]["name"].is_null());
+    // the name is optional: defaults to the local part of the email
+    let nn = c
+        .req(
+            "POST",
+            MEMBERS,
+            Some(json!({"email":"sans.nom@b.fr","roleKey":"technicien"})),
+        )
+        .await;
+    assert_eq!(nn.status, StatusCode::CREATED, "{:?}", nn.body);
+    assert_eq!(nn.body["name"], "sans.nom");
 }
 
 #[tokio::test]
@@ -170,7 +180,7 @@ async fn remove_disables_and_reinvite_reactivates() {
 }
 
 #[tokio::test]
-async fn cannot_demote_or_remove_last_owner_409() {
+async fn cannot_demote_or_remove_last_owner() {
     let c = ctx().await;
     let demote = c
         .req(
@@ -179,7 +189,7 @@ async fn cannot_demote_or_remove_last_owner_409() {
             Some(json!({"roleKey":"technicien"})),
         )
         .await;
-    assert_eq!(demote.status, StatusCode::CONFLICT, "{:?}", demote.body);
+    assert_eq!(demote.status, StatusCode::BAD_REQUEST, "{:?}", demote.body);
     assert_eq!(
         demote.body["error"],
         "Impossible de retirer le dernier propriétaire"
@@ -213,7 +223,7 @@ async fn cannot_demote_or_remove_last_owner_409() {
         Some(json!({"role":"CONSULTATION"})),
     )
     .await;
-    assert_eq!(last.status, StatusCode::CONFLICT);
+    assert_eq!(last.status, StatusCode::BAD_REQUEST);
     // nothing to change
     let none = call(
         &c.e.app,
@@ -432,7 +442,7 @@ async fn members_requires_members_admin() {
         MEMBERS,
         LOCAL,
         Some(&tm),
-        Some(json!({"email":"z@b.fr","name":"Z","roleKey":"technicien"})),
+        Some(json!({"email":"z@b.fr","name":"Z","roleKey":"viewer"})),
     )
     .await;
     assert_eq!(inv.status, StatusCode::CREATED);
@@ -451,4 +461,145 @@ async fn members_requires_members_admin() {
         selfp.body["error"],
         "Vous ne pouvez pas modifier les permissions de votre propre rôle."
     );
+}
+
+async fn mgr_env() -> (Ctx, String) {
+    let c = ctx().await;
+    sqlx::query(
+        r#"INSERT INTO "Role" ("id","key","label","permissions","createdAt","updatedAt")
+           VALUES ('r2','mgr','Mgr','{"members":"admin","projects":"write","catalog":"read"}','2026-01-01T00:00:00.000Z','2026-01-01T00:00:00.000Z')"#,
+    )
+    .execute(&c.e.pool)
+    .await
+    .unwrap();
+    add_user(&c.e.pool, "g@b.fr", "mgr", false).await;
+    let tm = login(&c.e.app, "g@b.fr").await;
+    (c, tm)
+}
+
+#[tokio::test]
+async fn non_owner_cannot_grant_more_rights_than_own() {
+    let (c, tm) = mgr_env().await;
+    let go = |m: &'static str, p: String, b: Option<Value>| {
+        let (app, tm) = (c.e.app.clone(), tm.clone());
+        async move { call(&app, m, &p, LOCAL, Some(&tm), b).await }
+    };
+    let msg = "Vous ne pouvez pas accorder plus de droits que les vôtres";
+    // (a) role writes above own level
+    let r = go("POST", ROLES.into(), Some(json!({"label":"Mine"}))).await;
+    assert_eq!(r.status, StatusCode::CREATED);
+    let id = r.body["id"].as_str().unwrap().to_string();
+    let up = go(
+        "PATCH",
+        format!("{ROLES}/{id}"),
+        Some(json!({"permissions":{"settings":"admin"}})),
+    )
+    .await;
+    assert_eq!(up.status, StatusCode::FORBIDDEN);
+    assert_eq!(up.body["error"], msg);
+    let up = go(
+        "PATCH",
+        format!("{ROLES}/{id}"),
+        Some(json!({"permissions":{"projects":"admin"}})),
+    )
+    .await;
+    assert_eq!(up.status, StatusCode::FORBIDDEN);
+    let ok = go(
+        "PATCH",
+        format!("{ROLES}/{id}"),
+        Some(json!({"permissions":{"projects":"write","members":"read"}})),
+    )
+    .await;
+    assert_eq!(ok.status, StatusCode::OK, "{:?}", ok.body);
+    // a builtin cannot be raised either
+    let roles = go("GET", ROLES.into(), None).await;
+    let chef = roles
+        .body
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|r| r["key"] == "chef-projet")
+        .unwrap()["id"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    let up = go(
+        "PATCH",
+        format!("{ROLES}/{chef}"),
+        Some(json!({"permissions":{"settings":"admin"}})),
+    )
+    .await;
+    assert_eq!(up.status, StatusCode::FORBIDDEN);
+    // (b) invite / PATCH into a role above own rights (chef-projet has design/catalog write)
+    let inv = go(
+        "POST",
+        MEMBERS.into(),
+        Some(json!({"email":"p@b.fr","name":"P","roleKey":"chef-projet"})),
+    )
+    .await;
+    assert_eq!(inv.status, StatusCode::FORBIDDEN);
+    assert_eq!(inv.body["error"], msg);
+    let inv = go(
+        "POST",
+        MEMBERS.into(),
+        Some(json!({"email":"p@b.fr","name":"P","roleKey":id})),
+    )
+    .await;
+    assert_eq!(inv.status, StatusCode::BAD_REQUEST); // key, not id
+    let key = ok.body["key"].as_str().unwrap().to_string();
+    let inv = go(
+        "POST",
+        MEMBERS.into(),
+        Some(json!({"email":"p@b.fr","name":"P","roleKey":key})),
+    )
+    .await;
+    assert_eq!(inv.status, StatusCode::CREATED, "{:?}", inv.body);
+    let pid = inv.body["id"].as_str().unwrap().to_string();
+    let mv = go(
+        "PATCH",
+        format!("{MEMBERS}/{pid}"),
+        Some(json!({"roleKey":"chef-projet"})),
+    )
+    .await;
+    assert_eq!(mv.status, StatusCode::FORBIDDEN);
+    assert_eq!(mv.body["error"], msg);
+    // owner stays unrestricted
+    let o = c
+        .req(
+            "PATCH",
+            &format!("{ROLES}/{chef}"),
+            Some(json!({"permissions":{"settings":"admin"}})),
+        )
+        .await;
+    assert_eq!(o.status, StatusCode::OK);
+}
+
+#[tokio::test]
+async fn reinvite_of_disabled_owner_needs_owner() {
+    let (c, tm) = mgr_env().await;
+    let o2 = add_user(&c.e.pool, "o2@b.fr", "owner", false).await;
+    let d = c.req("DELETE", &format!("{MEMBERS}/{}", o2.id), None).await;
+    assert_eq!(d.status, StatusCode::OK);
+    let r = call(
+        &c.e.app,
+        "POST",
+        MEMBERS,
+        LOCAL,
+        Some(&tm),
+        Some(json!({"email":"o2@b.fr","name":"X","roleKey":"consultation"})),
+    )
+    .await;
+    assert_eq!(r.status, StatusCode::FORBIDDEN, "{:?}", r.body);
+    assert_eq!(r.body["error"], "OWNER requis");
+    let active: bool = sqlx::query_scalar(r#"SELECT "isActive" FROM "User" WHERE "id" = ?"#)
+        .bind(&o2.id)
+        .fetch_one(&c.e.pool)
+        .await
+        .unwrap();
+    assert!(!active);
+    // an owner reactivates it and the sent name / username apply
+    let r = c.req("POST", MEMBERS, Some(json!({"email":"o2@b.fr","name":"Nouveau Nom","username":"nouveau","roleKey":"consultation"}))).await;
+    assert_eq!(r.status, StatusCode::CREATED, "{:?}", r.body);
+    assert_eq!(r.body["name"], "Nouveau Nom");
+    assert_eq!(r.body["username"], "nouveau");
 }

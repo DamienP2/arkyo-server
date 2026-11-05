@@ -10,7 +10,7 @@
 use std::collections::{BTreeMap, HashMap};
 
 use argon2::password_hash::rand_core::{OsRng, RngCore};
-use arkyo_core::permissions::{Domain, Level};
+use arkyo_core::permissions::{Domain, Level, Permissions};
 use axum::body::Bytes;
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
@@ -66,6 +66,14 @@ pub(super) fn valid_username(s: &str) -> bool {
 }
 
 pub(super) const USERNAME_MSG: &str = "Invalid string: must match pattern /^[a-z0-9._-]{3,30}$/";
+
+pub(super) const NO_MORE_RIGHTS: &str = "Vous ne pouvez pas accorder plus de droits que les vôtres";
+
+/// True when `role` grants some domain a higher level than `mine`.
+pub(super) fn exceeds(mine: &Permissions, role: &Permissions) -> bool {
+    role.iter()
+        .any(|(d, l)| *l > mine.get(d).copied().unwrap_or(Level::None))
+}
 
 /// The `MemberRole` tier arkyo keeps next to the role key.
 pub(super) fn tier(role_key: &str, is_owner: bool) -> &'static str {
@@ -172,10 +180,7 @@ fn user_error(e: UserError) -> Response {
         UserError::EmailTaken => error(StatusCode::CONFLICT, "Déjà membre ou invité"),
         UserError::UsernameTaken => error(StatusCode::CONFLICT, &e.to_string()),
         UserError::UnknownRole => bad("Rôle introuvable pour cet espace"),
-        UserError::LastOwner => error(
-            StatusCode::CONFLICT,
-            "Impossible de retirer le dernier propriétaire",
-        ),
+        UserError::LastOwner => bad("Impossible de retirer le dernier propriétaire"),
         UserError::NotFound => error(StatusCode::NOT_FOUND, "Membre introuvable"),
         UserError::WeakPassword(_) => bad(&e.to_string()),
         UserError::Db(e) => db_error(e),
@@ -244,7 +249,7 @@ pub async fn invite(
     };
     let fields = [
         Field::new("email", Kind::Str).required(),
-        Field::new("name", Kind::MaxLen(200)).required(),
+        Field::new("name", Kind::MaxLen(200)),
         Field::new("username", Kind::Str).nullable(),
         Field::new("roleKey", Kind::NonEmpty),
         Field::new(
@@ -259,11 +264,6 @@ pub async fn invite(
     if let Some(Value::String(e)) = body.get("email") {
         if !valid_email(e.trim()) {
             extra.push(("email", "Invalid email address"));
-        }
-    }
-    if let Some(Value::String(n)) = body.get("name") {
-        if n.trim().is_empty() {
-            extra.push(("name", "Too small: expected string to have >=1 characters"));
         }
     }
     if let Some(Value::String(u)) = body.get("username") {
@@ -299,12 +299,25 @@ pub async fn invite(
     if is_owner {
         return bad(OWNER_INVITE);
     }
-    let name = v["name"].as_str().map(|s| s.trim().to_string());
+    // arkyo's front sends no name: default to the local part of the email
+    let name = v
+        .get("name")
+        .and_then(Value::as_str)
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+        .or_else(|| email.split('@').next().map(str::to_string));
     let username = v
         .get("username")
         .and_then(Value::as_str)
         .map(str::to_string);
     let password = temporary_password();
+    let (me_owner, my_perms) = role_permissions(&st.pool, &me.role_key).await;
+    if !me_owner {
+        let (_, role_perms) = role_permissions(&st.pool, &role_key).await;
+        if exceeds(&my_perms, &role_perms) {
+            return error(StatusCode::FORBIDDEN, NO_MORE_RIGHTS);
+        }
+    }
 
     let existing: Option<(String, bool)> =
         match sqlx::query_as(r#"SELECT "id", "isActive" FROM "User" WHERE "email" = ?"#)
@@ -318,6 +331,20 @@ pub async fn invite(
     let id = match existing {
         // a removed member comes back: new temporary password, role, sessions closed
         Some((id, false)) => {
+            if !me_owner {
+                let target_key: Option<String> =
+                    sqlx::query_scalar(r#"SELECT "roleKey" FROM "User" WHERE "id" = ?"#)
+                        .bind(&id)
+                        .fetch_optional(&st.pool)
+                        .await
+                        .ok()
+                        .flatten();
+                if let Some(k) = target_key {
+                    if role_permissions(&st.pool, &k).await.0 {
+                        return error(StatusCode::FORBIDDEN, "OWNER requis");
+                    }
+                }
+            }
             let res = async {
                 users::reset_password(&st.pool, &id, &password, true).await?;
                 users::set_role(&st.pool, &id, &role_key).await?;
@@ -326,6 +353,25 @@ pub async fn invite(
             .await;
             if let Err(e) = res {
                 return user_error(e);
+            }
+            // a sent name / username replaces the old ones
+            if v.contains_key("name") || username.is_some() {
+                let upd = sqlx::query(
+                    r#"UPDATE "User" SET "name" = COALESCE(?, "name"), "username" = COALESCE(?, "username") WHERE "id" = ?"#,
+                )
+                .bind(v.get("name").and(name.as_deref()))
+                .bind(username.as_deref())
+                .bind(&id)
+                .execute(&st.pool)
+                .await;
+                if let Err(sqlx::Error::Database(d)) = &upd {
+                    if d.is_unique_violation() {
+                        return error(StatusCode::CONFLICT, &UserError::UsernameTaken.to_string());
+                    }
+                }
+                if let Err(e) = upd {
+                    return db_error(e);
+                }
             }
             id
         }
@@ -397,7 +443,7 @@ pub async fn update(
     if new_key.is_none() && active.is_none() {
         return bad("roleKey ou role requis");
     }
-    let (me_owner, _) = role_permissions(&st.pool, &me.role_key).await;
+    let (me_owner, my_perms) = role_permissions(&st.pool, &me.role_key).await;
     let (target_owner, _) = role_permissions(&st.pool, &target.role_key).await;
     if let Some(k) = &new_key {
         let row: Option<bool> =
@@ -421,6 +467,12 @@ pub async fn update(
                 StatusCode::FORBIDDEN,
                 "Vous ne pouvez pas modifier votre propre rôle.",
             );
+        }
+        if !me_owner {
+            let (_, role_perms) = role_permissions(&st.pool, k).await;
+            if exceeds(&my_perms, &role_perms) {
+                return error(StatusCode::FORBIDDEN, NO_MORE_RIGHTS);
+            }
         }
     }
     if active.is_some() {

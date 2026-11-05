@@ -239,13 +239,22 @@ pub async fn update(
         Err(r) => return r,
     };
     let key: String = row.get("key");
-    let (me_owner, _) = role_permissions(&st.pool, &me.role_key).await;
+    let (me_owner, my_perms) = role_permissions(&st.pool, &me.role_key).await;
     // no self-escalation: members:admin must not raise the role it carries
     if !me_owner && v.contains_key("permissions") && me.role_key == key {
         return error(
             StatusCode::FORBIDDEN,
             "Vous ne pouvez pas modifier les permissions de votre propre rôle.",
         );
+    }
+    // no domain above the caller's own level
+    if !me_owner {
+        if let Some(sent) = v.get("permissions").and_then(Value::as_object) {
+            let asked = parse_permissions(&Value::Object(sent.clone()).to_string());
+            if super::members::exceeds(&my_perms, &asked) {
+                return error(StatusCode::FORBIDDEN, super::members::NO_MORE_RIGHTS);
+            }
+        }
     }
     let label = v
         .get("label")

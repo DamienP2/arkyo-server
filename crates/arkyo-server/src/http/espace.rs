@@ -42,8 +42,11 @@ pub async fn patch(
     CurrentUser(u): CurrentUser,
     body: Bytes,
 ) -> Response {
-    if let Err(r) = require(&u, &st.pool, Domain::Settings, Level::Admin).await {
-        return r;
+    if require(&u, &st.pool, Domain::Settings, Level::Admin)
+        .await
+        .is_err()
+    {
+        return error(StatusCode::FORBIDDEN, "Réservé au propriétaire de l'espace");
     }
     let body = match parse_body(&body) {
         Ok(b) => b,
