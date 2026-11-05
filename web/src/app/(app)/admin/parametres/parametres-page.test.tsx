@@ -109,6 +109,26 @@ describe("/admin/parametres", () => {
     await waitFor(() => expect(router.state.location.pathname).toBe("/dashboard"));
   });
 
+  test("échec de lecture de l'app config : erreur et « Réessayer », pas de valeurs par défaut", async () => {
+    let fail = true;
+    renderApp(
+      "/admin/parametres?tab=numerotation",
+      parametresApi({
+        "GET /api/tenant/parametres/application": () =>
+          fail ? { status: 500, body: { error: "Erreur serveur" } } : { body: CONFIG },
+      }),
+    );
+    expect(await screen.findByText("Erreur serveur", {}, { timeout: 5000 })).toBeInTheDocument();
+    // Ni onglets ni aperçu de numérotation avec des valeurs par défaut.
+    expect(within(document.querySelector("header")!).queryByRole("button", { name: "Numérotation" })).toBeNull();
+    expect(document.querySelector("main code")).toBeNull();
+
+    fail = false;
+    fireEvent.click(screen.getByRole("button", { name: "Réessayer" }));
+    expect(await topbarTab("Numérotation")).toBeInTheDocument();
+    await waitFor(() => expect(document.querySelector("main code")!.textContent).toBe("RGA-V10001HD"));
+  });
+
   test("brands_tab_lists_and_creates", async () => {
     const created = { ...SONY, id: "b2", name: "Riedel", website: null };
     let brands: Record<string, unknown>[] = [SONY];
