@@ -143,6 +143,44 @@ const COPIED_FILES = [
   "lib/services/backup.ts",
   "lib/services/import/coerce.ts",
   "lib/services/import/parse-tabular.ts",
+  // Phase 2 (Task 11) : catalogue et éditeurs.
+  "app/(app)/admin/catalogue/_components/adapters-list-panel.tsx",
+  "app/(app)/admin/catalogue/_components/cables-list-panel.tsx",
+  "app/(app)/admin/catalogue/_components/equipment-list-panel.tsx",
+  "app/(app)/admin/catalogue/_components/safe-fetch.ts",
+  "app/(app)/admin/catalogue/_components/tenant-catalogue-types.ts",
+  "app/(app)/admin/catalogue/_components/use-catalogue-sync.ts",
+  "app/(app)/admin/catalogue/_components/use-tenant-visibility.ts",
+  "app/(app)/admin/catalogue/_lib/use-deleted-item-redirect.ts",
+  "app/(app)/admin/catalogue/adapters/[id]/_client.tsx",
+  "app/(app)/admin/catalogue/adapters/[id]/adapter-editor.tsx",
+  "app/(app)/admin/catalogue/adapters/[id]/page.tsx",
+  "app/(app)/admin/catalogue/adapters/new/_client.tsx",
+  "app/(app)/admin/catalogue/adapters/new/page.tsx",
+  "app/(app)/admin/catalogue/cables/[id]/_client.tsx",
+  "app/(app)/admin/catalogue/cables/[id]/cable-editor.tsx",
+  "app/(app)/admin/catalogue/cables/[id]/page.tsx",
+  "app/(app)/admin/catalogue/cables/new/_client.tsx",
+  "app/(app)/admin/catalogue/cables/new/page.tsx",
+  "app/(app)/admin/catalogue/catalogue-client.tsx",
+  "app/(app)/admin/catalogue/equipment/[id]/_client.tsx",
+  "app/(app)/admin/catalogue/equipment/[id]/page.tsx",
+  "app/(app)/admin/catalogue/equipment/_lib/merge-catalog-types.ts",
+  "app/(app)/admin/catalogue/equipment/_lib/merge-personal-refs.ts",
+  "app/(app)/admin/catalogue/equipment/new/_client.tsx",
+  "app/(app)/admin/catalogue/equipment/new/page.tsx",
+  "app/(app)/admin/catalogue/page.tsx",
+  "app/(app)/admin/equipment/[id]/_editor/capacity-ip-tab.tsx",
+  "app/(app)/admin/equipment/[id]/_editor/connectivity-tab.tsx",
+  "app/(app)/admin/equipment/[id]/_editor/custom-fields.tsx",
+  "app/(app)/admin/equipment/[id]/_editor/distribution-tab.tsx",
+  "app/(app)/admin/equipment/[id]/_editor/general-tab.tsx",
+  "app/(app)/admin/equipment/[id]/_editor/physical-tab.tsx",
+  "app/(app)/admin/equipment/[id]/_editor/shared.tsx",
+  "app/(app)/admin/equipment/[id]/_editor/sub-tab-bar.tsx",
+  "app/(app)/admin/equipment/[id]/_editor/tab-bar.tsx",
+  "app/(app)/admin/equipment/[id]/_editor/types.ts",
+  "app/(app)/admin/equipment/[id]/equipment-editor.tsx",
 ];
 
 /** Fichiers posés sur la topbar ou le rail : ils suivent le thème (variante « Clair A »). */
@@ -233,6 +271,8 @@ const ALLOW: AllowMap = {
   "components/catalogue/equipment-card.tsx": [TAG_2110],
   // Phase 2 (Task 10) : page Paramètres.
   "app/(app)/admin/parametres/_components/cable-label-stocks-section.tsx": [STOCK_DIAMETER],
+  // Phase 2 (Task 11) : catalogue et éditeurs.
+  "app/(app)/admin/catalogue/_components/equipment-list-panel.tsx": [TAG_2110],
 };
 
 test("aucune couleur d'interface Tailwind codée en dur dans les fichiers copiés (hors exceptions métier)", () => {
@@ -257,6 +297,13 @@ const ALLOW_STATUS: AllowMap = {
   // Phase 2 (Task 10) : page Paramètres.
   "app/(app)/admin/parametres/_components/cable-label-stocks-section.tsx": [STOCK_LAMINATING],
   "app/(app)/admin/parametres/_components/dimensions-panel.tsx": [TOURET_BADGE],
+  // Phase 2 (Task 11) : catalogue et éditeurs.
+  "app/(app)/admin/catalogue/_components/equipment-list-panel.tsx": [
+    {
+      line: /<span className="inline-flex items-center gap-0\.5 rounded-md bg-amber-500\/10 px-1\.5 py-0\.5 text-\[9px\] font-medium text-amber-600 dark:text-amber-400">$/,
+      reason: "étiquette « Lum » (projecteur lumière) d'un équipement : marqueur métier, comme « 2110 », " + DOUBT,
+    },
+  ],
 };
 
 test("erreurs, succès et alertes suivent --danger, --success et --warning", () => {
@@ -280,10 +327,6 @@ const ALLOW_HEX: AllowMap = {
   ],
   // Phase 2 (Task 9) : fondations partagées du catalogue.
   "app/(app)/admin/_components/list-toolbar-helpers.tsx": [
-    {
-      line: /^\s*(FREE|STARTER|PRO|ENTERPRISE): "#[0-9a-f]{6}", \/\/ \w+$/,
-      reason: "couleurs des plans (PLAN_COLORS) : reliquat SaaS, à retirer (plus consommé par les Paramètres ; reste exporté pour les onglets du catalogue)",
-    },
     { line: /boxShadow: "0 1px 2px 0 rgb\(0 0 0 \/ 0\.05\)",/, reason: "ombre (équivalent de shadow-sm) : pas une couleur d'interface" },
   ],
   "app/(app)/admin/_components/numbering-tab.tsx": [
@@ -387,6 +430,61 @@ const ALLOW_HEX: AllowMap = {
   ],
   "app/(app)/admin/parametres/_components/type-form-dialog.tsx": [
     { line: /color: f\.color \?\? "#6b7280",/, reason: "couleur de la fonction et son défaut Prisma : couleur métier" },
+  ],
+  // Phase 2 (Task 11) : catalogue et éditeurs.
+  "app/(app)/admin/catalogue/_components/equipment-list-panel.tsx": [
+    {
+      line: /color: fn\?\.color \?\? "#a3a3a3",|item\.functions\?\.\[0\]\?\.color \?\? item\.equipmentCategory\?\.color \?\? "#a3a3a3";/,
+      reason: "couleur de la fonction (groupe, carte) et son repli : couleur métier",
+    },
+  ],
+  "app/(app)/admin/catalogue/_components/cables-list-panel.tsx": [
+    { line: /it(em)?\.function\?\.color \?\? "#a3a3a3"/, reason: "couleur de la fonction (groupe, carte, ligne) et son repli : couleur métier" },
+  ],
+  "app/(app)/admin/catalogue/_components/adapters-list-panel.tsx": [
+    { line: /it\.function\?\.color \?\? "#a3a3a3",/, reason: "couleur de la fonction (groupe) et son repli : couleur métier" },
+    { line: /item\.function\?\.color \?\? "#06b6d4";/, reason: "couleur par défaut d'un adaptateur (comme adapter-card) : couleur métier" },
+    { line: /(srcCt|ct)\?\.color \?\? "#a3a3a3";/, reason: CONN },
+  ],
+  "app/(app)/admin/catalogue/equipment/_lib/merge-catalog-types.ts": [
+    { line: /^const DEFAULT_COLOR = "#6366f1";$/, reason: "couleur par défaut d'une fonction (types de classification) : couleur métier" },
+  ],
+  "app/(app)/admin/catalogue/equipment/_lib/merge-personal-refs.ts": [
+    { line: /color: s\.color \?\? "#6b7280",/, reason: "couleur du signal et son défaut Prisma : couleur métier" },
+  ],
+  "app/(app)/admin/equipment/[id]/equipment-editor.tsx": [
+    { line: /color: fn\?\.color \?\? "#6366f1" \},/, reason: "couleur de la fonction d'un type créé à la volée (même défaut que mergeCatalogTypes) : couleur métier" },
+    {
+      line: /^\s*const catColor = "#6366f1";$/,
+      reason: "teinte « catColor » des onglets de l'éditeur (ex-couleur de catégorie, composée en hexadécimal + alpha) : " + DOUBT,
+    },
+  ],
+  "app/(app)/admin/equipment/[id]/_editor/custom-fields.tsx": [
+    { line: /^\s*color: "#fff",$/, reason: "texte blanc sur la teinte catColor (voir equipment-editor) : " + DOUBT },
+  ],
+  "app/(app)/admin/equipment/[id]/_editor/connectivity-tab.tsx": [
+    { line: /"#94a3b8"/, reason: "couleur du signal ou de sa fonction et son repli : couleur métier" },
+    { line: /const directionColor = dirOpt\?\.color \?\? "#6366f1";/, reason: "couleur de direction d'un port (repli = bidirectionnel) : couleur métier" },
+  ],
+  "app/(app)/admin/equipment/[id]/_editor/shared.tsx": [
+    { line: /\{ background: cat\.color, color: "#fff", borderColor: "transparent" \}/, reason: "pastille de catégorie de signal sur sa propre couleur : couleur métier" },
+    {
+      line: /^\s*(color: "#8b5cf6",|backgroundColor: "color-mix\(in srgb, #8b5cf6 14%, transparent\)",)$/,
+      reason: "marqueur protocole « MC » (redondance ST 2022-7) d'un signal : marqueur métier, comme « 2110 », " + DOUBT,
+    },
+  ],
+  "app/(app)/admin/equipment/[id]/_editor/types.ts": [
+    { line: /^\s*(FRONT|REAR|LEFT|RIGHT|TOP|BOTTOM): "#[0-9a-f]{6}",$/, reason: "couleurs des faces d'un équipement : couleur métier" },
+    {
+      line: /\{ value: "(IN|OUT|BOTH)", label: "[^"]+", short: "[^"]+", color: "#[0-9a-f]{6}" \},/,
+      reason: "couleurs des directions de port (entrée, sortie, bidirectionnel) : couleur métier",
+    },
+  ],
+  "app/(app)/admin/equipment/[id]/_editor/distribution-tab.tsx": [
+    {
+      line: /^\s*color: "#(71717a|10b981|6366f1|8b5cf6)",$/,
+      reason: "couleurs des plans de l'onglet Distribution (supervisor) : jamais rendu, l'éditeur tenant passe showDistribution={false}",
+    },
   ],
 };
 

@@ -31,27 +31,8 @@ export function toggleInSet<T>(set: Set<T>, val: T): Set<T> {
   return next;
 }
 
-/** Couleurs des plans (alignées sur la spec distribution-tab + seed-plans). */
-export const PLAN_COLORS: Record<string, string> = {
-  FREE: "#71717a", // slate
-  STARTER: "#10b981", // emerald
-  PRO: "#6366f1", // indigo
-  ENTERPRISE: "#8b5cf6", // violet
-};
-
-export const PLAN_LABELS: Record<string, string> = {
-  FREE: "Free",
-  STARTER: "Starter",
-  PRO: "Pro",
-  ENTERPRISE: "Enterprise",
-};
-
-export const PLAN_ORDER: Record<string, number> = {
-  FREE: 0,
-  STARTER: 1,
-  PRO: 2,
-  ENTERPRISE: 3,
-};
+// arkyo-server: PLAN_COLORS / PLAN_LABELS / PLAN_ORDER retirés (plans
+// d'abonnement SaaS) : plus aucun consommateur dans le catalogue unique.
 
 // ── Chip toggle ────────────────────────────────────────────────────────────
 

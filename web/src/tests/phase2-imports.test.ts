@@ -78,8 +78,10 @@ const MODULES = [
 ];
 
 describe("phase 2 : modules partagés du catalogue copiés d'arkyo", () => {
+  // Premier import à froid : la transformation peut dépasser 5 s quand toute la
+  // suite tourne en parallèle (pages lazy du catalogue comprises).
   it.each(MODULES)("%s s'importe", async (mod) => {
     const m = await import(/* @vite-ignore */ mod);
     expect(m).toBeTypeOf("object");
-  });
+  }, 30000);
 });
