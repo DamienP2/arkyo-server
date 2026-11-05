@@ -583,7 +583,7 @@ pub async fn check_duplicate(
     let get = |k: &str| q.get(k).map_or("", String::as_str).to_string();
     let run = async {
         let mut conn = st.pool.acquire().await?;
-        matches(&mut conn, &get("name"), &get("reference")).await
+        matches(&mut conn, &EQUIPMENT, &get("name"), &get("reference")).await
     };
     match run.await {
         Ok(m) => Json(json!({ "matches": m })).into_response(),

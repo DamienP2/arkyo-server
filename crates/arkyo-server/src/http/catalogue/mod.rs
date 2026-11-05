@@ -1,14 +1,18 @@
-//! Catalogue API: `/api/tenant/catalogue/{equipment/**,lookup,connectors}`.
+//! Catalogue API: `/api/tenant/catalogue/{equipment,cables,adapters}/**`,
+//! `lookup` and `connectors`.
 //!
 //! Single catalogue (decision 2 of the phase): every item lives in the
 //! `Tenant*` tables and is presented as `PERSONAL`; the `arkyo` lists are
-//! always `[]`. Cables and adapters arrive with their own task.
+//! always `[]`. Cables and adapters share their write flow (`shared`).
 
 #![allow(clippy::result_large_err)]
 
+mod adapters;
+mod cables;
 mod connectors;
 mod equipment;
 mod lookup;
+mod shared;
 
 use arkyo_core::permissions::{has_permission, Domain, Level};
 use axum::http::StatusCode;
@@ -47,6 +51,59 @@ pub fn router() -> Router<AppState> {
         .route(
             "/tenant/catalogue/equipment/{id}/restore",
             post(equipment::restore),
+        )
+        .route(
+            "/tenant/catalogue/cables",
+            get(cables::list).post(cables::create),
+        )
+        .route(
+            "/tenant/catalogue/cables/bulk-delete",
+            post(cables::bulk_delete),
+        )
+        .route(
+            "/tenant/catalogue/cables/check-duplicate",
+            get(cables::check_duplicate),
+        )
+        .route("/tenant/catalogue/cables/lengths", get(cables::lengths))
+        .route(
+            "/tenant/catalogue/cables/{id}",
+            get(cables::detail)
+                .patch(cables::update)
+                .delete(cables::delete),
+        )
+        .route(
+            "/tenant/catalogue/cables/{id}/duplicate",
+            post(cables::duplicate),
+        )
+        .route(
+            "/tenant/catalogue/cables/{id}/restore",
+            post(cables::restore),
+        )
+        .route(
+            "/tenant/catalogue/adapters",
+            get(adapters::list).post(adapters::create),
+        )
+        .route(
+            "/tenant/catalogue/adapters/bulk-delete",
+            post(adapters::bulk_delete),
+        )
+        .route(
+            "/tenant/catalogue/adapters/check-duplicate",
+            get(adapters::check_duplicate),
+        )
+        .route(
+            "/tenant/catalogue/adapters/{id}",
+            get(adapters::detail)
+                .patch(adapters::update)
+                .delete(adapters::delete),
+        )
+        .route(
+            "/tenant/catalogue/adapters/{id}/duplicate",
+            post(adapters::duplicate),
+        )
+        .route(
+            "/tenant/catalogue/adapters/{id}/restore",
+            post(adapters::restore),
         )
         .route(
             "/tenant/catalogue/lookup",

@@ -5,8 +5,7 @@
 use serde_json::{json, Value};
 use sqlx::SqliteConnection;
 
-use super::enrich::EQUIPMENT;
-use crate::http::parametres::{list_rows_conn, str_of, Obj};
+use crate::http::parametres::{list_rows_conn, str_of, Obj, Table};
 
 /// Columns that are not copied: identity, ownership, dates (set by the
 /// insert), `documents` (arkyo's personal duplicate does not copy them) and
@@ -49,11 +48,12 @@ fn fold(s: &str) -> String {
     crate::http::parametres::fold(s)
 }
 
-/// Active equipment whose name and/or reference contains the (trimmed)
+/// Active rows of `table` (equipment, cables or adapters) whose name and/or reference contains the (trimmed)
 /// query, case-insensitively: at most 5, most recently updated first, each
 /// `{id, name, reference, source: "PERSONAL", matchField}`.
 pub async fn matches(
     conn: &mut SqliteConnection,
+    table: &Table,
     name: &str,
     reference: &str,
 ) -> Result<Vec<Value>, sqlx::Error> {
@@ -66,7 +66,7 @@ pub async fn matches(
     }
     let rows = list_rows_conn(
         conn,
-        &EQUIPMENT,
+        table,
         r#"WHERE "isActive" = 1"#,
         r#""updatedAt" DESC"#,
     )

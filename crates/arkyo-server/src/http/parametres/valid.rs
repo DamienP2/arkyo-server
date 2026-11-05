@@ -51,6 +51,8 @@ pub enum Kind {
     Int,
     Bool,
     StrArr,
+    /// `z.array(z.number())`.
+    NumArr,
     AnyArr,
     /// `z.enum(values, { message })`.
     Enum(&'static [&'static str], &'static str),
@@ -144,7 +146,7 @@ fn expected(kind: &Kind) -> &'static str {
         | Kind::Num
         | Kind::IntMin(_) => "number",
         Kind::Bool => "boolean",
-        Kind::StrArr | Kind::AnyArr | Kind::IdArr { .. } => "array",
+        Kind::StrArr | Kind::NumArr | Kind::AnyArr | Kind::IdArr { .. } => "array",
         Kind::Enum(..) => "string",
     }
 }
@@ -296,6 +298,16 @@ fn check(kind: &Kind, v: &Value) -> Vec<String> {
                 if !it.is_string() {
                     errs.push(format!(
                         "Invalid input: expected string, received {}",
+                        js_type(Some(it))
+                    ));
+                }
+            }
+        }
+        (Kind::NumArr, Value::Array(items)) => {
+            for it in items {
+                if !it.is_number() {
+                    errs.push(format!(
+                        "Invalid input: expected number, received {}",
                         js_type(Some(it))
                     ));
                 }

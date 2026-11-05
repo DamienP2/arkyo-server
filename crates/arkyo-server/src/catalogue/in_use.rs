@@ -219,21 +219,20 @@ pub async fn cable_model(conn: &mut SqliteConnection, id: &str) -> Result<Counts
     )])
 }
 
-/// Tables of project data that reference an equipment through
-/// `catalogEquipmentId` (arkyo `assertEquipmentNotInUse`: `RackInventoryItem`
-/// and `RackSlot`).
+/// Counts, per `(key, table)` of `refs`, the rows of the project tables that
+/// exist and whose `col` is `id`.
 ///
 /// EXTENSION POINT (phase 3): these tables are created by the phase that
-/// ports projects. Until then they do not exist and the equipment is never
-/// "in use"; once they exist the check below counts them without change.
-const EQUIPMENT_REFERENCES: [(&str, &str); 2] =
-    [("inventory", "RackInventoryItem"), ("slots", "RackSlot")];
-
-/// Equipment: rows of the project tables of [`EQUIPMENT_REFERENCES`] that
-/// exist and point at `id`.
-pub async fn equipment(conn: &mut SqliteConnection, id: &str) -> Result<Counts, sqlx::Error> {
+/// ports projects. Until then they do not exist and the item is never "in
+/// use"; once they exist the check counts them without change.
+async fn references(
+    conn: &mut SqliteConnection,
+    id: &str,
+    refs: &[(&'static str, &str)],
+    col: &str,
+) -> Result<Counts, sqlx::Error> {
     let mut out = Counts::new();
-    for (key, table) in EQUIPMENT_REFERENCES {
+    for (key, table) in refs {
         let exists: i64 = sqlx::query_scalar(
             "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = ?",
         )
@@ -245,7 +244,7 @@ pub async fn equipment(conn: &mut SqliteConnection, id: &str) -> Result<Counts, 
                 key,
                 count(
                     conn,
-                    &format!(r#"SELECT COUNT(*) FROM "{table}" WHERE "catalogEquipmentId" = ?"#),
+                    &format!(r#"SELECT COUNT(*) FROM "{table}" WHERE "{col}" = ?"#),
                     id,
                 )
                 .await?,
@@ -253,4 +252,46 @@ pub async fn equipment(conn: &mut SqliteConnection, id: &str) -> Result<Counts, 
         }
     }
     Ok(out)
+}
+
+/// Equipment (arkyo `assertEquipmentNotInUse`): `RackInventoryItem` and
+/// `RackSlot` rows pointing at it through `catalogEquipmentId`.
+pub async fn equipment(conn: &mut SqliteConnection, id: &str) -> Result<Counts, sqlx::Error> {
+    references(
+        conn,
+        id,
+        &[("inventory", "RackInventoryItem"), ("slots", "RackSlot")],
+        "catalogEquipmentId",
+    )
+    .await
+}
+
+/// Cable (arkyo `assertCableNotInUse`): `RackConnection` and
+/// `ProjectConnection` rows through `catalogCableModelId`.
+pub async fn cable(conn: &mut SqliteConnection, id: &str) -> Result<Counts, sqlx::Error> {
+    references(
+        conn,
+        id,
+        &[
+            ("rackConnections", "RackConnection"),
+            ("projectConnections", "ProjectConnection"),
+        ],
+        "catalogCableModelId",
+    )
+    .await
+}
+
+/// Adapter (arkyo `assertAdapterNotInUse`): `SynopticAdapter` and
+/// `ProjectSynopticAdapter` rows through `catalogAdapterId`.
+pub async fn adapter(conn: &mut SqliteConnection, id: &str) -> Result<Counts, sqlx::Error> {
+    references(
+        conn,
+        id,
+        &[
+            ("synoptic", "SynopticAdapter"),
+            ("projectSynoptic", "ProjectSynopticAdapter"),
+        ],
+        "catalogAdapterId",
+    )
+    .await
 }

@@ -31,6 +31,11 @@ pub static ADAPTER: Table = Table {
     bools: &["isActive", "shadowsArkyo"],
     jsons: &["inputs", "outputs"],
 };
+pub static CABLE: Table = Table {
+    name: "TenantCable",
+    bools: &["isActive", "shadowsArkyo"],
+    jsons: &["useCases", "availableLengths"],
+};
 pub static EQUIPMENT: Table = Table {
     name: "TenantEquipment",
     bools: &[
@@ -65,7 +70,7 @@ pub struct Refs {
     types: HashMap<String, Obj>,
 }
 
-async fn by_id(pool: &SqlitePool, t: &Table) -> Result<HashMap<String, Obj>, sqlx::Error> {
+pub async fn by_id(pool: &SqlitePool, t: &Table) -> Result<HashMap<String, Obj>, sqlx::Error> {
     Ok(list_rows(pool, t, "", r#""id""#)
         .await?
         .into_iter()
@@ -92,7 +97,7 @@ impl Refs {
     }
 }
 
-fn lookup(map: &HashMap<String, Obj>, id: Option<&str>) -> Value {
+pub fn lookup(map: &HashMap<String, Obj>, id: Option<&str>) -> Value {
     id.and_then(|i| map.get(i))
         .map_or(Value::Null, |o| Value::Object(o.clone()))
 }
