@@ -12,7 +12,7 @@ Ce fichier liste ce que les revues de la phase 1 ont laissé en suspens. Aucun p
 - **CLI lancée en root sous Linux.** Elle doit abandonner ses privilèges au profit du propriétaire du dossier de données (`setgroups`, `setgid`, `setuid`) avant d'ouvrir la base. Il reste aujourd'hui une course sur `arkyo.db` avant l'ouverture SQLite. Elle suppose que le compte `arkyo` soit déjà compromis, et ne peut produire qu'un déni de service ou une atteinte à l'intégrité.
 - **Windows.** Les ACL de `%ProgramData%\Arkyo` ne sont pas resserrées (WiX `PermissionEx`).
 - **Mises à jour.** Aucune exclusion mutuelle entre install, upload et rollback. Le corps d'un upload (512 Mo) est lu avant la vérification des droits. Les erreurs survenant avant le téléchargement ne remontent pas dans l'interface. Le bouton « Installer » envoie toujours `?version=`, ce qui autorise une version plus ancienne.
-- **Uploads (bloquant pour la phase 2).** Il manque `X-Content-Type-Options: nosniff` et un mode sandbox pour le HTML et le SVG. Les fichiers sont lus entièrement en mémoire, sans streaming.
+- **Uploads.** ~~Il manque `X-Content-Type-Options: nosniff` et un mode sandbox pour le HTML et le SVG.~~ Traité en phase 2 : `nosniff` sur tout `/uploads`, CSP `sandbox` pour le SVG et le HTML (`web.rs`, testé dans `http_upload.rs`). Reste : les fichiers sont lus entièrement en mémoire, sans streaming.
 - **Linux.** Le compte `arkyo` possède `/opt/arkyo`, ce qui est nécessaire à la mise à jour intégrée. Conséquence : un admin web peut devenir root via `sudo arkyo-server …`. C'est documenté ; à réévaluer.
 - **Reverse proxy sur le même hôte.** Tous les clients y paraissent en loopback, et la création du premier admin à distance devient possible. Il faut au moins le documenter.
 - **Flux SSE.** Ils ne revérifient pas la session. À corriger avant de publier de vrais évènements (phases 3 et 7).
@@ -22,7 +22,7 @@ Ce fichier liste ce que les revues de la phase 1 ont laissé en suspens. Aucun p
 - **Authentification.** Course sur la création du premier admin. Loopback IPv4-mappé (`to_canonical()`). Durée de connexion qui révèle si un identifiant existe. `CurrentUser` n'est valable que dans `/api`.
 - **Erreurs avalées.** Erreurs de base ignorées dans `count_of`, `site` et dans `get`/`list`/`count` des utilisateurs.
 - **Tests manquants.** `require()`, `set_role` avec `UnknownRole`, garde du dernier propriétaire avec deux pools, test de clé étrangère trop faible. Côté front : confirmations d'upload et de rollback.
-- **Front.** Les dépendances du `useEffect` du shim next-auth. `redirect()` ignore son type. La page `/auth/setup` reste blanche si `/api/auth/state` échoue. Helpers croisés entre les pages auth. Port 8090 codé en dur sur la page setup. Bundle à 500 kB, à découper avec `lazy()` en phase 2.
+- **Front.** Les dépendances du `useEffect` du shim next-auth. `redirect()` ignore son type. La page `/auth/setup` reste blanche si `/api/auth/state` échoue. Helpers croisés entre les pages auth. Port 8090 codé en dur sur la page setup. ~~Bundle à 500 kB, à découper avec `lazy()` en phase 2.~~ En partie traité en phase 2 : les 11 pages portées sont chargées par `lazy()` (`router.tsx`), mais le chunk d'entrée fait encore 524 kB (157 kB gzip), au-dessus du seuil d'avertissement de Vite.
 - **Divers.**
   - Les options globales sont ignorées quand `run` est précisé.
   - L'erreur de `bind` ne donne pas son contexte.
@@ -37,7 +37,7 @@ Ce fichier liste ce que les revues de la phase 1 ont laissé en suspens. Aucun p
 ## Habillage Strata Arkyo — points reportés
 
 - **Badges sur fond `--muted`.** Le contraste n'a été vérifié que sur `--surface`. Le badge succès tombe à environ 4,0:1 sur `--muted` en clair. Il faut étendre le test avant d'utiliser des badges sur des lignes grisées (phase 2).
-- **`catalog-badges.tsx`.** L'étiquette de plan « fantôme » en violet est à environ 2,7:1 en clair. À revoir quand le catalogue arrivera (phase 2).
+- ~~**`catalog-badges.tsx`.** L'étiquette de plan « fantôme » en violet est à environ 2,7:1 en clair. À revoir quand le catalogue arrivera (phase 2).~~ Sans objet après la phase 2 : aucun écran n'importe `CatalogBadges` ni `getCatalogItemFlags`, et l'API ne renvoie jamais d'élément `ARKYO`, donc l'étiquette ne s'affiche jamais. Le fichier reste une copie d'arkyo inutilisée.
 - **Marges minces.** Badge de rôle CONSULTATION en clair (4,55:1), badges succès et alerte (4,59 et 4,61:1).
 - **macOS.** Le `preinstall` supprime `/Applications/Arkyo.app` sans vérifier l'identifiant de bundle (`com.arkyo.app`).
 - **Tests.**
