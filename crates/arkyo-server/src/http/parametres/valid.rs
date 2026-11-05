@@ -56,6 +56,19 @@ pub enum Kind {
     AnyArr,
     /// `z.enum(values, { message })`.
     Enum(&'static [&'static str], &'static str),
+    /// `z.unknown()`: any JSON value.
+    Any,
+    /// `z.array(slotSchema)` of the print templates (`key`, `label`,
+    /// `type` in TEXT/VARIABLE/LOGO, optional `defaultValue`, `sample`).
+    Slots,
+    /// `z.string().min(1, min_msg).max(max, max_msg).regex(^[A-Z0-9_]+$,
+    /// regex_msg)` (`max` is `usize::MAX` when there is no upper bound).
+    UpperKey {
+        min_msg: &'static str,
+        max: usize,
+        max_msg: &'static str,
+        regex_msg: &'static str,
+    },
 }
 
 /// Value of a field the client did not send (create only).
@@ -138,7 +151,8 @@ fn expected(kind: &Kind) -> &'static str {
         | Kind::Bounded { .. }
         | Kind::MaxLen(_)
         | Kind::Url
-        | Kind::Asset => "string",
+        | Kind::Asset
+        | Kind::UpperKey { .. } => "string",
         Kind::NumNonNeg
         | Kind::NumPos
         | Kind::NumPosMsg(_)
@@ -146,8 +160,9 @@ fn expected(kind: &Kind) -> &'static str {
         | Kind::Num
         | Kind::IntMin(_) => "number",
         Kind::Bool => "boolean",
-        Kind::StrArr | Kind::NumArr | Kind::AnyArr | Kind::IdArr { .. } => "array",
+        Kind::StrArr | Kind::NumArr | Kind::AnyArr | Kind::IdArr { .. } | Kind::Slots => "array",
         Kind::Enum(..) => "string",
+        Kind::Any => "unknown",
     }
 }
 
@@ -177,6 +192,42 @@ fn valid_url(s: &str) -> bool {
         && !rest.is_empty()
         && !rest.starts_with('/')
         && !s.chars().any(char::is_whitespace)
+}
+
+/// One element of a print template's `slots` (arkyo `slotSchema`).
+fn check_slot(it: &Value, errs: &mut Vec<String>) {
+    let Value::Object(o) = it else {
+        errs.push(format!(
+            "Invalid input: expected object, received {}",
+            js_type(Some(it))
+        ));
+        return;
+    };
+    for name in ["key", "label"] {
+        match o.get(name) {
+            Some(Value::String(s)) if s.is_empty() => {
+                errs.push("Too small: expected string to have >=1 characters".into());
+            }
+            Some(Value::String(_)) => {}
+            other => errs.push(format!(
+                "Invalid input: expected string, received {}",
+                js_type(other)
+            )),
+        }
+    }
+    match o.get("type") {
+        Some(Value::String(s)) if ["TEXT", "VARIABLE", "LOGO"].contains(&s.as_str()) => {}
+        _ => errs.push(r#"Invalid option: expected one of "TEXT"|"VARIABLE"|"LOGO""#.into()),
+    }
+    for name in ["defaultValue", "sample"] {
+        match o.get(name) {
+            None | Some(Value::String(_)) => {}
+            other => errs.push(format!(
+                "Invalid input: expected string, received {}",
+                js_type(other)
+            )),
+        }
+    }
 }
 
 /// The messages of every check `v` fails (empty = valid).
@@ -316,6 +367,36 @@ fn check(kind: &Kind, v: &Value) -> Vec<String> {
         (Kind::Enum(values, msg), Value::String(s)) => {
             if !values.contains(&s.as_str()) {
                 errs.push((*msg).to_string());
+            }
+        }
+        (Kind::Any, _) => {}
+        (
+            Kind::UpperKey {
+                min_msg,
+                max,
+                max_msg,
+                regex_msg,
+            },
+            Value::String(s),
+        ) => {
+            let n = s.chars().count();
+            if n < 1 {
+                errs.push((*min_msg).to_string());
+            }
+            if n > *max {
+                errs.push((*max_msg).to_string());
+            }
+            if s.is_empty()
+                || !s
+                    .chars()
+                    .all(|c| c.is_ascii_uppercase() || c.is_ascii_digit() || c == '_')
+            {
+                errs.push((*regex_msg).to_string());
+            }
+        }
+        (Kind::Slots, Value::Array(items)) => {
+            for it in items {
+                check_slot(it, &mut errs);
             }
         }
         _ => errs.push(type_error(kind, Some(v))),

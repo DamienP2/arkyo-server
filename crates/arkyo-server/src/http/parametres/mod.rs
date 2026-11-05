@@ -11,11 +11,14 @@
 
 #![allow(clippy::result_large_err)]
 
+pub mod application;
 pub mod brands;
 pub mod cabling;
 pub mod categories;
 pub mod connectors;
 mod dimensions;
+mod numbering;
+mod print;
 pub mod signals;
 mod symbols;
 mod valid;
@@ -171,6 +174,15 @@ pub fn router() -> Router<AppState> {
         .route(
             "/tenant/parametres/categories/type/{id}",
             patch(categories::type_update).delete(categories::type_delete),
+        )
+        .merge(print::router())
+        .route(
+            "/tenant/parametres/numbering",
+            get(numbering::get).patch(numbering::patch),
+        )
+        .route(
+            "/tenant/parametres/application",
+            get(application::get).patch(application::patch),
         )
         .route(
             "/tenant/parametres/dimensions",

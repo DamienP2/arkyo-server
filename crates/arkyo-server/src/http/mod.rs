@@ -1,5 +1,6 @@
 //! HTTP API: shared state, session middleware, extractors and routing.
 
+mod admin;
 mod auth;
 mod catalogue;
 mod events;
@@ -193,6 +194,7 @@ pub fn router(state: AppState) -> Router {
         )
         .route("/system/update/rollback", post(system::update_rollback))
         .merge(parametres::router())
+        .merge(admin::router())
         .merge(catalogue::router())
         .fallback(api_not_found)
         .layer(middleware::from_fn_with_state(state.clone(), session_layer));
