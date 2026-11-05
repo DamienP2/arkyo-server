@@ -1,5 +1,7 @@
+pub mod audit;
 pub mod config;
 pub mod db;
+pub mod events;
 pub mod firewall;
 pub mod http;
 pub mod ids;

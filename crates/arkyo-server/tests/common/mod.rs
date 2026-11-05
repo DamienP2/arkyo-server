@@ -21,20 +21,24 @@ pub struct Env {
     pub _dir: tempfile::TempDir,
     pub pool: SqlitePool,
     pub app: Router,
+    pub events: arkyo_server::events::EventBus,
 }
 
 pub async fn env() -> Env {
     let dir = tempfile::tempdir().unwrap();
     let pool = arkyo_server::db::open(dir.path()).await.unwrap();
+    let events = arkyo_server::events::EventBus::new();
     let app = router(AppState {
         pool: pool.clone(),
         data_dir: dir.path().to_path_buf(),
+        events: events.clone(),
         config: Arc::new(RwLock::new(Config::default())),
     });
     Env {
         _dir: dir,
         pool,
         app,
+        events,
     }
 }
 

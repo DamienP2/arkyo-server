@@ -120,14 +120,30 @@ async fn uploads(State(st): State<AppState>, uri: Uri) -> Response {
         return not_found();
     };
     let kind = mime_guess::from_path(&file).first_or_octet_stream();
-    (
+    let mut res = (
         [
             (header::CONTENT_TYPE, kind.essence_str().to_string()),
             (header::CACHE_CONTROL, "public, max-age=3600".to_string()),
         ],
         data,
     )
-        .into_response()
+        .into_response();
+    let h = res.headers_mut();
+    h.insert(
+        header::X_CONTENT_TYPE_OPTIONS,
+        HeaderValue::from_static("nosniff"),
+    );
+    // Active content (SVG, HTML) opened directly runs in an opaque origin.
+    if matches!(
+        kind.essence_str(),
+        "image/svg+xml" | "text/html" | "application/xhtml+xml"
+    ) {
+        h.insert(
+            header::CONTENT_SECURITY_POLICY,
+            HeaderValue::from_static("sandbox"),
+        );
+    }
+    res
 }
 
 /// Everything outside `/api`: uploads, embedded files, SPA fallback.

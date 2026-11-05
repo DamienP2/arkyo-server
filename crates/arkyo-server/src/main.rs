@@ -319,6 +319,7 @@ async fn serve(
     let state = AppState {
         pool,
         data_dir: dir.clone(),
+        events: arkyo_server::events::EventBus::new(),
         config: Arc::new(RwLock::new(cfg.clone())),
     };
     let addr = SocketAddr::new(args.bind.unwrap_or(cfg.bind), args.port.unwrap_or(cfg.port));

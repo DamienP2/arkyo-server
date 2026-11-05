@@ -72,3 +72,83 @@ async fn locale_without_session_sets_cookie_only() {
     assert_eq!(r.body, json!({"ok": true}));
     assert!(r.cookie.unwrap().starts_with("locale=en"));
 }
+
+#[tokio::test]
+async fn publish_reaches_sse_subscriber() {
+    let e = env().await;
+    add_user(&e.pool, "o@b.fr", "owner", false).await;
+    let tok = login(&e.app, "o@b.fr").await;
+    let res = e
+        .app
+        .clone()
+        .oneshot(events_request(Some(&tok)))
+        .await
+        .unwrap();
+    let mut body = res.into_body();
+    let first = body.frame().await.unwrap().unwrap().into_data().unwrap();
+    assert_eq!(&first[..], b"data: {\"type\":\"connected\"}\n\n");
+
+    e.events.publish("tenant_catalogue", "update", Some("abc"));
+    e.events.publish("tenant_catalogue", "create", None);
+    let a = body.frame().await.unwrap().unwrap().into_data().unwrap();
+    let a = String::from_utf8(a.to_vec()).unwrap();
+    let json = a.strip_prefix("data: ").unwrap().trim_end();
+    let v: serde_json::Value = serde_json::from_str(json).unwrap();
+    assert_eq!(
+        v,
+        json!({"type":"update","entity":"tenant_catalogue","action":"update","id":"abc"})
+    );
+    let b = body.frame().await.unwrap().unwrap().into_data().unwrap();
+    let b: serde_json::Value = serde_json::from_str(
+        std::str::from_utf8(&b)
+            .unwrap()
+            .strip_prefix("data: ")
+            .unwrap()
+            .trim_end(),
+    )
+    .unwrap();
+    assert_eq!(
+        b,
+        json!({"type":"update","entity":"tenant_catalogue","action":"create"})
+    );
+}
+
+#[tokio::test]
+async fn publish_without_subscriber_is_harmless() {
+    let e = env().await;
+    e.events.publish("x", "y", None);
+}
+
+#[tokio::test]
+async fn audit_row_written() {
+    let e = env().await;
+    let mut tx = e.pool.begin().await.unwrap();
+    arkyo_server::audit::log(
+        &mut tx,
+        "u1",
+        "update",
+        "TenantBrand",
+        "b1",
+        None,
+        Some(json!({"name": "A"})),
+        Some(json!({"name": "B"})),
+    )
+    .await
+    .unwrap();
+    tx.commit().await.unwrap();
+    let row: (String, String, String, Option<String>, Option<String>, Option<String>, String) =
+        sqlx::query_as(
+            r#"SELECT "userId","action","entityType","projectId","before","after","createdAt" FROM "AuditLog" WHERE "entityId"='b1'"#,
+        )
+        .fetch_one(&e.pool)
+        .await
+        .unwrap();
+    assert_eq!(
+        (row.0.as_str(), row.1.as_str(), row.2.as_str()),
+        ("u1", "update", "TenantBrand")
+    );
+    assert_eq!(row.3, None);
+    assert_eq!(row.4.as_deref(), Some(r#"{"name":"A"}"#));
+    assert_eq!(row.5.as_deref(), Some(r#"{"name":"B"}"#));
+    assert_eq!(row.6.len(), 24);
+}

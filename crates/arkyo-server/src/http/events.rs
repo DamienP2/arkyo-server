@@ -1,7 +1,7 @@
 //! `GET /api/events`: the app-wide SSE stream (arkyo:app/api/events/route.ts).
 //!
-//! Sends `connected` at once, then a `ping` every 25 s. Phase 1 publishes no
-//! domain events yet; the stream keeps the shell's `AppSync` connected.
+//! Sends `connected` at once, then the events of the [`EventBus`](crate::events::EventBus)
+//! as they are published, and a `ping` every 25 s.
 //!
 //! Streams end on [`close_all`] (server shutdown): graceful shutdown waits for
 //! open connections, and an endless stream would hold it forever.
@@ -11,12 +11,13 @@ use std::sync::LazyLock;
 use std::time::Duration;
 
 use axum::body::{Body, Bytes};
+use axum::extract::State;
 use axum::http::header;
 use axum::response::{IntoResponse, Response};
 use futures_util::stream::{self, StreamExt};
-use tokio::sync::watch;
+use tokio::sync::{broadcast, watch};
 
-use super::CurrentUser;
+use super::{AppState, CurrentUser};
 
 const CONNECTED: &[u8] = b"data: {\"type\":\"connected\"}\n\n";
 const PING: &[u8] = b"data: {\"type\":\"ping\"}\n\n";
@@ -34,11 +35,23 @@ async fn closed() {
     let _ = rx.wait_for(|closed| *closed).await;
 }
 
-pub async fn stream(_: CurrentUser) -> Response {
+pub async fn stream(State(st): State<AppState>, _: CurrentUser) -> Response {
+    let rx = st.events.subscribe();
     let connected = stream::once(async { Ok::<_, Infallible>(Bytes::from_static(CONNECTED)) });
-    let pings = stream::unfold((), |()| async {
-        tokio::time::sleep(PING_EVERY).await;
-        Some((Ok::<_, Infallible>(Bytes::from_static(PING)), ()))
+    // Events and pings share one stream: a ping is due 25 s after the last frame.
+    let live = stream::unfold(rx, |mut rx| async move {
+        loop {
+            match tokio::time::timeout(PING_EVERY, rx.recv()).await {
+                Ok(Ok(data)) => {
+                    let frame = format!("data: {data}\n\n");
+                    return Some((Ok::<_, Infallible>(Bytes::from(frame)), rx));
+                }
+                // A slow client missed some events: keep going with the newest.
+                Ok(Err(broadcast::error::RecvError::Lagged(_))) => continue,
+                Ok(Err(broadcast::error::RecvError::Closed)) => return None,
+                Err(_) => return Some((Ok(Bytes::from_static(PING)), rx)),
+            }
+        }
     });
     (
         [
@@ -47,7 +60,7 @@ pub async fn stream(_: CurrentUser) -> Response {
             (header::CONNECTION, "keep-alive"),
             (header::HeaderName::from_static("x-accel-buffering"), "no"),
         ],
-        Body::from_stream(connected.chain(pings).take_until(closed())),
+        Body::from_stream(connected.chain(live).take_until(closed())),
     )
         .into_response()
 }

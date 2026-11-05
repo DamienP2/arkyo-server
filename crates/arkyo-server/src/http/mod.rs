@@ -6,6 +6,7 @@ mod me;
 mod notifications;
 mod presence;
 mod system;
+mod upload;
 
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
@@ -31,6 +32,7 @@ use crate::users::{self, User};
 pub struct AppState {
     pub pool: SqlitePool,
     pub data_dir: PathBuf,
+    pub events: crate::events::EventBus,
     pub config: Arc<RwLock<Config>>,
 }
 
@@ -173,6 +175,11 @@ pub fn router(state: AppState) -> Router {
         )
         .route("/presence", get(presence::get).post(presence::post))
         .route("/events", get(events::stream))
+        .route(
+            "/upload",
+            post(upload::upload).layer(DefaultBodyLimit::max(upload::MAX_BODY)),
+        )
+        .route("/upload/from-url", post(upload::from_url))
         .route("/system", get(system::info))
         .route("/system/update", get(system::update_info))
         .route("/system/update/settings", put(system::update_settings))
