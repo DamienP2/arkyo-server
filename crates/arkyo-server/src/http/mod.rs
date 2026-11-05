@@ -4,6 +4,7 @@ mod auth;
 mod events;
 mod me;
 mod notifications;
+mod parametres;
 mod presence;
 mod system;
 mod upload;
@@ -190,6 +191,7 @@ pub fn router(state: AppState) -> Router {
             post(system::update_upload).layer(DefaultBodyLimit::max(system::MAX_UPLOAD)),
         )
         .route("/system/update/rollback", post(system::update_rollback))
+        .merge(parametres::router())
         .fallback(api_not_found)
         .layer(middleware::from_fn_with_state(state.clone(), session_layer));
     let web = crate::web::routes(&state.data_dir);

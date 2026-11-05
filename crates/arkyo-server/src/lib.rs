@@ -1,4 +1,5 @@
 pub mod audit;
+pub mod catalogue;
 pub mod config;
 pub mod db;
 pub mod events;
