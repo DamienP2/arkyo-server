@@ -6,17 +6,17 @@
       "table": "TenantSignalType",
       "rows": [
         {
-          "id": "cmw3kwyir00iid7dizm3v5dss",
+          "id": "cmw3l7xn900iimydizxklnumx",
           "name": "Composite (CVBS)",
           "color": "#6b7280",
-          "functionId": "cmw3kwyhz0001d7dirmf5fvaj",
+          "functionId": "cmw3l7xmg0001mydisfhpmpdg",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": "5.5 MHz",
           "requiredImpedance": null,
           "minBandwidthMHz": null,
           "connectorIds": [
-            "cmw3kwyin00ecd7dikcs3byqv"
+            "cmw3l7xn400ecmydijjq8znbt"
           ],
           "isIp": false,
           "supportsRedundancy": false,
@@ -27,17 +27,17 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyir00ijd7diwwbe02fu",
+          "id": "cmw3l7xn900ijmydihczjrfio",
           "name": "Component YPbPr",
           "color": "#6b7280",
-          "functionId": "cmw3kwyhz0001d7dirmf5fvaj",
+          "functionId": "cmw3l7xmg0001mydisfhpmpdg",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": "30 MHz",
           "requiredImpedance": null,
           "minBandwidthMHz": null,
           "connectorIds": [
-            "cmw3kwyin00ecd7dikcs3byqv"
+            "cmw3l7xn400ecmydijjq8znbt"
           ],
           "isIp": false,
           "supportsRedundancy": false,
@@ -48,17 +48,17 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyir00ikd7di8pqvdqja",
+          "id": "cmw3l7xn900ikmydieccik4w9",
           "name": "SD-SDI",
           "color": "#6b7280",
-          "functionId": "cmw3kwyhz0001d7dirmf5fvaj",
+          "functionId": "cmw3l7xmg0001mydisfhpmpdg",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": "270 Mbps",
           "requiredImpedance": null,
           "minBandwidthMHz": null,
           "connectorIds": [
-            "cmw3kwyin00ecd7dikcs3byqv"
+            "cmw3l7xn400ecmydijjq8znbt"
           ],
           "isIp": false,
           "supportsRedundancy": false,
@@ -69,17 +69,17 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyir00ild7dik1dgjpz0",
+          "id": "cmw3l7xn900ilmydijnt37j9s",
           "name": "HD-SDI",
           "color": "#6b7280",
-          "functionId": "cmw3kwyhz0001d7dirmf5fvaj",
+          "functionId": "cmw3l7xmg0001mydisfhpmpdg",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": "1.485 Gbps",
           "requiredImpedance": null,
           "minBandwidthMHz": null,
           "connectorIds": [
-            "cmw3kwyin00ecd7dikcs3byqv"
+            "cmw3l7xn400ecmydijjq8znbt"
           ],
           "isIp": false,
           "supportsRedundancy": false,
@@ -90,17 +90,17 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyir00imd7dipzen1qy0",
+          "id": "cmw3l7xn900immydio8mhkiim",
           "name": "3G-SDI",
           "color": "#6b7280",
-          "functionId": "cmw3kwyhz0001d7dirmf5fvaj",
+          "functionId": "cmw3l7xmg0001mydisfhpmpdg",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": "2.97 Gbps",
           "requiredImpedance": null,
           "minBandwidthMHz": null,
           "connectorIds": [
-            "cmw3kwyin00ecd7dikcs3byqv"
+            "cmw3l7xn400ecmydijjq8znbt"
           ],
           "isIp": false,
           "supportsRedundancy": false,
@@ -111,17 +111,18 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyir00ind7dio9pcouv6",
+          "id": "cmw3l7xn900inmydiokkfniew",
           "name": "6G-SDI",
           "color": "#6b7280",
-          "functionId": "cmw3kwyhz0001d7dirmf5fvaj",
+          "functionId": "cmw3l7xmg0001mydisfhpmpdg",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": "5.94 Gbps",
           "requiredImpedance": null,
           "minBandwidthMHz": null,
           "connectorIds": [
-            "cmw3kwyin00ecd7dikcs3byqv"
+            "cmw3l7xn400ecmydijjq8znbt",
+            "cmw3l7xn400eimydi64rsqi1p"
           ],
           "isIp": false,
           "supportsRedundancy": false,
@@ -132,17 +133,18 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyir00iod7di7zjq8cde",
+          "id": "cmw3l7xn900iomydixfnxavoe",
           "name": "12G-SDI",
           "color": "#6b7280",
-          "functionId": "cmw3kwyhz0001d7dirmf5fvaj",
+          "functionId": "cmw3l7xmg0001mydisfhpmpdg",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": "11.88 Gbps",
           "requiredImpedance": null,
           "minBandwidthMHz": null,
           "connectorIds": [
-            "cmw3kwyin00ecd7dikcs3byqv"
+            "cmw3l7xn400ecmydijjq8znbt",
+            "cmw3l7xn400eimydi64rsqi1p"
           ],
           "isIp": false,
           "supportsRedundancy": false,
@@ -153,17 +155,17 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyir00ipd7diiggqrmwl",
+          "id": "cmw3l7xn900ipmydix04f4otr",
           "name": "Quad-Link 3G-SDI",
           "color": "#6b7280",
-          "functionId": "cmw3kwyhz0001d7dirmf5fvaj",
+          "functionId": "cmw3l7xmg0001mydisfhpmpdg",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": "4×2.97 Gbps",
           "requiredImpedance": null,
           "minBandwidthMHz": null,
           "connectorIds": [
-            "cmw3kwyin00ecd7dikcs3byqv"
+            "cmw3l7xn400ecmydijjq8znbt"
           ],
           "isIp": false,
           "supportsRedundancy": false,
@@ -174,17 +176,17 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyir00iqd7dinpxyzq5s",
+          "id": "cmw3l7xn900iqmydiqg0i6nao",
           "name": "Dual-Link 1.5G",
           "color": "#6b7280",
-          "functionId": "cmw3kwyhz0001d7dirmf5fvaj",
+          "functionId": "cmw3l7xmg0001mydisfhpmpdg",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": "2×1.485 Gbps",
           "requiredImpedance": null,
           "minBandwidthMHz": null,
           "connectorIds": [
-            "cmw3kwyin00ecd7dikcs3byqv"
+            "cmw3l7xn400ecmydijjq8znbt"
           ],
           "isIp": false,
           "supportsRedundancy": false,
@@ -195,17 +197,17 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyir00ird7dijoytpw2h",
+          "id": "cmw3l7xn900irmydiq5h9imqf",
           "name": "HDMI 1.4",
           "color": "#6b7280",
-          "functionId": "cmw3kwyhz0001d7dirmf5fvaj",
+          "functionId": "cmw3l7xmg0001mydisfhpmpdg",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": "10.2 Gbps",
           "requiredImpedance": null,
           "minBandwidthMHz": null,
           "connectorIds": [
-            "cmw3kwyin00epd7dikgw6vxb1"
+            "cmw3l7xn400epmydir94cdn1f"
           ],
           "isIp": false,
           "supportsRedundancy": false,
@@ -216,17 +218,17 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyir00isd7diqihqg6x5",
+          "id": "cmw3l7xn900ismydi54hjecc9",
           "name": "HDMI 2.0",
           "color": "#6b7280",
-          "functionId": "cmw3kwyhz0001d7dirmf5fvaj",
+          "functionId": "cmw3l7xmg0001mydisfhpmpdg",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": "18 Gbps",
           "requiredImpedance": null,
           "minBandwidthMHz": null,
           "connectorIds": [
-            "cmw3kwyin00epd7dikgw6vxb1"
+            "cmw3l7xn400epmydir94cdn1f"
           ],
           "isIp": false,
           "supportsRedundancy": false,
@@ -237,17 +239,17 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyir00itd7diggwhtmbm",
+          "id": "cmw3l7xn900itmydi66zihc25",
           "name": "HDMI 2.1",
           "color": "#6b7280",
-          "functionId": "cmw3kwyhz0001d7dirmf5fvaj",
+          "functionId": "cmw3l7xmg0001mydisfhpmpdg",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": "48 Gbps",
           "requiredImpedance": null,
           "minBandwidthMHz": null,
           "connectorIds": [
-            "cmw3kwyin00epd7dikgw6vxb1"
+            "cmw3l7xn400epmydir94cdn1f"
           ],
           "isIp": false,
           "supportsRedundancy": false,
@@ -258,17 +260,18 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyir00iud7difdi6isq8",
+          "id": "cmw3l7xn900iumydicq53qbfw",
           "name": "DisplayPort 1.4",
           "color": "#6b7280",
-          "functionId": "cmw3kwyhz0001d7dirmf5fvaj",
+          "functionId": "cmw3l7xmg0001mydisfhpmpdg",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": "32.4 Gbps",
           "requiredImpedance": null,
           "minBandwidthMHz": null,
           "connectorIds": [
-            "cmw3kwyin00etd7dig30xsrj3"
+            "cmw3l7xn400etmydikmu0ihyk",
+            "cmw3l7xn600i8mydi0ylfxlou"
           ],
           "isIp": false,
           "supportsRedundancy": false,
@@ -279,17 +282,18 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyir00ivd7dikero9gmq",
+          "id": "cmw3l7xn900ivmydinqdaowqd",
           "name": "DisplayPort 2.1",
           "color": "#6b7280",
-          "functionId": "cmw3kwyhz0001d7dirmf5fvaj",
+          "functionId": "cmw3l7xmg0001mydisfhpmpdg",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": "80 Gbps",
           "requiredImpedance": null,
           "minBandwidthMHz": null,
           "connectorIds": [
-            "cmw3kwyin00etd7dig30xsrj3"
+            "cmw3l7xn400etmydikmu0ihyk",
+            "cmw3l7xn600i8mydi0ylfxlou"
           ],
           "isIp": false,
           "supportsRedundancy": false,
@@ -300,17 +304,17 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyir00iwd7dih1rykwrd",
+          "id": "cmw3l7xn900iwmydigbc9ntyv",
           "name": "DVI-D Single Link",
           "color": "#6b7280",
-          "functionId": "cmw3kwyhz0001d7dirmf5fvaj",
+          "functionId": "cmw3l7xmg0001mydisfhpmpdg",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": "3.96 Gbps",
           "requiredImpedance": null,
           "minBandwidthMHz": null,
           "connectorIds": [
-            "cmw3kwyio00exd7dihlnwhxt5"
+            "cmw3l7xn400exmydimq7s1o25"
           ],
           "isIp": false,
           "supportsRedundancy": false,
@@ -321,17 +325,17 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyir00ixd7diqnz6gwlq",
+          "id": "cmw3l7xna00ixmydi8dkywrka",
           "name": "DVI-D Dual Link",
           "color": "#6b7280",
-          "functionId": "cmw3kwyhz0001d7dirmf5fvaj",
+          "functionId": "cmw3l7xmg0001mydisfhpmpdg",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": "7.92 Gbps",
           "requiredImpedance": null,
           "minBandwidthMHz": null,
           "connectorIds": [
-            "cmw3kwyio00exd7dihlnwhxt5"
+            "cmw3l7xn400exmydimq7s1o25"
           ],
           "isIp": false,
           "supportsRedundancy": false,
@@ -342,17 +346,17 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyir00iyd7dik4ha17gy",
+          "id": "cmw3l7xna00iymydi9b9xjfyn",
           "name": "VGA",
           "color": "#6b7280",
-          "functionId": "cmw3kwyhz0001d7dirmf5fvaj",
+          "functionId": "cmw3l7xmg0001mydisfhpmpdg",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": "100 MHz",
           "requiredImpedance": null,
           "minBandwidthMHz": null,
           "connectorIds": [
-            "cmw3kwyio00ezd7dip5bnpboa"
+            "cmw3l7xn400ezmydifypfmnmx"
           ],
           "isIp": false,
           "supportsRedundancy": false,
@@ -363,19 +367,19 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyir00izd7di51jsegsi",
+          "id": "cmw3l7xna00izmydi3p8icapu",
           "name": "SDI sur Fibre",
           "color": "#6b7280",
-          "functionId": "cmw3kwyhz0001d7dirmf5fvaj",
+          "functionId": "cmw3l7xmg0001mydisfhpmpdg",
           "cablePrefix": "FV",
           "cableSuffix": "",
           "bandwidth": null,
           "requiredImpedance": null,
           "minBandwidthMHz": null,
           "connectorIds": [
-            "cmw3kwyio00fed7didssyu6iz",
-            "cmw3kwyio00fhd7dipxki644s",
-            "cmw3kwyio00fpd7diwtb7skqp"
+            "cmw3l7xn400femydia5su2tra",
+            "cmw3l7xn400fhmydijds08mch",
+            "cmw3l7xn400fpmydilbc7mhzx"
           ],
           "isIp": false,
           "supportsRedundancy": false,
@@ -386,19 +390,19 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyir00j0d7dijvawc66z",
+          "id": "cmw3l7xna00j0mydisof3m63u",
           "name": "SMPTE 2110 (Media)",
           "color": "#6b7280",
-          "functionId": "cmw3kwyi0000ad7di0nzvibu3",
+          "functionId": "cmw3l7xmg000amydif3nkms0a",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": "1–25 Gbps",
           "requiredImpedance": null,
           "minBandwidthMHz": null,
           "connectorIds": [
-            "cmw3kwyip00i2d7dijmjahsc5",
-            "cmw3kwyip00ied7dihstrr4jx",
-            "cmw3kwyip00igd7dik7riaqzx"
+            "cmw3l7xn600i2mydiu3q44ifd",
+            "cmw3l7xn600iemydixqfe3is3",
+            "cmw3l7xn600igmydi1xy4dw5f"
           ],
           "isIp": true,
           "supportsRedundancy": true,
@@ -409,18 +413,18 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyir00j1d7dibdeu3vxq",
+          "id": "cmw3l7xna00j1mydig7g8n3gq",
           "name": "SMPTE 2110-22 (Compressé)",
           "color": "#6b7280",
-          "functionId": "cmw3kwyhz0001d7dirmf5fvaj",
+          "functionId": "cmw3l7xmg0001mydisfhpmpdg",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": "100–500 Mbps",
           "requiredImpedance": null,
           "minBandwidthMHz": null,
           "connectorIds": [
-            "cmw3kwyip00i2d7dijmjahsc5",
-            "cmw3kwyip00ied7dihstrr4jx"
+            "cmw3l7xn600i2mydiu3q44ifd",
+            "cmw3l7xn600iemydixqfe3is3"
           ],
           "isIp": false,
           "supportsRedundancy": false,
@@ -431,17 +435,17 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyir00j2d7di59pwlau5",
+          "id": "cmw3l7xna00j2mydi5lllq19b",
           "name": "NDI",
           "color": "#6b7280",
-          "functionId": "cmw3kwyhz0001d7dirmf5fvaj",
+          "functionId": "cmw3l7xmg0001mydisfhpmpdg",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": "~150 Mbps",
           "requiredImpedance": null,
           "minBandwidthMHz": null,
           "connectorIds": [
-            "cmw3kwyip00i2d7dijmjahsc5"
+            "cmw3l7xn600i2mydiu3q44ifd"
           ],
           "isIp": false,
           "supportsRedundancy": false,
@@ -452,17 +456,17 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyir00j3d7di1k7mevbp",
+          "id": "cmw3l7xna00j3mydihqbtcbii",
           "name": "NDI HX",
           "color": "#6b7280",
-          "functionId": "cmw3kwyhz0001d7dirmf5fvaj",
+          "functionId": "cmw3l7xmg0001mydisfhpmpdg",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": "~16 Mbps",
           "requiredImpedance": null,
           "minBandwidthMHz": null,
           "connectorIds": [
-            "cmw3kwyip00i2d7dijmjahsc5"
+            "cmw3l7xn600i2mydiu3q44ifd"
           ],
           "isIp": false,
           "supportsRedundancy": false,
@@ -473,18 +477,18 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyir00j4d7diz4otpwo1",
+          "id": "cmw3l7xna00j4mydiiry4fst5",
           "name": "SRT",
           "color": "#6b7280",
-          "functionId": "cmw3kwyhz0001d7dirmf5fvaj",
+          "functionId": "cmw3l7xmg0001mydisfhpmpdg",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": null,
           "requiredImpedance": null,
           "minBandwidthMHz": null,
           "connectorIds": [
-            "cmw3kwyip00i2d7dijmjahsc5",
-            "cmw3kwyip00ied7dihstrr4jx"
+            "cmw3l7xn600i2mydiu3q44ifd",
+            "cmw3l7xn600iemydixqfe3is3"
           ],
           "isIp": false,
           "supportsRedundancy": false,
@@ -495,18 +499,18 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyis00j5d7di66kewwy2",
+          "id": "cmw3l7xna00j5mydi89z7qb0i",
           "name": "RIST",
           "color": "#6b7280",
-          "functionId": "cmw3kwyhz0001d7dirmf5fvaj",
+          "functionId": "cmw3l7xmg0001mydisfhpmpdg",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": null,
           "requiredImpedance": null,
           "minBandwidthMHz": null,
           "connectorIds": [
-            "cmw3kwyip00i2d7dijmjahsc5",
-            "cmw3kwyip00ied7dihstrr4jx"
+            "cmw3l7xn600i2mydiu3q44ifd",
+            "cmw3l7xn600iemydixqfe3is3"
           ],
           "isIp": false,
           "supportsRedundancy": false,
@@ -517,17 +521,17 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyis00j6d7di3jenhq4e",
+          "id": "cmw3l7xna00j6mydi89b8lgmb",
           "name": "RTMP / RTMPS",
           "color": "#6b7280",
-          "functionId": "cmw3kwyhz0001d7dirmf5fvaj",
+          "functionId": "cmw3l7xmg0001mydisfhpmpdg",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": null,
           "requiredImpedance": null,
           "minBandwidthMHz": null,
           "connectorIds": [
-            "cmw3kwyip00i2d7dijmjahsc5"
+            "cmw3l7xn600i2mydiu3q44ifd"
           ],
           "isIp": false,
           "supportsRedundancy": false,
@@ -538,18 +542,18 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyis00j7d7di2comi4sn",
+          "id": "cmw3l7xna00j7mydiag2nb5vo",
           "name": "MPEG-TS over IP",
           "color": "#6b7280",
-          "functionId": "cmw3kwyhz0001d7dirmf5fvaj",
+          "functionId": "cmw3l7xmg0001mydisfhpmpdg",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": "1–80 Mbps",
           "requiredImpedance": null,
           "minBandwidthMHz": null,
           "connectorIds": [
-            "cmw3kwyip00i2d7dijmjahsc5",
-            "cmw3kwyip00ied7dihstrr4jx"
+            "cmw3l7xn600i2mydiu3q44ifd",
+            "cmw3l7xn600iemydixqfe3is3"
           ],
           "isIp": false,
           "supportsRedundancy": false,
@@ -560,16 +564,18 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyis00j8d7dijl9xndno",
+          "id": "cmw3l7xna00j8mydiyp31r461",
           "name": "Fibre Caméra SMPTE",
           "color": "#6b7280",
-          "functionId": "cmw3kwyhz0001d7dirmf5fvaj",
+          "functionId": "cmw3l7xmg0001mydisfhpmpdg",
           "cablePrefix": "CAM",
           "cableSuffix": "",
           "bandwidth": null,
           "requiredImpedance": null,
           "minBandwidthMHz": null,
-          "connectorIds": [],
+          "connectorIds": [
+            "cmw3l7xn400emmydir6ey07q6"
+          ],
           "isIp": false,
           "supportsRedundancy": false,
           "redundancyStyle": "AB",
@@ -579,16 +585,19 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyis00j9d7di12k4pn5d",
+          "id": "cmw3l7xna00j9mydi5vsg09vd",
           "name": "Analogique Micro",
           "color": "#6b7280",
-          "functionId": "cmw3kwyi00002d7diybobu4ks",
+          "functionId": "cmw3l7xmg0002mydihyfu3n1k",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": "20 Hz–20 kHz",
           "requiredImpedance": null,
           "minBandwidthMHz": null,
-          "connectorIds": [],
+          "connectorIds": [
+            "cmw3l7xn400fsmydiu3g7piyd",
+            "cmw3l7xn400g1myditg6dqclf"
+          ],
           "isIp": false,
           "supportsRedundancy": false,
           "redundancyStyle": "AB",
@@ -598,19 +607,21 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyis00jad7digx5vl9o7",
+          "id": "cmw3l7xna00jamydit8izqkz7",
           "name": "Analogique Ligne",
           "color": "#6b7280",
-          "functionId": "cmw3kwyi00002d7diybobu4ks",
+          "functionId": "cmw3l7xmg0002mydihyfu3n1k",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": "20 Hz–20 kHz",
           "requiredImpedance": null,
           "minBandwidthMHz": null,
           "connectorIds": [
-            "cmw3kwyio00g3d7dihpex8k1u",
-            "cmw3kwyio00g9d7di7z4ag1xq",
-            "cmw3kwyio00g7d7di5v0j5n7y"
+            "cmw3l7xn400fsmydiu3g7piyd",
+            "cmw3l7xn400g3mydi6ti1by1z",
+            "cmw3l7xn500g9mydii9srml1t",
+            "cmw3l7xn500gcmydin0pypyxg",
+            "cmw3l7xn500g7mydiu7mfqugy"
           ],
           "isIp": false,
           "supportsRedundancy": false,
@@ -621,16 +632,18 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyis00jbd7di5p70zh1x",
+          "id": "cmw3l7xna00jbmydizc4bggpo",
           "name": "AES/EBU (AES3)",
           "color": "#6b7280",
-          "functionId": "cmw3kwyi00002d7diybobu4ks",
+          "functionId": "cmw3l7xmg0002mydihyfu3n1k",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": "3.072 Mbps",
           "requiredImpedance": null,
           "minBandwidthMHz": null,
-          "connectorIds": [],
+          "connectorIds": [
+            "cmw3l7xn400fsmydiu3g7piyd"
+          ],
           "isIp": false,
           "supportsRedundancy": false,
           "redundancyStyle": "AB",
@@ -640,17 +653,17 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyis00jcd7dio7zyx9if",
+          "id": "cmw3l7xna00jcmydi62sfizxd",
           "name": "AES-3id",
           "color": "#6b7280",
-          "functionId": "cmw3kwyi00002d7diybobu4ks",
+          "functionId": "cmw3l7xmg0002mydihyfu3n1k",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": "3.072 Mbps",
           "requiredImpedance": null,
           "minBandwidthMHz": null,
           "connectorIds": [
-            "cmw3kwyin00ecd7dikcs3byqv"
+            "cmw3l7xn400ecmydijjq8znbt"
           ],
           "isIp": false,
           "supportsRedundancy": false,
@@ -661,17 +674,17 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyis00jdd7dilwz666pg",
+          "id": "cmw3l7xna00jdmydi9cd98lb2",
           "name": "MADI Coax",
           "color": "#6b7280",
-          "functionId": "cmw3kwyi00002d7diybobu4ks",
+          "functionId": "cmw3l7xmg0002mydihyfu3n1k",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": "125 Mbps",
           "requiredImpedance": null,
           "minBandwidthMHz": null,
           "connectorIds": [
-            "cmw3kwyin00ecd7dikcs3byqv"
+            "cmw3l7xn400ecmydijjq8znbt"
           ],
           "isIp": false,
           "supportsRedundancy": false,
@@ -682,19 +695,19 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyis00jed7ditzc394ql",
+          "id": "cmw3l7xna00jemydid2vboqon",
           "name": "MADI Optique",
           "color": "#6b7280",
-          "functionId": "cmw3kwyi00002d7diybobu4ks",
+          "functionId": "cmw3l7xmg0002mydihyfu3n1k",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": "125 Mbps",
           "requiredImpedance": null,
           "minBandwidthMHz": null,
           "connectorIds": [
-            "cmw3kwyio00fed7didssyu6iz",
-            "cmw3kwyio00fhd7dipxki644s",
-            "cmw3kwyio00fkd7di27fopkrx"
+            "cmw3l7xn400femydia5su2tra",
+            "cmw3l7xn400fhmydijds08mch",
+            "cmw3l7xn400fkmydidj4roko1"
           ],
           "isIp": false,
           "supportsRedundancy": false,
@@ -705,17 +718,17 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyis00jfd7di35gglwwl",
+          "id": "cmw3l7xna00jfmydib0je1jhc",
           "name": "S/PDIF Coaxial",
           "color": "#6b7280",
-          "functionId": "cmw3kwyi00002d7diybobu4ks",
+          "functionId": "cmw3l7xmg0002mydihyfu3n1k",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": "3.072 Mbps",
           "requiredImpedance": null,
           "minBandwidthMHz": null,
           "connectorIds": [
-            "cmw3kwyio00g9d7di7z4ag1xq"
+            "cmw3l7xn500g9mydii9srml1t"
           ],
           "isIp": false,
           "supportsRedundancy": false,
@@ -726,17 +739,17 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyis00jgd7dip840po7x",
+          "id": "cmw3l7xna00jgmydi031irrsu",
           "name": "S/PDIF Optique (TOSLINK)",
           "color": "#6b7280",
-          "functionId": "cmw3kwyi00002d7diybobu4ks",
+          "functionId": "cmw3l7xmg0002mydihyfu3n1k",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": "3.072 Mbps",
           "requiredImpedance": null,
           "minBandwidthMHz": null,
           "connectorIds": [
-            "cmw3kwyio00fkd7di27fopkrx"
+            "cmw3l7xn400fkmydidj4roko1"
           ],
           "isIp": false,
           "supportsRedundancy": false,
@@ -747,17 +760,17 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyis00jhd7dix1rmmayo",
+          "id": "cmw3l7xna00jhmydiyzyg0dsc",
           "name": "ADAT Lightpipe",
           "color": "#6b7280",
-          "functionId": "cmw3kwyi00002d7diybobu4ks",
+          "functionId": "cmw3l7xmg0002mydihyfu3n1k",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": "12.288 Mbps",
           "requiredImpedance": null,
           "minBandwidthMHz": null,
           "connectorIds": [
-            "cmw3kwyio00fkd7di27fopkrx"
+            "cmw3l7xn400fkmydidj4roko1"
           ],
           "isIp": false,
           "supportsRedundancy": false,
@@ -768,17 +781,17 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyis00jid7digqrc9wpf",
+          "id": "cmw3l7xna00jimydijym86csz",
           "name": "Dante",
           "color": "#6b7280",
-          "functionId": "cmw3kwyi00002d7diybobu4ks",
+          "functionId": "cmw3l7xmg0002mydihyfu3n1k",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": "1 Gbps",
           "requiredImpedance": null,
           "minBandwidthMHz": null,
           "connectorIds": [
-            "cmw3kwyip00i2d7dijmjahsc5"
+            "cmw3l7xn600i2mydiu3q44ifd"
           ],
           "isIp": false,
           "supportsRedundancy": false,
@@ -789,17 +802,17 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyis00jjd7dilohdxorj",
+          "id": "cmw3l7xna00jjmydikk9jlwn3",
           "name": "AES67",
           "color": "#6b7280",
-          "functionId": "cmw3kwyi00002d7diybobu4ks",
+          "functionId": "cmw3l7xmg0002mydihyfu3n1k",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": "1 Gbps",
           "requiredImpedance": null,
           "minBandwidthMHz": null,
           "connectorIds": [
-            "cmw3kwyip00i2d7dijmjahsc5"
+            "cmw3l7xn600i2mydiu3q44ifd"
           ],
           "isIp": false,
           "supportsRedundancy": false,
@@ -810,18 +823,18 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyis00jkd7diz1fc1ydq",
+          "id": "cmw3l7xna00jkmydivwiqlbti",
           "name": "SMPTE 2110-31 (AES3 IP)",
           "color": "#6b7280",
-          "functionId": "cmw3kwyi00002d7diybobu4ks",
+          "functionId": "cmw3l7xmg0002mydihyfu3n1k",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": "1 Gbps",
           "requiredImpedance": null,
           "minBandwidthMHz": null,
           "connectorIds": [
-            "cmw3kwyip00i2d7dijmjahsc5",
-            "cmw3kwyip00ied7dihstrr4jx"
+            "cmw3l7xn600i2mydiu3q44ifd",
+            "cmw3l7xn600iemydixqfe3is3"
           ],
           "isIp": false,
           "supportsRedundancy": false,
@@ -832,17 +845,17 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyis00jld7dixaew8pje",
+          "id": "cmw3l7xna00jlmydiewoazrpm",
           "name": "Management",
           "color": "#6b7280",
-          "functionId": "cmw3kwyi00006d7dif63rdu92",
+          "functionId": "cmw3l7xmg0006mydiqv6774yl",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": "1 Gbps",
           "requiredImpedance": null,
           "minBandwidthMHz": null,
           "connectorIds": [
-            "cmw3kwyip00i2d7dijmjahsc5"
+            "cmw3l7xn600i2mydiu3q44ifd"
           ],
           "isIp": true,
           "supportsRedundancy": false,
@@ -853,18 +866,18 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyis00jmd7difazcj3th",
+          "id": "cmw3l7xna00jmmydidplrdhpw",
           "name": "Ravenna",
           "color": "#6b7280",
-          "functionId": "cmw3kwyi00002d7diybobu4ks",
+          "functionId": "cmw3l7xmg0002mydihyfu3n1k",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": "1 Gbps",
           "requiredImpedance": null,
           "minBandwidthMHz": null,
           "connectorIds": [
-            "cmw3kwyip00i2d7dijmjahsc5",
-            "cmw3kwyip00ied7dihstrr4jx"
+            "cmw3l7xn600i2mydiu3q44ifd",
+            "cmw3l7xn600iemydixqfe3is3"
           ],
           "isIp": false,
           "supportsRedundancy": false,
@@ -875,17 +888,17 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyis00jnd7dimyhpv5fj",
+          "id": "cmw3l7xna00jnmydibe85snff",
           "name": "Q-LAN",
           "color": "#6b7280",
-          "functionId": "cmw3kwyi00002d7diybobu4ks",
+          "functionId": "cmw3l7xmg0002mydihyfu3n1k",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": "1 Gbps",
           "requiredImpedance": null,
           "minBandwidthMHz": null,
           "connectorIds": [
-            "cmw3kwyip00i2d7dijmjahsc5"
+            "cmw3l7xn600i2mydiu3q44ifd"
           ],
           "isIp": false,
           "supportsRedundancy": false,
@@ -896,17 +909,17 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyis00jod7die89r2zk6",
+          "id": "cmw3l7xna00jomydicso02ol8",
           "name": "Livewire+",
           "color": "#6b7280",
-          "functionId": "cmw3kwyi00002d7diybobu4ks",
+          "functionId": "cmw3l7xmg0002mydihyfu3n1k",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": "1 Gbps",
           "requiredImpedance": null,
           "minBandwidthMHz": null,
           "connectorIds": [
-            "cmw3kwyip00i2d7dijmjahsc5"
+            "cmw3l7xn600i2mydiu3q44ifd"
           ],
           "isIp": false,
           "supportsRedundancy": false,
@@ -917,17 +930,17 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyis00jpd7dizgi583l1",
+          "id": "cmw3l7xna00jpmydite6412p1",
           "name": "WheatNet-IP",
           "color": "#6b7280",
-          "functionId": "cmw3kwyi00002d7diybobu4ks",
+          "functionId": "cmw3l7xmg0002mydihyfu3n1k",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": "1 Gbps",
           "requiredImpedance": null,
           "minBandwidthMHz": null,
           "connectorIds": [
-            "cmw3kwyip00i2d7dijmjahsc5"
+            "cmw3l7xn600i2mydiu3q44ifd"
           ],
           "isIp": false,
           "supportsRedundancy": false,
@@ -938,16 +951,18 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyis00jqd7diwoyrx365",
+          "id": "cmw3l7xna00jqmydi5es6a5gt",
           "name": "Speaker passif (NL2)",
           "color": "#6b7280",
-          "functionId": "cmw3kwyi00002d7diybobu4ks",
+          "functionId": "cmw3l7xmg0002mydihyfu3n1k",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": null,
           "requiredImpedance": null,
           "minBandwidthMHz": null,
-          "connectorIds": [],
+          "connectorIds": [
+            "cmw3l7xn500ggmydibxzrpmk2"
+          ],
           "isIp": false,
           "supportsRedundancy": false,
           "redundancyStyle": "AB",
@@ -957,16 +972,18 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyis00jrd7dilvl0kcr2",
+          "id": "cmw3l7xna00jrmydi1s24gk7h",
           "name": "Speaker bi-amp (NL4)",
           "color": "#6b7280",
-          "functionId": "cmw3kwyi00002d7diybobu4ks",
+          "functionId": "cmw3l7xmg0002mydihyfu3n1k",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": null,
           "requiredImpedance": null,
           "minBandwidthMHz": null,
-          "connectorIds": [],
+          "connectorIds": [
+            "cmw3l7xn500ggmydibxzrpmk2"
+          ],
           "isIp": false,
           "supportsRedundancy": false,
           "redundancyStyle": "AB",
@@ -976,17 +993,17 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyis00jsd7dilqz2mffd",
+          "id": "cmw3l7xna00jsmydirf78rob1",
           "name": "Ethernet 100M",
           "color": "#6b7280",
-          "functionId": "cmw3kwyi00006d7dif63rdu92",
+          "functionId": "cmw3l7xmg0006mydiqv6774yl",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": "100 Mbps",
           "requiredImpedance": null,
           "minBandwidthMHz": null,
           "connectorIds": [
-            "cmw3kwyip00i2d7dijmjahsc5"
+            "cmw3l7xn600i2mydiu3q44ifd"
           ],
           "isIp": false,
           "supportsRedundancy": false,
@@ -997,18 +1014,18 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyis00jtd7di52dv5po1",
+          "id": "cmw3l7xna00jtmydiqn83kiqn",
           "name": "Ethernet 1GbE",
           "color": "#6b7280",
-          "functionId": "cmw3kwyi00006d7dif63rdu92",
+          "functionId": "cmw3l7xmg0006mydiqv6774yl",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": "1 Gbps",
           "requiredImpedance": null,
           "minBandwidthMHz": null,
           "connectorIds": [
-            "cmw3kwyip00i2d7dijmjahsc5",
-            "cmw3kwyip00ied7dihstrr4jx"
+            "cmw3l7xn600i2mydiu3q44ifd",
+            "cmw3l7xn600iemydixqfe3is3"
           ],
           "isIp": false,
           "supportsRedundancy": false,
@@ -1019,19 +1036,19 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyis00jud7dipbc6bu9i",
+          "id": "cmw3l7xna00jumydi0xxyt6ul",
           "name": "Ethernet 10GbE",
           "color": "#6b7280",
-          "functionId": "cmw3kwyi00006d7dif63rdu92",
+          "functionId": "cmw3l7xmg0006mydiqv6774yl",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": "10 Gbps",
           "requiredImpedance": null,
           "minBandwidthMHz": null,
           "connectorIds": [
-            "cmw3kwyip00i2d7dijmjahsc5",
-            "cmw3kwyip00ied7dihstrr4jx",
-            "cmw3kwyio00fed7didssyu6iz"
+            "cmw3l7xn600i2mydiu3q44ifd",
+            "cmw3l7xn600iemydixqfe3is3",
+            "cmw3l7xn400femydia5su2tra"
           ],
           "isIp": false,
           "supportsRedundancy": false,
@@ -1042,17 +1059,17 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyis00jvd7di90bj6wri",
+          "id": "cmw3l7xna00jvmydi64qdc04r",
           "name": "Ethernet 25GbE",
           "color": "#6b7280",
-          "functionId": "cmw3kwyi00006d7dif63rdu92",
+          "functionId": "cmw3l7xmg0006mydiqv6774yl",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": "25 Gbps",
           "requiredImpedance": null,
           "minBandwidthMHz": null,
           "connectorIds": [
-            "cmw3kwyip00ied7dihstrr4jx"
+            "cmw3l7xn600iemydixqfe3is3"
           ],
           "isIp": false,
           "supportsRedundancy": false,
@@ -1063,17 +1080,17 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyis00jwd7di152pzry0",
+          "id": "cmw3l7xna00jwmydinaja50jt",
           "name": "Ethernet 40GbE",
           "color": "#6b7280",
-          "functionId": "cmw3kwyi00006d7dif63rdu92",
+          "functionId": "cmw3l7xmg0006mydiqv6774yl",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": "40 Gbps",
           "requiredImpedance": null,
           "minBandwidthMHz": null,
           "connectorIds": [
-            "cmw3kwyip00igd7dik7riaqzx"
+            "cmw3l7xn600igmydi1xy4dw5f"
           ],
           "isIp": false,
           "supportsRedundancy": false,
@@ -1084,17 +1101,17 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyis00jxd7di6lls8jgf",
+          "id": "cmw3l7xna00jxmydiznmesvef",
           "name": "Ethernet 100GbE",
           "color": "#6b7280",
-          "functionId": "cmw3kwyi00006d7dif63rdu92",
+          "functionId": "cmw3l7xmg0006mydiqv6774yl",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": "100 Gbps",
           "requiredImpedance": null,
           "minBandwidthMHz": null,
           "connectorIds": [
-            "cmw3kwyip00igd7dik7riaqzx"
+            "cmw3l7xn600igmydi1xy4dw5f"
           ],
           "isIp": false,
           "supportsRedundancy": false,
@@ -1105,16 +1122,20 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyis00jyd7diwtjvo55x",
+          "id": "cmw3l7xna00jymydi48z49aor",
           "name": "USB 2.0",
           "color": "#6b7280",
-          "functionId": "cmw3kwyi00006d7dif63rdu92",
+          "functionId": "cmw3l7xmg0006mydiqv6774yl",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": "480 Mbps",
           "requiredImpedance": null,
           "minBandwidthMHz": null,
-          "connectorIds": [],
+          "connectorIds": [
+            "cmw3l7xn600i4mydiuum3nvqh",
+            "cmw3l7xn600i6mydikja56js7",
+            "cmw3l7xn600iamydi9ucpr6su"
+          ],
           "isIp": false,
           "supportsRedundancy": false,
           "redundancyStyle": "AB",
@@ -1124,16 +1145,19 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyis00jzd7diy95xy075",
+          "id": "cmw3l7xnb00jzmydi9m9c1qeg",
           "name": "USB 3.x",
           "color": "#6b7280",
-          "functionId": "cmw3kwyi00006d7dif63rdu92",
+          "functionId": "cmw3l7xmg0006mydiqv6774yl",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": "5–20 Gbps",
           "requiredImpedance": null,
           "minBandwidthMHz": null,
-          "connectorIds": [],
+          "connectorIds": [
+            "cmw3l7xn600i4mydiuum3nvqh",
+            "cmw3l7xn600i8mydi0ylfxlou"
+          ],
           "isIp": false,
           "supportsRedundancy": false,
           "redundancyStyle": "AB",
@@ -1143,17 +1167,18 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyis00k0d7di3prgwmyr",
+          "id": "cmw3l7xnb00k0mydimnv4svph",
           "name": "Thunderbolt 3/4",
           "color": "#6b7280",
-          "functionId": "cmw3kwyi00006d7dif63rdu92",
+          "functionId": "cmw3l7xmg0006mydiqv6774yl",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": "40 Gbps",
           "requiredImpedance": null,
           "minBandwidthMHz": null,
           "connectorIds": [
-            "cmw3kwyip00icd7dipg6hvblp"
+            "cmw3l7xn600icmydi1833idiz",
+            "cmw3l7xn600i8mydi0ylfxlou"
           ],
           "isIp": false,
           "supportsRedundancy": false,
@@ -1164,16 +1189,18 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyis00k1d7dif7pzbnzs",
+          "id": "cmw3l7xnb00k1mydiqxq5n972",
           "name": "RS-232",
           "color": "#6b7280",
-          "functionId": "cmw3kwyi00004d7di1zo2nfss",
+          "functionId": "cmw3l7xmg0004mydist83yzue",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": "115.2 kbps",
           "requiredImpedance": null,
           "minBandwidthMHz": null,
-          "connectorIds": [],
+          "connectorIds": [
+            "cmw3l7xn500gomydiw5y2rvkz"
+          ],
           "isIp": false,
           "supportsRedundancy": false,
           "redundancyStyle": "AB",
@@ -1183,16 +1210,18 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyis00k2d7di1gamnn2o",
+          "id": "cmw3l7xnb00k2mydiq6ygj5np",
           "name": "RS-422",
           "color": "#6b7280",
-          "functionId": "cmw3kwyi00004d7di1zo2nfss",
+          "functionId": "cmw3l7xmg0004mydist83yzue",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": "10 Mbps",
           "requiredImpedance": null,
           "minBandwidthMHz": null,
-          "connectorIds": [],
+          "connectorIds": [
+            "cmw3l7xn500gomydiw5y2rvkz"
+          ],
           "isIp": false,
           "supportsRedundancy": false,
           "redundancyStyle": "AB",
@@ -1202,16 +1231,19 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyis00k3d7dialfmxzfg",
+          "id": "cmw3l7xnb00k3mydifmplvphx",
           "name": "GPIO / Contact sec",
           "color": "#6b7280",
-          "functionId": "cmw3kwyi00004d7di1zo2nfss",
+          "functionId": "cmw3l7xmg0004mydist83yzue",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": null,
           "requiredImpedance": null,
           "minBandwidthMHz": null,
-          "connectorIds": [],
+          "connectorIds": [
+            "cmw3l7xn500gqmyditrclgewo",
+            "cmw3l7xn500gimydi1kw80cev"
+          ],
           "isIp": false,
           "supportsRedundancy": false,
           "redundancyStyle": "AB",
@@ -1221,17 +1253,18 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyis00k4d7dihbew7ui5",
+          "id": "cmw3l7xnb00k4mydi3s37ga5v",
           "name": "Tally TSL UMD 5",
           "color": "#6b7280",
-          "functionId": "cmw3kwyi00004d7di1zo2nfss",
+          "functionId": "cmw3l7xmg0004mydist83yzue",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": null,
           "requiredImpedance": null,
           "minBandwidthMHz": null,
           "connectorIds": [
-            "cmw3kwyip00i2d7dijmjahsc5"
+            "cmw3l7xn600i2mydiu3q44ifd",
+            "cmw3l7xn500gomydiw5y2rvkz"
           ],
           "isIp": false,
           "supportsRedundancy": false,
@@ -1242,16 +1275,19 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyis00k5d7di8ymub4ca",
+          "id": "cmw3l7xnb00k5mydiactwgteb",
           "name": "Tally GPI",
           "color": "#6b7280",
-          "functionId": "cmw3kwyi00004d7di1zo2nfss",
+          "functionId": "cmw3l7xmg0004mydist83yzue",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": null,
           "requiredImpedance": null,
           "minBandwidthMHz": null,
-          "connectorIds": [],
+          "connectorIds": [
+            "cmw3l7xn500gqmyditrclgewo",
+            "cmw3l7xn500gimydi1kw80cev"
+          ],
           "isIp": false,
           "supportsRedundancy": false,
           "redundancyStyle": "AB",
@@ -1261,17 +1297,17 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyis00k6d7diaxk9jpfs",
+          "id": "cmw3l7xnb00k6mydicg1nvze2",
           "name": "Ember+",
           "color": "#6b7280",
-          "functionId": "cmw3kwyi00004d7di1zo2nfss",
+          "functionId": "cmw3l7xmg0004mydist83yzue",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": null,
           "requiredImpedance": null,
           "minBandwidthMHz": null,
           "connectorIds": [
-            "cmw3kwyip00i2d7dijmjahsc5"
+            "cmw3l7xn600i2mydiu3q44ifd"
           ],
           "isIp": false,
           "supportsRedundancy": false,
@@ -1282,17 +1318,17 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyis00k7d7disd1l3sti",
+          "id": "cmw3l7xnb00k7mydizd2hpk2v",
           "name": "NMOS IS-04 / IS-05",
           "color": "#6b7280",
-          "functionId": "cmw3kwyi00004d7di1zo2nfss",
+          "functionId": "cmw3l7xmg0004mydist83yzue",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": null,
           "requiredImpedance": null,
           "minBandwidthMHz": null,
           "connectorIds": [
-            "cmw3kwyip00i2d7dijmjahsc5"
+            "cmw3l7xn600i2mydiu3q44ifd"
           ],
           "isIp": false,
           "supportsRedundancy": false,
@@ -1303,17 +1339,17 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyis00k8d7dihx66n8rr",
+          "id": "cmw3l7xnb00k8mydit346gfms",
           "name": "VISCA over IP",
           "color": "#6b7280",
-          "functionId": "cmw3kwyi00004d7di1zo2nfss",
+          "functionId": "cmw3l7xmg0004mydist83yzue",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": null,
           "requiredImpedance": null,
           "minBandwidthMHz": null,
           "connectorIds": [
-            "cmw3kwyip00i2d7dijmjahsc5"
+            "cmw3l7xn600i2mydiu3q44ifd"
           ],
           "isIp": false,
           "supportsRedundancy": false,
@@ -1324,16 +1360,18 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyis00k9d7dituupavkt",
+          "id": "cmw3l7xnb00k9mydiut5mywon",
           "name": "VISCA RS-232",
           "color": "#6b7280",
-          "functionId": "cmw3kwyi00004d7di1zo2nfss",
+          "functionId": "cmw3l7xmg0004mydist83yzue",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": null,
           "requiredImpedance": null,
           "minBandwidthMHz": null,
-          "connectorIds": [],
+          "connectorIds": [
+            "cmw3l7xn500gomydiw5y2rvkz"
+          ],
           "isIp": false,
           "supportsRedundancy": false,
           "redundancyStyle": "AB",
@@ -1343,16 +1381,18 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyis00kad7dim5jr9zjp",
+          "id": "cmw3l7xnb00kamydibg5d9qcx",
           "name": "Party-Line 2 fils",
           "color": "#6b7280",
-          "functionId": "cmw3kwyi00009d7didttsy7id",
+          "functionId": "cmw3l7xmg0009mydivpvljlpu",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": null,
           "requiredImpedance": null,
           "minBandwidthMHz": null,
-          "connectorIds": [],
+          "connectorIds": [
+            "cmw3l7xn400fsmydiu3g7piyd"
+          ],
           "isIp": false,
           "supportsRedundancy": false,
           "redundancyStyle": "AB",
@@ -1362,16 +1402,19 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyit00kbd7dig6m6griy",
+          "id": "cmw3l7xnb00kbmydiljjw8fpk",
           "name": "Matrice 4 fils",
           "color": "#6b7280",
-          "functionId": "cmw3kwyi00009d7didttsy7id",
+          "functionId": "cmw3l7xmg0009mydivpvljlpu",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": null,
           "requiredImpedance": null,
           "minBandwidthMHz": null,
-          "connectorIds": [],
+          "connectorIds": [
+            "cmw3l7xn400fvmydir24fnck9",
+            "cmw3l7xn500gcmydin0pypyxg"
+          ],
           "isIp": false,
           "supportsRedundancy": false,
           "redundancyStyle": "AB",
@@ -1381,17 +1424,17 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyit00kcd7diu81qsbyv",
+          "id": "cmw3l7xnb00kcmydi6syq8lfj",
           "name": "Intercom IP (Dante)",
           "color": "#6b7280",
-          "functionId": "cmw3kwyi00009d7didttsy7id",
+          "functionId": "cmw3l7xmg0009mydivpvljlpu",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": null,
           "requiredImpedance": null,
           "minBandwidthMHz": null,
           "connectorIds": [
-            "cmw3kwyip00i2d7dijmjahsc5"
+            "cmw3l7xn600i2mydiu3q44ifd"
           ],
           "isIp": false,
           "supportsRedundancy": false,
@@ -1402,17 +1445,17 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyit00kdd7diepl80k89",
+          "id": "cmw3l7xnb00kdmydi4j17mfr3",
           "name": "Intercom IP (AoIP propriétaire)",
           "color": "#6b7280",
-          "functionId": "cmw3kwyi00009d7didttsy7id",
+          "functionId": "cmw3l7xmg0009mydivpvljlpu",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": null,
           "requiredImpedance": null,
           "minBandwidthMHz": null,
           "connectorIds": [
-            "cmw3kwyip00i2d7dijmjahsc5"
+            "cmw3l7xn600i2mydiu3q44ifd"
           ],
           "isIp": false,
           "supportsRedundancy": false,
@@ -1423,16 +1466,19 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyit00ked7diifxx3g1t",
+          "id": "cmw3l7xnb00kemydiitg7o067",
           "name": "IFB",
           "color": "#6b7280",
-          "functionId": "cmw3kwyi00009d7didttsy7id",
+          "functionId": "cmw3l7xmg0009mydivpvljlpu",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": null,
           "requiredImpedance": null,
           "minBandwidthMHz": null,
-          "connectorIds": [],
+          "connectorIds": [
+            "cmw3l7xn400fsmydiu3g7piyd",
+            "cmw3l7xn500g5mydiosi1ma1o"
+          ],
           "isIp": false,
           "supportsRedundancy": false,
           "redundancyStyle": "AB",
@@ -1442,17 +1488,17 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyit00kfd7diu1rlmhuz",
+          "id": "cmw3l7xnb00kfmydie4xhl4l9",
           "name": "Black Burst (NTSC/PAL)",
           "color": "#6b7280",
-          "functionId": "cmw3kwyi00007d7di7e1881hc",
+          "functionId": "cmw3l7xmg0007mydi6jjmjgud",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": null,
           "requiredImpedance": null,
           "minBandwidthMHz": null,
           "connectorIds": [
-            "cmw3kwyin00ecd7dikcs3byqv"
+            "cmw3l7xn400ecmydijjq8znbt"
           ],
           "isIp": false,
           "supportsRedundancy": false,
@@ -1463,17 +1509,17 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyit00kgd7di969f8stq",
+          "id": "cmw3l7xnb00kgmydiuiqdzzcn",
           "name": "Tri-Level Sync",
           "color": "#6b7280",
-          "functionId": "cmw3kwyi00007d7di7e1881hc",
+          "functionId": "cmw3l7xmg0007mydi6jjmjgud",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": null,
           "requiredImpedance": null,
           "minBandwidthMHz": null,
           "connectorIds": [
-            "cmw3kwyin00ecd7dikcs3byqv"
+            "cmw3l7xn400ecmydijjq8znbt"
           ],
           "isIp": false,
           "supportsRedundancy": false,
@@ -1484,17 +1530,18 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyit00khd7diqky7jsw8",
+          "id": "cmw3l7xnb00khmydi15fpkyll",
           "name": "LTC",
           "color": "#6b7280",
-          "functionId": "cmw3kwyi00007d7di7e1881hc",
+          "functionId": "cmw3l7xmg0007mydi6jjmjgud",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": null,
           "requiredImpedance": null,
           "minBandwidthMHz": null,
           "connectorIds": [
-            "cmw3kwyin00ecd7dikcs3byqv"
+            "cmw3l7xn400fsmydiu3g7piyd",
+            "cmw3l7xn400ecmydijjq8znbt"
           ],
           "isIp": false,
           "supportsRedundancy": false,
@@ -1505,17 +1552,17 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyit00kid7dimmgs6tny",
+          "id": "cmw3l7xnb00kimydim36gh3lp",
           "name": "Word Clock",
           "color": "#6b7280",
-          "functionId": "cmw3kwyi00007d7di7e1881hc",
+          "functionId": "cmw3l7xmg0007mydi6jjmjgud",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": null,
           "requiredImpedance": null,
           "minBandwidthMHz": null,
           "connectorIds": [
-            "cmw3kwyin00ecd7dikcs3byqv"
+            "cmw3l7xn400ecmydijjq8znbt"
           ],
           "isIp": false,
           "supportsRedundancy": false,
@@ -1526,17 +1573,17 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyit00kjd7did6ee3m24",
+          "id": "cmw3l7xnb00kjmydierdxq1or",
           "name": "10 MHz Reference",
           "color": "#6b7280",
-          "functionId": "cmw3kwyi00007d7di7e1881hc",
+          "functionId": "cmw3l7xmg0007mydi6jjmjgud",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": null,
           "requiredImpedance": null,
           "minBandwidthMHz": null,
           "connectorIds": [
-            "cmw3kwyin00ecd7dikcs3byqv"
+            "cmw3l7xn400ecmydijjq8znbt"
           ],
           "isIp": false,
           "supportsRedundancy": false,
@@ -1547,18 +1594,18 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyit00kkd7di8tv8sveu",
+          "id": "cmw3l7xnb00kkmydiwkvxrrgs",
           "name": "PTP (ST 2059)",
           "color": "#6b7280",
-          "functionId": "cmw3kwyi00007d7di7e1881hc",
+          "functionId": "cmw3l7xmg0007mydi6jjmjgud",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": "1 Gbps",
           "requiredImpedance": null,
           "minBandwidthMHz": null,
           "connectorIds": [
-            "cmw3kwyip00i2d7dijmjahsc5",
-            "cmw3kwyip00ied7dihstrr4jx"
+            "cmw3l7xn600i2mydiu3q44ifd",
+            "cmw3l7xn600iemydixqfe3is3"
           ],
           "isIp": false,
           "supportsRedundancy": false,
@@ -1569,18 +1616,18 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyit00kld7diaarzepfl",
+          "id": "cmw3l7xnb00klmydi3yzy9pc6",
           "name": "GPS / GNSS",
           "color": "#6b7280",
-          "functionId": "cmw3kwyi00007d7di7e1881hc",
+          "functionId": "cmw3l7xmg0007mydi6jjmjgud",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": null,
           "requiredImpedance": null,
           "minBandwidthMHz": null,
           "connectorIds": [
-            "cmw3kwyin00ecd7dikcs3byqv",
-            "cmw3kwyio00f3d7diekyxy012"
+            "cmw3l7xn400ecmydijjq8znbt",
+            "cmw3l7xn400f3mydizveb9478"
           ],
           "isIp": false,
           "supportsRedundancy": false,
@@ -1591,18 +1638,20 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyit00kmd7diltlz1e6k",
+          "id": "cmw3l7xnb00kmmydi2fgixy4m",
           "name": "Secteur 230V 16A Mono",
           "color": "#6b7280",
-          "functionId": "cmw3kwyi00005d7ditbl9u4o5",
+          "functionId": "cmw3l7xmg0005mydiigozc28p",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": "230V AC 16A",
           "requiredImpedance": null,
           "minBandwidthMHz": null,
           "connectorIds": [
-            "cmw3kwyip00hyd7dioyjno5sl",
-            "cmw3kwyip00hid7dim32ifcmy"
+            "cmw3l7xn500hcmydiz0aj56yb",
+            "cmw3l7xn600hymydihmh0lozj",
+            "cmw3l7xn500himydi7l6ennyt",
+            "cmw3l7xn500hkmydi1p9rj00s"
           ],
           "isIp": false,
           "supportsRedundancy": false,
@@ -1613,16 +1662,19 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyit00knd7ditbqvo1mg",
+          "id": "cmw3l7xnb00knmydi1nlrz6y3",
           "name": "Secteur 230V 32A Mono",
           "color": "#6b7280",
-          "functionId": "cmw3kwyi00005d7ditbl9u4o5",
+          "functionId": "cmw3l7xmg0005mydiigozc28p",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": "230V AC 32A",
           "requiredImpedance": null,
           "minBandwidthMHz": null,
-          "connectorIds": [],
+          "connectorIds": [
+            "cmw3l7xn500hkmydi1p9rj00s",
+            "cmw3l7xn500hcmydiz0aj56yb"
+          ],
           "isIp": false,
           "supportsRedundancy": false,
           "redundancyStyle": "AB",
@@ -1632,16 +1684,18 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyit00kod7din590fr7y",
+          "id": "cmw3l7xnb00komydiw06vbmsq",
           "name": "Triphasé 400V 16A",
           "color": "#6b7280",
-          "functionId": "cmw3kwyi00005d7ditbl9u4o5",
+          "functionId": "cmw3l7xmg0005mydiigozc28p",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": "400V 3×16A",
           "requiredImpedance": null,
           "minBandwidthMHz": null,
-          "connectorIds": [],
+          "connectorIds": [
+            "cmw3l7xn500hmmydizmqll6s0"
+          ],
           "isIp": false,
           "supportsRedundancy": false,
           "redundancyStyle": "AB",
@@ -1651,16 +1705,18 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyit00kpd7diogng4ebr",
+          "id": "cmw3l7xnb00kpmydiel3kdqno",
           "name": "Triphasé 400V 32A",
           "color": "#6b7280",
-          "functionId": "cmw3kwyi00005d7ditbl9u4o5",
+          "functionId": "cmw3l7xmg0005mydiigozc28p",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": "400V 3×32A",
           "requiredImpedance": null,
           "minBandwidthMHz": null,
-          "connectorIds": [],
+          "connectorIds": [
+            "cmw3l7xn500hmmydizmqll6s0"
+          ],
           "isIp": false,
           "supportsRedundancy": false,
           "redundancyStyle": "AB",
@@ -1670,16 +1726,18 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyit00kqd7dii2264xqd",
+          "id": "cmw3l7xnb00kqmydiib1cxpqv",
           "name": "Triphasé 400V 63A",
           "color": "#6b7280",
-          "functionId": "cmw3kwyi00005d7ditbl9u4o5",
+          "functionId": "cmw3l7xmg0005mydiigozc28p",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": "400V 3×63A",
           "requiredImpedance": null,
           "minBandwidthMHz": null,
-          "connectorIds": [],
+          "connectorIds": [
+            "cmw3l7xn500hmmydizmqll6s0"
+          ],
           "isIp": false,
           "supportsRedundancy": false,
           "redundancyStyle": "AB",
@@ -1689,16 +1747,18 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyit00krd7dihr1cykr8",
+          "id": "cmw3l7xnb00krmydimc83r8jd",
           "name": "Triphasé 400V 125A",
           "color": "#6b7280",
-          "functionId": "cmw3kwyi00005d7ditbl9u4o5",
+          "functionId": "cmw3l7xmg0005mydiigozc28p",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": "400V 3×125A",
           "requiredImpedance": null,
           "minBandwidthMHz": null,
-          "connectorIds": [],
+          "connectorIds": [
+            "cmw3l7xn500hmmydizmqll6s0"
+          ],
           "isIp": false,
           "supportsRedundancy": false,
           "redundancyStyle": "AB",
@@ -1708,16 +1768,18 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyit00ksd7diu7k3rj63",
+          "id": "cmw3l7xnb00ksmydiuxwys9rm",
           "name": "DC 12V Caméra",
           "color": "#6b7280",
-          "functionId": "cmw3kwyi00005d7ditbl9u4o5",
+          "functionId": "cmw3l7xmg0005mydiigozc28p",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": "12V DC",
           "requiredImpedance": null,
           "minBandwidthMHz": null,
-          "connectorIds": [],
+          "connectorIds": [
+            "cmw3l7xn400fvmydir24fnck9"
+          ],
           "isIp": false,
           "supportsRedundancy": false,
           "redundancyStyle": "AB",
@@ -1727,16 +1789,18 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyit00ktd7di2jiuie4v",
+          "id": "cmw3l7xnb00ktmydi043citxs",
           "name": "DC 24/48V (rack)",
           "color": "#6b7280",
-          "functionId": "cmw3kwyi00005d7ditbl9u4o5",
+          "functionId": "cmw3l7xmg0005mydiigozc28p",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": "24-48V DC",
           "requiredImpedance": null,
           "minBandwidthMHz": null,
-          "connectorIds": [],
+          "connectorIds": [
+            "cmw3l7xn500gimydi1kw80cev"
+          ],
           "isIp": false,
           "supportsRedundancy": false,
           "redundancyStyle": "AB",
@@ -1746,19 +1810,19 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyit00kud7di406fhc88",
+          "id": "cmw3l7xnb00kumydiqetg022v",
           "name": "HF Micro UHF",
           "color": "#6b7280",
-          "functionId": "cmw3kwyi00008d7dihb1bpim8",
+          "functionId": "cmw3l7xmg0008mydimfbc1gjf",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": null,
           "requiredImpedance": null,
           "minBandwidthMHz": null,
           "connectorIds": [
-            "cmw3kwyin00ecd7dikcs3byqv",
-            "cmw3kwyio00f5d7dii9mta3ig",
-            "cmw3kwyio00f3d7diekyxy012"
+            "cmw3l7xn400ecmydijjq8znbt",
+            "cmw3l7xn400f5mydi50yocjue",
+            "cmw3l7xn400f3mydizveb9478"
           ],
           "isIp": false,
           "supportsRedundancy": false,
@@ -1769,18 +1833,18 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyit00kvd7di00yrg0a2",
+          "id": "cmw3l7xnb00kvmydiid8ec1ye",
           "name": "HF IEM (retour)",
           "color": "#6b7280",
-          "functionId": "cmw3kwyi00008d7dihb1bpim8",
+          "functionId": "cmw3l7xmg0008mydimfbc1gjf",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": null,
           "requiredImpedance": null,
           "minBandwidthMHz": null,
           "connectorIds": [
-            "cmw3kwyin00ecd7dikcs3byqv",
-            "cmw3kwyio00f5d7dii9mta3ig"
+            "cmw3l7xn400ecmydijjq8znbt",
+            "cmw3l7xn400f5mydi50yocjue"
           ],
           "isIp": false,
           "supportsRedundancy": false,
@@ -1791,17 +1855,18 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyit00kwd7dizrm3vcav",
+          "id": "cmw3l7xnb00kwmydiypvnodgx",
           "name": "Liaison HF caméra",
           "color": "#6b7280",
-          "functionId": "cmw3kwyi00008d7dihb1bpim8",
+          "functionId": "cmw3l7xmg0008mydimfbc1gjf",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": null,
           "requiredImpedance": null,
           "minBandwidthMHz": null,
           "connectorIds": [
-            "cmw3kwyin00ecd7dikcs3byqv"
+            "cmw3l7xn400ecmydijjq8znbt",
+            "cmw3l7xn400f7mydi5j294ps0"
           ],
           "isIp": false,
           "supportsRedundancy": false,
@@ -1812,17 +1877,17 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyit00kxd7dij897xurf",
+          "id": "cmw3l7xnb00kxmydi62xaxmlv",
           "name": "Wi-Fi",
           "color": "#6b7280",
-          "functionId": "cmw3kwyi00008d7dihb1bpim8",
+          "functionId": "cmw3l7xmg0008mydimfbc1gjf",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": null,
           "requiredImpedance": null,
           "minBandwidthMHz": null,
           "connectorIds": [
-            "cmw3kwyio00f5d7dii9mta3ig"
+            "cmw3l7xn400f5mydi50yocjue"
           ],
           "isIp": false,
           "supportsRedundancy": false,
@@ -1833,16 +1898,18 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyit00kyd7di42dqv199",
+          "id": "cmw3l7xnb00kymydigsrnv5cq",
           "name": "Satcom Ku/Ka band",
           "color": "#6b7280",
-          "functionId": "cmw3kwyi00008d7dihb1bpim8",
+          "functionId": "cmw3l7xmg0008mydimfbc1gjf",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": null,
           "requiredImpedance": null,
           "minBandwidthMHz": null,
-          "connectorIds": [],
+          "connectorIds": [
+            "cmw3l7xn400f7mydi5j294ps0"
+          ],
           "isIp": false,
           "supportsRedundancy": false,
           "redundancyStyle": "AB",
@@ -1852,16 +1919,19 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyit00kzd7dikf35gxl3",
+          "id": "cmw3l7xnb00kzmydic8snopo1",
           "name": "DMX512",
           "color": "#6b7280",
-          "functionId": "cmw3kwyi00003d7diie87gkwn",
+          "functionId": "cmw3l7xmg0003mydiia2kzr9o",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": "250 kbps",
           "requiredImpedance": null,
           "minBandwidthMHz": null,
-          "connectorIds": [],
+          "connectorIds": [
+            "cmw3l7xn400fymydiw3s6n1o5",
+            "cmw3l7xn400fsmydiu3g7piyd"
+          ],
           "isIp": false,
           "supportsRedundancy": false,
           "redundancyStyle": "AB",
@@ -1871,17 +1941,17 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyit00l0d7divyhltycs",
+          "id": "cmw3l7xnb00l0mydixoi2dsj9",
           "name": "Art-Net",
           "color": "#6b7280",
-          "functionId": "cmw3kwyi00003d7diie87gkwn",
+          "functionId": "cmw3l7xmg0003mydiia2kzr9o",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": "100 Mbps",
           "requiredImpedance": null,
           "minBandwidthMHz": null,
           "connectorIds": [
-            "cmw3kwyip00i2d7dijmjahsc5"
+            "cmw3l7xn600i2mydiu3q44ifd"
           ],
           "isIp": false,
           "supportsRedundancy": false,
@@ -1892,17 +1962,17 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyit00l1d7dip3je8vm0",
+          "id": "cmw3l7xnb00l1mydi1iprwo1e",
           "name": "sACN (E1.31)",
           "color": "#6b7280",
-          "functionId": "cmw3kwyi00003d7diie87gkwn",
+          "functionId": "cmw3l7xmg0003mydiia2kzr9o",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": null,
           "requiredImpedance": null,
           "minBandwidthMHz": null,
           "connectorIds": [
-            "cmw3kwyip00i2d7dijmjahsc5"
+            "cmw3l7xn600i2mydiu3q44ifd"
           ],
           "isIp": false,
           "supportsRedundancy": false,
@@ -1913,16 +1983,19 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyit00l2d7dir6q28eev",
+          "id": "cmw3l7xnb00l2mydim6pmgrys",
           "name": "RDM",
           "color": "#6b7280",
-          "functionId": "cmw3kwyi00003d7diie87gkwn",
+          "functionId": "cmw3l7xmg0003mydiia2kzr9o",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": null,
           "requiredImpedance": null,
           "minBandwidthMHz": null,
-          "connectorIds": [],
+          "connectorIds": [
+            "cmw3l7xn400fymydiw3s6n1o5",
+            "cmw3l7xn400fsmydiu3g7piyd"
+          ],
           "isIp": false,
           "supportsRedundancy": false,
           "redundancyStyle": "AB",
@@ -1932,17 +2005,17 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyit00l3d7diqzktzhgo",
+          "id": "cmw3l7xnb00l3mydiu0ktsbhs",
           "name": "MA-Net 2",
           "color": "#6b7280",
-          "functionId": "cmw3kwyi00003d7diie87gkwn",
+          "functionId": "cmw3l7xmg0003mydiia2kzr9o",
           "cablePrefix": "",
           "cableSuffix": "",
           "bandwidth": null,
           "requiredImpedance": null,
           "minBandwidthMHz": null,
           "connectorIds": [
-            "cmw3kwyip00i2d7dijmjahsc5"
+            "cmw3l7xn600i2mydiu3q44ifd"
           ],
           "isIp": false,
           "supportsRedundancy": false,

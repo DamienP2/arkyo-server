@@ -6,7 +6,7 @@
       "table": "TenantEquipmentCategory",
       "rows": [
         {
-          "id": "cmw3kwyic0058d7diw34ml54m",
+          "id": "cmw3l7xmr0058mydim8v4yni9",
           "name": "CAMÉRAS",
           "color": "#ef4444",
           "iconId": null,
@@ -15,61 +15,61 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyic0059d7dib4w1t5oy",
+          "id": "cmw3l7xmr0059mydi65wj10fn",
           "name": "Caméra studio",
           "color": "#ef4444",
           "iconId": null,
-          "parentId": "cmw3kwyic0058d7diw34ml54m",
+          "parentId": "cmw3l7xmr0058mydim8v4yni9",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyic005ad7dis10spgwe",
+          "id": "cmw3l7xmr005amydik5zremqu",
           "name": "Caméra ENG / EFP",
           "color": "#ef4444",
           "iconId": null,
-          "parentId": "cmw3kwyic0058d7diw34ml54m",
+          "parentId": "cmw3l7xmr0058mydim8v4yni9",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyic005bd7dilqfhsch8",
+          "id": "cmw3l7xmr005bmydif8pru4ph",
           "name": "Caméra PTZ",
           "color": "#ef4444",
           "iconId": null,
-          "parentId": "cmw3kwyic0058d7diw34ml54m",
+          "parentId": "cmw3l7xmr0058mydim8v4yni9",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyic005cd7diklryzsar",
+          "id": "cmw3l7xmr005cmydiv0oahums",
           "name": "Caméra action / POV",
           "color": "#ef4444",
           "iconId": null,
-          "parentId": "cmw3kwyic0058d7diw34ml54m",
+          "parentId": "cmw3l7xmr0058mydim8v4yni9",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyic005dd7dilhpoc3k2",
+          "id": "cmw3l7xmr005dmydi3s6lfs9l",
           "name": "Caméra ralenti",
           "color": "#ef4444",
           "iconId": null,
-          "parentId": "cmw3kwyic0058d7diw34ml54m",
+          "parentId": "cmw3l7xmr0058mydim8v4yni9",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyic005ed7diz3ot5yfb",
+          "id": "cmw3l7xmr005emydi2dxiudcv",
           "name": "Drone / stabilisateur",
           "color": "#ef4444",
           "iconId": null,
-          "parentId": "cmw3kwyic0058d7diw34ml54m",
+          "parentId": "cmw3l7xmr0058mydim8v4yni9",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyic005fd7dibvmtc5yg",
+          "id": "cmw3l7xmr005fmydisww2znrk",
           "name": "OPTIQUES",
           "color": "#f97316",
           "iconId": null,
@@ -78,52 +78,52 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyic005gd7dict2akg8j",
+          "id": "cmw3l7xmr005gmydi7tkqy6zg",
           "name": "Objectif broadcast",
           "color": "#f97316",
           "iconId": null,
-          "parentId": "cmw3kwyic005fd7dibvmtc5yg",
+          "parentId": "cmw3l7xmr005fmydisww2znrk",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyic005hd7di0ppg27tq",
+          "id": "cmw3l7xmr005hmydih4zbq6as",
           "name": "Objectif photo / ciné",
           "color": "#f97316",
           "iconId": null,
-          "parentId": "cmw3kwyic005fd7dibvmtc5yg",
+          "parentId": "cmw3l7xmr005fmydisww2znrk",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyic005id7diwzvknb4y",
+          "id": "cmw3l7xmr005imydiexq0t818",
           "name": "Téléconvertisseur",
           "color": "#f97316",
           "iconId": null,
-          "parentId": "cmw3kwyic005fd7dibvmtc5yg",
+          "parentId": "cmw3l7xmr005fmydisww2znrk",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyic005jd7diorputhdd",
+          "id": "cmw3l7xmr005jmydijjerb3a2",
           "name": "Bague d'adaptation",
           "color": "#f97316",
           "iconId": null,
-          "parentId": "cmw3kwyic005fd7dibvmtc5yg",
+          "parentId": "cmw3l7xmr005fmydisww2znrk",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyic005kd7diz71wca2l",
+          "id": "cmw3l7xmr005kmydie70clg1c",
           "name": "Filtre optique",
           "color": "#f97316",
           "iconId": null,
-          "parentId": "cmw3kwyic005fd7dibvmtc5yg",
+          "parentId": "cmw3l7xmr005fmydisww2znrk",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyic005ld7di9p7x79af",
+          "id": "cmw3l7xmr005lmydi6e5lne2l",
           "name": "SUPPORTS & MOUVEMENTS",
           "color": "#f59e0b",
           "iconId": null,
@@ -132,70 +132,70 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyic005md7di53tuafys",
+          "id": "cmw3l7xmr005mmydigf3karf5",
           "name": "Pied / trépied",
           "color": "#f59e0b",
           "iconId": null,
-          "parentId": "cmw3kwyic005ld7di9p7x79af",
+          "parentId": "cmw3l7xmr005lmydi6e5lne2l",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyic005nd7di29opi8kr",
+          "id": "cmw3l7xmr005nmydi0y3wat4c",
           "name": "Tête fluide",
           "color": "#f59e0b",
           "iconId": null,
-          "parentId": "cmw3kwyic005ld7di9p7x79af",
+          "parentId": "cmw3l7xmr005lmydi6e5lne2l",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyic005od7diwdcbae6u",
+          "id": "cmw3l7xmr005omydirqtti1mr",
           "name": "Dolly / chariot",
           "color": "#f59e0b",
           "iconId": null,
-          "parentId": "cmw3kwyic005ld7di9p7x79af",
+          "parentId": "cmw3l7xmr005lmydi6e5lne2l",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyic005pd7dimp5aztpt",
+          "id": "cmw3l7xmr005pmydifcztii8j",
           "name": "Grue / jib",
           "color": "#f59e0b",
           "iconId": null,
-          "parentId": "cmw3kwyic005ld7di9p7x79af",
+          "parentId": "cmw3l7xmr005lmydi6e5lne2l",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyic005qd7di89g4k7hy",
+          "id": "cmw3l7xms005qmydiy6j30lz0",
           "name": "Slider",
           "color": "#f59e0b",
           "iconId": null,
-          "parentId": "cmw3kwyic005ld7di9p7x79af",
+          "parentId": "cmw3l7xmr005lmydi6e5lne2l",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyid005rd7di9bjl0nyn",
+          "id": "cmw3l7xms005rmydipk2jknty",
           "name": "Gyrostabilisateur",
           "color": "#f59e0b",
           "iconId": null,
-          "parentId": "cmw3kwyic005ld7di9p7x79af",
+          "parentId": "cmw3l7xmr005lmydi6e5lne2l",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyid005sd7diay2flxd9",
+          "id": "cmw3l7xms005smydi6yc2noij",
           "name": "Cage / accessoire rig",
           "color": "#f59e0b",
           "iconId": null,
-          "parentId": "cmw3kwyic005ld7di9p7x79af",
+          "parentId": "cmw3l7xmr005lmydi6e5lne2l",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyid005td7dij28cu9ep",
+          "id": "cmw3l7xms005tmydiiz9clfwl",
           "name": "VIDÉO — TRAITEMENT",
           "color": "#8b5cf6",
           "iconId": null,
@@ -204,79 +204,79 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyid005ud7dip8mj9sj3",
+          "id": "cmw3l7xms005umydis7q31hkb",
           "name": "Mélangeur vidéo",
           "color": "#8b5cf6",
           "iconId": null,
-          "parentId": "cmw3kwyid005td7dij28cu9ep",
+          "parentId": "cmw3l7xms005tmydiiz9clfwl",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyid005vd7di0v30z3tf",
+          "id": "cmw3l7xms005vmydimydw78mn",
           "name": "Convertisseur / adaptateur",
           "color": "#8b5cf6",
           "iconId": null,
-          "parentId": "cmw3kwyid005td7dij28cu9ep",
+          "parentId": "cmw3l7xms005tmydiiz9clfwl",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyid005wd7di842mvbn7",
+          "id": "cmw3l7xms005wmydiecit7eo7",
           "name": "Upscaler / downscaler",
           "color": "#8b5cf6",
           "iconId": null,
-          "parentId": "cmw3kwyid005td7dij28cu9ep",
+          "parentId": "cmw3l7xms005tmydiiz9clfwl",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyid005xd7diewreqg2x",
+          "id": "cmw3l7xms005xmyditjsj2g2c",
           "name": "Frame synchronizer",
           "color": "#8b5cf6",
           "iconId": null,
-          "parentId": "cmw3kwyid005td7dij28cu9ep",
+          "parentId": "cmw3l7xms005tmydiiz9clfwl",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyid005yd7dir5ohn93e",
+          "id": "cmw3l7xms005ymydiy441cs2g",
           "name": "Distribution amplifier",
           "color": "#8b5cf6",
           "iconId": null,
-          "parentId": "cmw3kwyid005td7dij28cu9ep",
+          "parentId": "cmw3l7xms005tmydiiz9clfwl",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyid005zd7dieyzqj0ur",
+          "id": "cmw3l7xms005zmydi2yjnjzn5",
           "name": "Matrice vidéo",
           "color": "#8b5cf6",
           "iconId": null,
-          "parentId": "cmw3kwyid005td7dij28cu9ep",
+          "parentId": "cmw3l7xms005tmydiiz9clfwl",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyid0060d7diswnx2p5v",
+          "id": "cmw3l7xms0060mydi3ft15drv",
           "name": "Moniteur de forme d'onde",
           "color": "#8b5cf6",
           "iconId": null,
-          "parentId": "cmw3kwyid005td7dij28cu9ep",
+          "parentId": "cmw3l7xms005tmydiiz9clfwl",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyid0061d7dio2lsmmcj",
+          "id": "cmw3l7xms0061mydikbjnkwsq",
           "name": "Vectorscope",
           "color": "#8b5cf6",
           "iconId": null,
-          "parentId": "cmw3kwyid005td7dij28cu9ep",
+          "parentId": "cmw3l7xms005tmydiiz9clfwl",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyid0062d7dimi6cdxt6",
+          "id": "cmw3l7xms0062mydiju1esg9i",
           "name": "VIDÉO — TRANSPORT",
           "color": "#6366f1",
           "iconId": null,
@@ -285,52 +285,52 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyid0063d7dipu5i74is",
+          "id": "cmw3l7xms0063mydi6xdtvnpf",
           "name": "Émetteur / récepteur sans fil vidéo",
           "color": "#6366f1",
           "iconId": null,
-          "parentId": "cmw3kwyid0062d7dimi6cdxt6",
+          "parentId": "cmw3l7xms0062mydiju1esg9i",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyid0064d7diwozv0sjv",
+          "id": "cmw3l7xms0064mydiuxixr73x",
           "name": "Encodeur / décodeur IP",
           "color": "#6366f1",
           "iconId": null,
-          "parentId": "cmw3kwyid0062d7dimi6cdxt6",
+          "parentId": "cmw3l7xms0062mydiju1esg9i",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyid0065d7dittikjbwo",
+          "id": "cmw3l7xms0065myditg7zzpmc",
           "name": "Fibre optique actif",
           "color": "#6366f1",
           "iconId": null,
-          "parentId": "cmw3kwyid0062d7dimi6cdxt6",
+          "parentId": "cmw3l7xms0062mydiju1esg9i",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyid0066d7dirh6pc05p",
+          "id": "cmw3l7xms0066mydi8yu9833o",
           "name": "Extender HDMI / SDI",
           "color": "#6366f1",
           "iconId": null,
-          "parentId": "cmw3kwyid0062d7dimi6cdxt6",
+          "parentId": "cmw3l7xms0062mydiju1esg9i",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyid0067d7diznw3zwpy",
+          "id": "cmw3l7xms0067mydiealmay43",
           "name": "Multiviewer",
           "color": "#6366f1",
           "iconId": null,
-          "parentId": "cmw3kwyid0062d7dimi6cdxt6",
+          "parentId": "cmw3l7xms0062mydiju1esg9i",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyid0068d7di73oejz5r",
+          "id": "cmw3l7xms0068mydijoxv76wy",
           "name": "MONITEURS & AFFICHAGE",
           "color": "#3b82f6",
           "iconId": null,
@@ -339,52 +339,52 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyid0069d7di0u7upfaw",
+          "id": "cmw3l7xms0069mydi0zeh8l8b",
           "name": "Moniteur de production",
           "color": "#3b82f6",
           "iconId": null,
-          "parentId": "cmw3kwyid0068d7di73oejz5r",
+          "parentId": "cmw3l7xms0068mydijoxv76wy",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyid006ad7di1s30t77p",
+          "id": "cmw3l7xms006amydi82pp7mtd",
           "name": "Moniteur de confiance",
           "color": "#3b82f6",
           "iconId": null,
-          "parentId": "cmw3kwyid0068d7di73oejz5r",
+          "parentId": "cmw3l7xms0068mydijoxv76wy",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyid006bd7dicdkixmzj",
+          "id": "cmw3l7xms006bmyditgvg7jb6",
           "name": "Moniteur talent / retour",
           "color": "#3b82f6",
           "iconId": null,
-          "parentId": "cmw3kwyid0068d7di73oejz5r",
+          "parentId": "cmw3l7xms0068mydijoxv76wy",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyid006cd7dij1d6gfa1",
+          "id": "cmw3l7xms006cmydivrfu60bl",
           "name": "Écran de prompteur",
           "color": "#3b82f6",
           "iconId": null,
-          "parentId": "cmw3kwyid0068d7di73oejz5r",
+          "parentId": "cmw3l7xms0068mydijoxv76wy",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyid006dd7diqzf7rd5h",
+          "id": "cmw3l7xms006dmydigp0ong09",
           "name": "Tableau d'affichage",
           "color": "#3b82f6",
           "iconId": null,
-          "parentId": "cmw3kwyid0068d7di73oejz5r",
+          "parentId": "cmw3l7xms0068mydijoxv76wy",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyid006ed7digat2le2e",
+          "id": "cmw3l7xms006emydiaxkjkdch",
           "name": "ENREGISTREMENT & STOCKAGE",
           "color": "#06b6d4",
           "iconId": null,
@@ -393,52 +393,52 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyid006fd7di1w2qjh6n",
+          "id": "cmw3l7xms006fmydi0grut9ie",
           "name": "Enregistreur disque",
           "color": "#06b6d4",
           "iconId": null,
-          "parentId": "cmw3kwyid006ed7digat2le2e",
+          "parentId": "cmw3l7xms006emydiaxkjkdch",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyid006gd7diaxxqljsl",
+          "id": "cmw3l7xms006gmydi8jw5eyl1",
           "name": "Serveur vidéo",
           "color": "#06b6d4",
           "iconId": null,
-          "parentId": "cmw3kwyid006ed7digat2le2e",
+          "parentId": "cmw3l7xms006emydiaxkjkdch",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyid006hd7dixp4gz5jt",
+          "id": "cmw3l7xms006hmydibtb3hd1c",
           "name": "Lecteur / graveur",
           "color": "#06b6d4",
           "iconId": null,
-          "parentId": "cmw3kwyid006ed7digat2le2e",
+          "parentId": "cmw3l7xms006emydiaxkjkdch",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyid006id7dih5psl5rc",
+          "id": "cmw3l7xms006imydic4653waf",
           "name": "NAS / stockage réseau",
           "color": "#06b6d4",
           "iconId": null,
-          "parentId": "cmw3kwyid006ed7digat2le2e",
+          "parentId": "cmw3l7xms006emydiaxkjkdch",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyid006jd7dir7xz9hki",
+          "id": "cmw3l7xms006jmydiuu2v5x5z",
           "name": "SSD / media amovible",
           "color": "#06b6d4",
           "iconId": null,
-          "parentId": "cmw3kwyid006ed7digat2le2e",
+          "parentId": "cmw3l7xms006emydiaxkjkdch",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyid006kd7di8xhtnwdo",
+          "id": "cmw3l7xms006kmydid8sc8uaw",
           "name": "AUDIO — CAPTURE",
           "color": "#10b981",
           "iconId": null,
@@ -447,61 +447,61 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyid006ld7dicv5ve844",
+          "id": "cmw3l7xms006lmydiwv1s9ora",
           "name": "Microphone studio",
           "color": "#10b981",
           "iconId": null,
-          "parentId": "cmw3kwyid006kd7di8xhtnwdo",
+          "parentId": "cmw3l7xms006kmydid8sc8uaw",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyid006md7di021652iw",
+          "id": "cmw3l7xms006mmydi7cuq1hqz",
           "name": "Microphone ENG / reportage",
           "color": "#10b981",
           "iconId": null,
-          "parentId": "cmw3kwyid006kd7di8xhtnwdo",
+          "parentId": "cmw3l7xms006kmydid8sc8uaw",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyid006nd7diiet9myt8",
+          "id": "cmw3l7xms006nmydix5jy0ebx",
           "name": "Microphone HF émetteur",
           "color": "#10b981",
           "iconId": null,
-          "parentId": "cmw3kwyid006kd7di8xhtnwdo",
+          "parentId": "cmw3l7xms006kmydid8sc8uaw",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyid006od7ditcmdyb65",
+          "id": "cmw3l7xms006omydit4b27qjn",
           "name": "Microphone HF récepteur",
           "color": "#10b981",
           "iconId": null,
-          "parentId": "cmw3kwyid006kd7di8xhtnwdo",
+          "parentId": "cmw3l7xms006kmydid8sc8uaw",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyid006pd7di2gk8ep24",
+          "id": "cmw3l7xms006pmydiieqodp0u",
           "name": "Oreillette / retour casque",
           "color": "#10b981",
           "iconId": null,
-          "parentId": "cmw3kwyid006kd7di8xhtnwdo",
+          "parentId": "cmw3l7xms006kmydid8sc8uaw",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyid006qd7dip0olecsf",
+          "id": "cmw3l7xms006qmydi62suqbhp",
           "name": "Perche / boom",
           "color": "#10b981",
           "iconId": null,
-          "parentId": "cmw3kwyid006kd7di8xhtnwdo",
+          "parentId": "cmw3l7xms006kmydid8sc8uaw",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyid006rd7di9w8655ja",
+          "id": "cmw3l7xms006rmydivte1vief",
           "name": "AUDIO — TRAITEMENT",
           "color": "#14b8a6",
           "iconId": null,
@@ -510,61 +510,61 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyid006sd7di6uhtriai",
+          "id": "cmw3l7xms006smydiam1a6vv0",
           "name": "Console de mixage",
           "color": "#14b8a6",
           "iconId": null,
-          "parentId": "cmw3kwyid006rd7di9w8655ja",
+          "parentId": "cmw3l7xms006rmydivte1vief",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyid006td7dik6ld8gul",
+          "id": "cmw3l7xms006tmydip8sihn4s",
           "name": "Processeur audio",
           "color": "#14b8a6",
           "iconId": null,
-          "parentId": "cmw3kwyid006rd7di9w8655ja",
+          "parentId": "cmw3l7xms006rmydivte1vief",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyid006ud7diw3oyfwy3",
+          "id": "cmw3l7xms006umydiojy5h75k",
           "name": "Convertisseur AD/DA",
           "color": "#14b8a6",
           "iconId": null,
-          "parentId": "cmw3kwyid006rd7di9w8655ja",
+          "parentId": "cmw3l7xms006rmydivte1vief",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyid006vd7di3vat1s0v",
+          "id": "cmw3l7xms006vmydiboxmk3yq",
           "name": "Distribution audio",
           "color": "#14b8a6",
           "iconId": null,
-          "parentId": "cmw3kwyid006rd7di9w8655ja",
+          "parentId": "cmw3l7xms006rmydivte1vief",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyid006wd7did1t4lcrg",
+          "id": "cmw3l7xms006wmydiu422evyl",
           "name": "Délai / alignement",
           "color": "#14b8a6",
           "iconId": null,
-          "parentId": "cmw3kwyid006rd7di9w8655ja",
+          "parentId": "cmw3l7xms006rmydivte1vief",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyid006xd7diw3trmffp",
+          "id": "cmw3l7xms006xmydigeqgd2ql",
           "name": "Intercom / talkback",
           "color": "#14b8a6",
           "iconId": null,
-          "parentId": "cmw3kwyid006rd7di9w8655ja",
+          "parentId": "cmw3l7xms006rmydivte1vief",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyid006yd7dit86z6rgz",
+          "id": "cmw3l7xms006ymydiuo5fs9kw",
           "name": "RÉSEAU & IT",
           "color": "#84cc16",
           "iconId": null,
@@ -573,61 +573,61 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyid006zd7dim0yz0hr4",
+          "id": "cmw3l7xms006zmydi0ysk0jo7",
           "name": "Switch réseau",
           "color": "#84cc16",
           "iconId": null,
-          "parentId": "cmw3kwyid006yd7dit86z6rgz",
+          "parentId": "cmw3l7xms006ymydiuo5fs9kw",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyid0070d7diqx8k3gh6",
+          "id": "cmw3l7xms0070mydi2wgnnjzt",
           "name": "Routeur",
           "color": "#84cc16",
           "iconId": null,
-          "parentId": "cmw3kwyid006yd7dit86z6rgz",
+          "parentId": "cmw3l7xms006ymydiuo5fs9kw",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyid0071d7di9vjjke4w",
+          "id": "cmw3l7xms0071mydib5ooq81w",
           "name": "Serveur",
           "color": "#84cc16",
           "iconId": null,
-          "parentId": "cmw3kwyid006yd7dit86z6rgz",
+          "parentId": "cmw3l7xms006ymydiuo5fs9kw",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyid0072d7di925k733f",
+          "id": "cmw3l7xms0072mydiq9khbnz3",
           "name": "Media gateway",
           "color": "#84cc16",
           "iconId": null,
-          "parentId": "cmw3kwyid006yd7dit86z6rgz",
+          "parentId": "cmw3l7xms006ymydiuo5fs9kw",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyid0073d7di0lht62wx",
+          "id": "cmw3l7xms0073mydieizhpjgc",
           "name": "Analyseur réseau",
           "color": "#84cc16",
           "iconId": null,
-          "parentId": "cmw3kwyid006yd7dit86z6rgz",
+          "parentId": "cmw3l7xms006ymydiuo5fs9kw",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyid0074d7di1u4g1axl",
+          "id": "cmw3l7xms0074mydidzt7gys6",
           "name": "Patch panel réseau",
           "color": "#84cc16",
           "iconId": null,
-          "parentId": "cmw3kwyid006yd7dit86z6rgz",
+          "parentId": "cmw3l7xms006ymydiuo5fs9kw",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyid0075d7dioi6oabj4",
+          "id": "cmw3l7xms0075mydiancryktn",
           "name": "SYNCHRONISATION",
           "color": "#a3a3a3",
           "iconId": null,
@@ -636,43 +636,43 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyid0076d7dijh90bpv4",
+          "id": "cmw3l7xms0076mydix953ft8n",
           "name": "Générateur de sync / Genlock",
           "color": "#a3a3a3",
           "iconId": null,
-          "parentId": "cmw3kwyid0075d7dioi6oabj4",
+          "parentId": "cmw3l7xms0075mydiancryktn",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyid0077d7dic4zzbom7",
+          "id": "cmw3l7xms0077mydi0cpf2dse",
           "name": "Master clock / Word clock",
           "color": "#a3a3a3",
           "iconId": null,
-          "parentId": "cmw3kwyid0075d7dioi6oabj4",
+          "parentId": "cmw3l7xms0075mydiancryktn",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyid0078d7di4f1kif79",
+          "id": "cmw3l7xms0078mydiwfxev0sy",
           "name": "Distribution Genlock",
           "color": "#a3a3a3",
           "iconId": null,
-          "parentId": "cmw3kwyid0075d7dioi6oabj4",
+          "parentId": "cmw3l7xms0075mydiancryktn",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyid0079d7di1owslevj",
+          "id": "cmw3l7xms0079mydithp8m6cp",
           "name": "LTC / timecode",
           "color": "#a3a3a3",
           "iconId": null,
-          "parentId": "cmw3kwyid0075d7dioi6oabj4",
+          "parentId": "cmw3l7xms0075mydiancryktn",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyid007ad7dib4ybxtuf",
+          "id": "cmw3l7xms007amydighs8ekl5",
           "name": "COMMUNICATION",
           "color": "#ec4899",
           "iconId": null,
@@ -681,52 +681,52 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyid007bd7di6j6ii4fe",
+          "id": "cmw3l7xms007bmydi42cztx88",
           "name": "Matrice intercom",
           "color": "#ec4899",
           "iconId": null,
-          "parentId": "cmw3kwyid007ad7dib4ybxtuf",
+          "parentId": "cmw3l7xms007amydighs8ekl5",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyid007cd7di29xh0eah",
+          "id": "cmw3l7xms007cmydixd31gs98",
           "name": "Beltpack",
           "color": "#ec4899",
           "iconId": null,
-          "parentId": "cmw3kwyid007ad7dib4ybxtuf",
+          "parentId": "cmw3l7xms007amydighs8ekl5",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyid007dd7dicxbeiobp",
+          "id": "cmw3l7xms007dmydibfm8djm9",
           "name": "Station opérateur",
           "color": "#ec4899",
           "iconId": null,
-          "parentId": "cmw3kwyid007ad7dib4ybxtuf",
+          "parentId": "cmw3l7xms007amydighs8ekl5",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyid007ed7dircob2tka",
+          "id": "cmw3l7xms007emydiyzx6hvsz",
           "name": "IFB / retour réalisateur",
           "color": "#ec4899",
           "iconId": null,
-          "parentId": "cmw3kwyid007ad7dib4ybxtuf",
+          "parentId": "cmw3l7xms007amydighs8ekl5",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyid007fd7dimw1wxax9",
+          "id": "cmw3l7xms007fmydin094hfme",
           "name": "Système HF intercom",
           "color": "#ec4899",
           "iconId": null,
-          "parentId": "cmw3kwyid007ad7dib4ybxtuf",
+          "parentId": "cmw3l7xms007amydighs8ekl5",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyid007gd7dimsvcor5n",
+          "id": "cmw3l7xms007gmydi3hazszjx",
           "name": "ÉCLAIRAGE",
           "color": "#f59e0b",
           "iconId": null,
@@ -735,52 +735,52 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyie007hd7diu9j7w8s7",
+          "id": "cmw3l7xms007hmydib37q0ccb",
           "name": "Projecteur LED",
           "color": "#f59e0b",
           "iconId": null,
-          "parentId": "cmw3kwyid007gd7dimsvcor5n",
+          "parentId": "cmw3l7xms007gmydi3hazszjx",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyie007id7dir87jj9rl",
+          "id": "cmw3l7xmt007imydi9k8zsfac",
           "name": "Projecteur HMI / tungstène",
           "color": "#f59e0b",
           "iconId": null,
-          "parentId": "cmw3kwyid007gd7dimsvcor5n",
+          "parentId": "cmw3l7xms007gmydi3hazszjx",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyie007jd7di8lauxumj",
+          "id": "cmw3l7xmt007jmydivk5lx4r3",
           "name": "Panneau LED",
           "color": "#f59e0b",
           "iconId": null,
-          "parentId": "cmw3kwyid007gd7dimsvcor5n",
+          "parentId": "cmw3l7xms007gmydi3hazszjx",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyie007kd7dirflvwunf",
+          "id": "cmw3l7xmt007kmydixxsbehu5",
           "name": "Contrôleur DMX",
           "color": "#f59e0b",
           "iconId": null,
-          "parentId": "cmw3kwyid007gd7dimsvcor5n",
+          "parentId": "cmw3l7xms007gmydi3hazszjx",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyie007ld7diaoh9cq0s",
+          "id": "cmw3l7xmt007lmydi7pbnflia",
           "name": "Gradateur / dimmer",
           "color": "#f59e0b",
           "iconId": null,
-          "parentId": "cmw3kwyid007gd7dimsvcor5n",
+          "parentId": "cmw3l7xms007gmydi3hazszjx",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyie007md7di8xzdb5iw",
+          "id": "cmw3l7xmt007mmydi3b3f0bk6",
           "name": "ÉNERGIE",
           "color": "#ef4444",
           "iconId": null,
@@ -789,61 +789,61 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyie007nd7dipjxspuaj",
+          "id": "cmw3l7xmt007nmydionj57vop",
           "name": "Distributeur secteur",
           "color": "#ef4444",
           "iconId": null,
-          "parentId": "cmw3kwyie007md7di8xzdb5iw",
+          "parentId": "cmw3l7xmt007mmydi3b3f0bk6",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyie007od7di25sl42yd",
+          "id": "cmw3l7xmt007omydipx4yjkog",
           "name": "Onduleur / UPS",
           "color": "#ef4444",
           "iconId": null,
-          "parentId": "cmw3kwyie007md7di8xzdb5iw",
+          "parentId": "cmw3l7xmt007mmydi3b3f0bk6",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyie007pd7di2nh29c01",
+          "id": "cmw3l7xmt007pmydihyw6vj7k",
           "name": "Batterie / V-Mount",
           "color": "#ef4444",
           "iconId": null,
-          "parentId": "cmw3kwyie007md7di8xzdb5iw",
+          "parentId": "cmw3l7xmt007mmydi3b3f0bk6",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyie007qd7dishpoo4cx",
+          "id": "cmw3l7xmt007qmydipvmp6rcz",
           "name": "Chargeur",
           "color": "#ef4444",
           "iconId": null,
-          "parentId": "cmw3kwyie007md7di8xzdb5iw",
+          "parentId": "cmw3l7xmt007mmydi3b3f0bk6",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyie007rd7diqm5bpmyk",
+          "id": "cmw3l7xmt007rmydishsiheau",
           "name": "Générateur",
           "color": "#ef4444",
           "iconId": null,
-          "parentId": "cmw3kwyie007md7di8xzdb5iw",
+          "parentId": "cmw3l7xmt007mmydi3b3f0bk6",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyie007sd7diyeyjf42i",
+          "id": "cmw3l7xmt007smydi88934kdl",
           "name": "Câble secteur / multiprises",
           "color": "#ef4444",
           "iconId": null,
-          "parentId": "cmw3kwyie007md7di8xzdb5iw",
+          "parentId": "cmw3l7xmt007mmydi3b3f0bk6",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyie007td7dicfomu8kh",
+          "id": "cmw3l7xmt007tmydivsyh661c",
           "name": "CÂBLAGE & CONNECTIQUE",
           "color": "#6366f1",
           "iconId": null,
@@ -852,88 +852,88 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyie007ud7di6t1ucvqe",
+          "id": "cmw3l7xmt007umydild76gtx2",
           "name": "Câble SDI",
           "color": "#6366f1",
           "iconId": null,
-          "parentId": "cmw3kwyie007td7dicfomu8kh",
+          "parentId": "cmw3l7xmt007tmydivsyh661c",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyie007vd7dixaz7jwkw",
+          "id": "cmw3l7xmt007vmydi3mcnsi6z",
           "name": "Câble HDMI",
           "color": "#6366f1",
           "iconId": null,
-          "parentId": "cmw3kwyie007td7dicfomu8kh",
+          "parentId": "cmw3l7xmt007tmydivsyh661c",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyie007wd7di4d5qjke2",
+          "id": "cmw3l7xmt007wmydiuthu6y84",
           "name": "Câble fibre",
           "color": "#6366f1",
           "iconId": null,
-          "parentId": "cmw3kwyie007td7dicfomu8kh",
+          "parentId": "cmw3l7xmt007tmydivsyh661c",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyie007xd7diniworz8q",
+          "id": "cmw3l7xmt007xmydilv1uzr98",
           "name": "Câble audio",
           "color": "#6366f1",
           "iconId": null,
-          "parentId": "cmw3kwyie007td7dicfomu8kh",
+          "parentId": "cmw3l7xmt007tmydivsyh661c",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyie007yd7di6i5nqad9",
+          "id": "cmw3l7xmt007ymydiidzbd55y",
           "name": "Câble réseau",
           "color": "#6366f1",
           "iconId": null,
-          "parentId": "cmw3kwyie007td7dicfomu8kh",
+          "parentId": "cmw3l7xmt007tmydivsyh661c",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyie007zd7dicxu1q3lo",
+          "id": "cmw3l7xmt007zmydiqn81dc7m",
           "name": "Câble énergie",
           "color": "#6366f1",
           "iconId": null,
-          "parentId": "cmw3kwyie007td7dicfomu8kh",
+          "parentId": "cmw3l7xmt007tmydivsyh661c",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyie0080d7di7xcqlj9e",
+          "id": "cmw3l7xmt0080myditab4qywk",
           "name": "Patch panel BNC",
           "color": "#6366f1",
           "iconId": null,
-          "parentId": "cmw3kwyie007td7dicfomu8kh",
+          "parentId": "cmw3l7xmt007tmydivsyh661c",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyie0081d7dingzhte6n",
+          "id": "cmw3l7xmt0081mydig7izfofk",
           "name": "Patch panel XLR",
           "color": "#6366f1",
           "iconId": null,
-          "parentId": "cmw3kwyie007td7dicfomu8kh",
+          "parentId": "cmw3l7xmt007tmydivsyh661c",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyie0082d7dim9mhnlce",
+          "id": "cmw3l7xmt0082mydihowbrbto",
           "name": "Patch panel fibre",
           "color": "#6366f1",
           "iconId": null,
-          "parentId": "cmw3kwyie007td7dicfomu8kh",
+          "parentId": "cmw3l7xmt007tmydivsyh661c",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyie0083d7diwxll2li7",
+          "id": "cmw3l7xmt0083mydi279pi0mv",
           "name": "RACK & INFRASTRUCTURE",
           "color": "#8b5cf6",
           "iconId": null,
@@ -942,47 +942,47 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyie0084d7diusygoit5",
+          "id": "cmw3l7xmt0084mydia2i0thda",
           "name": "Rack 19\"",
           "color": "#8b5cf6",
           "iconId": null,
-          "parentId": "cmw3kwyie0083d7diwxll2li7",
+          "parentId": "cmw3l7xmt0083mydi279pi0mv",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyie0085d7di79zjsphl",
+          "id": "cmw3l7xmt0085mydi6y0ywsj8",
           "name": "Flight-case",
           "color": "#8b5cf6",
           "iconId": null,
-          "parentId": "cmw3kwyie0083d7diwxll2li7",
+          "parentId": "cmw3l7xmt0083mydi279pi0mv",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyie0086d7diyllzcsrh",
+          "id": "cmw3l7xmt0086mydigghen8h6",
           "name": "Panneau de brassage",
           "color": "#8b5cf6",
           "iconId": null,
-          "parentId": "cmw3kwyie0083d7diwxll2li7",
+          "parentId": "cmw3l7xmt0083mydi279pi0mv",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyie0087d7di10n3a8f0",
+          "id": "cmw3l7xmt0087mydid2b5s0n8",
           "name": "Toit / fond de rack",
           "color": "#8b5cf6",
           "iconId": null,
-          "parentId": "cmw3kwyie0083d7diwxll2li7",
+          "parentId": "cmw3l7xmt0083mydi279pi0mv",
           "sortOrder": 0,
           "isActive": true
         },
         {
-          "id": "cmw3kwyie0088d7diebpaj7lq",
+          "id": "cmw3l7xmt0088mydi5yrusymt",
           "name": "Tiroir de rack",
           "color": "#8b5cf6",
           "iconId": null,
-          "parentId": "cmw3kwyie0083d7diwxll2li7",
+          "parentId": "cmw3l7xmt0083mydi279pi0mv",
           "sortOrder": 0,
           "isActive": true
         }

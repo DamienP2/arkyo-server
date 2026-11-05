@@ -6,7 +6,7 @@
       "table": "TenantConnectorType",
       "rows": [
         {
-          "id": "cmw3kwyin00ecd7dikcs3byqv",
+          "id": "cmw3l7xn400ecmydijjq8znbt",
           "name": "BNC",
           "versions": [
             "75Ω",
@@ -19,38 +19,38 @@
           "svgUrl": null,
           "color": "#3b82f6",
           "functionIds": [
-            "cmw3kwyhz0001d7dirmf5fvaj",
-            "cmw3kwyi00008d7dihb1bpim8",
-            "cmw3kwyi00007d7di7e1881hc"
+            "cmw3l7xmg0001mydisfhpmpdg",
+            "cmw3l7xmg0008mydimfbc1gjf",
+            "cmw3l7xmg0007mydi6jjmjgud"
           ],
           "isActive": true
         },
         {
-          "id": "cmw3kwyin00egd7dilebqdz3c",
+          "id": "cmw3l7xn400egmydiwvk31bdh",
           "name": "DIN 1.0/2.3",
           "versions": [],
           "iconId": "din102",
           "svgUrl": null,
           "color": "#3b82f6",
           "functionIds": [
-            "cmw3kwyhz0001d7dirmf5fvaj"
+            "cmw3l7xmg0001mydisfhpmpdg"
           ],
           "isActive": true
         },
         {
-          "id": "cmw3kwyin00eid7dicuv6z1l2",
+          "id": "cmw3l7xn400eimydi64rsqi1p",
           "name": "HD-BNC (Micro-BNC)",
           "versions": [],
           "iconId": "microbnc",
           "svgUrl": null,
           "color": "#3b82f6",
           "functionIds": [
-            "cmw3kwyhz0001d7dirmf5fvaj"
+            "cmw3l7xmg0001mydisfhpmpdg"
           ],
           "isActive": true
         },
         {
-          "id": "cmw3kwyin00ekd7diny54yalm",
+          "id": "cmw3l7xn400ekmydigms34hcj",
           "name": "Triax",
           "versions": [
             "Fischer",
@@ -60,25 +60,25 @@
           "svgUrl": null,
           "color": "#3b82f6",
           "functionIds": [
-            "cmw3kwyhz0001d7dirmf5fvaj"
+            "cmw3l7xmg0001mydisfhpmpdg"
           ],
           "isActive": true
         },
         {
-          "id": "cmw3kwyin00emd7diqohxy9a8",
+          "id": "cmw3l7xn400emmydir6ey07q6",
           "name": "SMPTE 311M (hybride fibre)",
           "versions": [],
           "iconId": "smpte",
           "svgUrl": null,
           "color": "#3b82f6",
           "functionIds": [
-            "cmw3kwyhz0001d7dirmf5fvaj",
-            "cmw3kwyi00006d7dif63rdu92"
+            "cmw3l7xmg0001mydisfhpmpdg",
+            "cmw3l7xmg0006mydiqv6774yl"
           ],
           "isActive": true
         },
         {
-          "id": "cmw3kwyin00epd7dikgw6vxb1",
+          "id": "cmw3l7xn400epmydir94cdn1f",
           "name": "HDMI",
           "versions": [
             "Type A"
@@ -87,48 +87,48 @@
           "svgUrl": null,
           "color": "#3b82f6",
           "functionIds": [
-            "cmw3kwyhz0001d7dirmf5fvaj"
+            "cmw3l7xmg0001mydisfhpmpdg"
           ],
           "isActive": true
         },
         {
-          "id": "cmw3kwyin00erd7dit0dkievx",
+          "id": "cmw3l7xn400ermydi8qmznzyx",
           "name": "Micro-HDMI",
           "versions": [],
           "iconId": "microhdmi",
           "svgUrl": null,
           "color": "#3b82f6",
           "functionIds": [
-            "cmw3kwyhz0001d7dirmf5fvaj"
+            "cmw3l7xmg0001mydisfhpmpdg"
           ],
           "isActive": true
         },
         {
-          "id": "cmw3kwyin00etd7dig30xsrj3",
+          "id": "cmw3l7xn400etmydikmu0ihyk",
           "name": "DisplayPort",
           "versions": [],
           "iconId": "dp",
           "svgUrl": null,
           "color": "#3b82f6",
           "functionIds": [
-            "cmw3kwyhz0001d7dirmf5fvaj"
+            "cmw3l7xmg0001mydisfhpmpdg"
           ],
           "isActive": true
         },
         {
-          "id": "cmw3kwyio00evd7di22uneuqo",
+          "id": "cmw3l7xn400evmydiz25pvcy6",
           "name": "Mini-DisplayPort",
           "versions": [],
           "iconId": "minidp",
           "svgUrl": null,
           "color": "#3b82f6",
           "functionIds": [
-            "cmw3kwyhz0001d7dirmf5fvaj"
+            "cmw3l7xmg0001mydisfhpmpdg"
           ],
           "isActive": true
         },
         {
-          "id": "cmw3kwyio00exd7dihlnwhxt5",
+          "id": "cmw3l7xn400exmydimq7s1o25",
           "name": "DVI-D",
           "versions": [
             "Single Link",
@@ -138,48 +138,48 @@
           "svgUrl": null,
           "color": "#3b82f6",
           "functionIds": [
-            "cmw3kwyhz0001d7dirmf5fvaj"
+            "cmw3l7xmg0001mydisfhpmpdg"
           ],
           "isActive": true
         },
         {
-          "id": "cmw3kwyio00ezd7dip5bnpboa",
+          "id": "cmw3l7xn400ezmydifypfmnmx",
           "name": "VGA",
           "versions": [],
           "iconId": "dsub",
           "svgUrl": null,
           "color": "#3b82f6",
           "functionIds": [
-            "cmw3kwyhz0001d7dirmf5fvaj"
+            "cmw3l7xmg0001mydisfhpmpdg"
           ],
           "isActive": true
         },
         {
-          "id": "cmw3kwyio00f1d7dihxs2dzng",
+          "id": "cmw3l7xn400f1mydigzomebgg",
           "name": "Mini-DIN (S-Video)",
           "versions": [],
           "iconId": "din5",
           "svgUrl": null,
           "color": "#3b82f6",
           "functionIds": [
-            "cmw3kwyhz0001d7dirmf5fvaj"
+            "cmw3l7xmg0001mydisfhpmpdg"
           ],
           "isActive": true
         },
         {
-          "id": "cmw3kwyio00f3d7diekyxy012",
+          "id": "cmw3l7xn400f3mydizveb9478",
           "name": "TNC",
           "versions": [],
           "iconId": "bnc",
           "svgUrl": null,
           "color": "#ec4899",
           "functionIds": [
-            "cmw3kwyi00008d7dihb1bpim8"
+            "cmw3l7xmg0008mydimfbc1gjf"
           ],
           "isActive": true
         },
         {
-          "id": "cmw3kwyio00f5d7dii9mta3ig",
+          "id": "cmw3l7xn400f5mydi50yocjue",
           "name": "SMA",
           "versions": [
             "Standard",
@@ -189,12 +189,12 @@
           "svgUrl": null,
           "color": "#ec4899",
           "functionIds": [
-            "cmw3kwyi00008d7dihb1bpim8"
+            "cmw3l7xmg0008mydimfbc1gjf"
           ],
           "isActive": true
         },
         {
-          "id": "cmw3kwyio00f7d7diu4visheg",
+          "id": "cmw3l7xn400f7mydi5j294ps0",
           "name": "Fiche N",
           "versions": [
             "50Ω",
@@ -204,37 +204,37 @@
           "svgUrl": null,
           "color": "#ec4899",
           "functionIds": [
-            "cmw3kwyi00008d7dihb1bpim8"
+            "cmw3l7xmg0008mydimfbc1gjf"
           ],
           "isActive": true
         },
         {
-          "id": "cmw3kwyio00f9d7dighe2bcni",
+          "id": "cmw3l7xn400f9mydiih4f4amx",
           "name": "Fiche F",
           "versions": [],
           "iconId": "f",
           "svgUrl": null,
           "color": "#ec4899",
           "functionIds": [
-            "cmw3kwyi00008d7dihb1bpim8",
-            "cmw3kwyhz0001d7dirmf5fvaj"
+            "cmw3l7xmg0008mydimfbc1gjf",
+            "cmw3l7xmg0001mydisfhpmpdg"
           ],
           "isActive": true
         },
         {
-          "id": "cmw3kwyio00fcd7dio3mbzn51",
+          "id": "cmw3l7xn400fcmydi1g3q9vpa",
           "name": "7/16 DIN",
           "versions": [],
           "iconId": "n",
           "svgUrl": null,
           "color": "#ec4899",
           "functionIds": [
-            "cmw3kwyi00008d7dihb1bpim8"
+            "cmw3l7xmg0008mydimfbc1gjf"
           ],
           "isActive": true
         },
         {
-          "id": "cmw3kwyio00fed7didssyu6iz",
+          "id": "cmw3l7xn400femydia5su2tra",
           "name": "LC Duplex",
           "versions": [
             "Simplex",
@@ -244,39 +244,39 @@
           "svgUrl": null,
           "color": "#06b6d4",
           "functionIds": [
-            "cmw3kwyhz0001d7dirmf5fvaj",
-            "cmw3kwyi00006d7dif63rdu92"
+            "cmw3l7xmg0001mydisfhpmpdg",
+            "cmw3l7xmg0006mydiqv6774yl"
           ],
           "isActive": true
         },
         {
-          "id": "cmw3kwyio00fhd7dipxki644s",
+          "id": "cmw3l7xn400fhmydijds08mch",
           "name": "SC",
           "versions": [],
           "iconId": "sc",
           "svgUrl": null,
           "color": "#06b6d4",
           "functionIds": [
-            "cmw3kwyhz0001d7dirmf5fvaj",
-            "cmw3kwyi00006d7dif63rdu92"
+            "cmw3l7xmg0001mydisfhpmpdg",
+            "cmw3l7xmg0006mydiqv6774yl"
           ],
           "isActive": true
         },
         {
-          "id": "cmw3kwyio00fkd7di27fopkrx",
+          "id": "cmw3l7xn400fkmydidj4roko1",
           "name": "ST",
           "versions": [],
           "iconId": "st",
           "svgUrl": null,
           "color": "#06b6d4",
           "functionIds": [
-            "cmw3kwyhz0001d7dirmf5fvaj",
-            "cmw3kwyi00006d7dif63rdu92"
+            "cmw3l7xmg0001mydisfhpmpdg",
+            "cmw3l7xmg0006mydiqv6774yl"
           ],
           "isActive": true
         },
         {
-          "id": "cmw3kwyio00fnd7dib0q8t6c7",
+          "id": "cmw3l7xn400fnmydi773hz7lk",
           "name": "MPO/MTP",
           "versions": [
             "12 fibres",
@@ -286,12 +286,12 @@
           "svgUrl": null,
           "color": "#06b6d4",
           "functionIds": [
-            "cmw3kwyi00006d7dif63rdu92"
+            "cmw3l7xmg0006mydiqv6774yl"
           ],
           "isActive": true
         },
         {
-          "id": "cmw3kwyio00fpd7diwtb7skqp",
+          "id": "cmw3l7xn400fpmydilbc7mhzx",
           "name": "opticalCON",
           "versions": [
             "DUO",
@@ -301,13 +301,13 @@
           "svgUrl": null,
           "color": "#06b6d4",
           "functionIds": [
-            "cmw3kwyhz0001d7dirmf5fvaj",
-            "cmw3kwyi00006d7dif63rdu92"
+            "cmw3l7xmg0001mydisfhpmpdg",
+            "cmw3l7xmg0006mydiqv6774yl"
           ],
           "isActive": true
         },
         {
-          "id": "cmw3kwyio00fsd7dic9wfiwe1",
+          "id": "cmw3l7xn400fsmydiu3g7piyd",
           "name": "XLR 3",
           "versions": [
             "Analogique",
@@ -317,26 +317,26 @@
           "svgUrl": null,
           "color": "#f59e0b",
           "functionIds": [
-            "cmw3kwyi00002d7diybobu4ks",
-            "cmw3kwyi00009d7didttsy7id"
+            "cmw3l7xmg0002mydihyfu3n1k",
+            "cmw3l7xmg0009mydivpvljlpu"
           ],
           "isActive": true
         },
         {
-          "id": "cmw3kwyio00fvd7divgzutvx2",
+          "id": "cmw3l7xn400fvmydir24fnck9",
           "name": "XLR 4",
           "versions": [],
           "iconId": "xlr4",
           "svgUrl": null,
           "color": "#f59e0b",
           "functionIds": [
-            "cmw3kwyi00002d7diybobu4ks",
-            "cmw3kwyi00009d7didttsy7id"
+            "cmw3l7xmg0002mydihyfu3n1k",
+            "cmw3l7xmg0009mydivpvljlpu"
           ],
           "isActive": true
         },
         {
-          "id": "cmw3kwyio00fyd7ditgvq4y1u",
+          "id": "cmw3l7xn400fymydiw3s6n1o5",
           "name": "XLR 5",
           "versions": [
             "DMX",
@@ -346,13 +346,13 @@
           "svgUrl": null,
           "color": "#f59e0b",
           "functionIds": [
-            "cmw3kwyi00002d7diybobu4ks",
-            "cmw3kwyi00003d7diie87gkwn"
+            "cmw3l7xmg0002mydihyfu3n1k",
+            "cmw3l7xmg0003mydiia2kzr9o"
           ],
           "isActive": true
         },
         {
-          "id": "cmw3kwyio00g1d7disbv5ahjj",
+          "id": "cmw3l7xn400g1myditg6dqclf",
           "name": "Mini-XLR",
           "versions": [
             "TA3 (3 broches)",
@@ -363,12 +363,12 @@
           "svgUrl": null,
           "color": "#f59e0b",
           "functionIds": [
-            "cmw3kwyi00002d7diybobu4ks"
+            "cmw3l7xmg0002mydihyfu3n1k"
           ],
           "isActive": true
         },
         {
-          "id": "cmw3kwyio00g3d7dihpex8k1u",
+          "id": "cmw3l7xn400g3mydi6ti1by1z",
           "name": "Jack 6.35",
           "versions": [
             "TRS",
@@ -378,12 +378,12 @@
           "svgUrl": null,
           "color": "#f59e0b",
           "functionIds": [
-            "cmw3kwyi00002d7diybobu4ks"
+            "cmw3l7xmg0002mydihyfu3n1k"
           ],
           "isActive": true
         },
         {
-          "id": "cmw3kwyio00g5d7di7rgf1ghh",
+          "id": "cmw3l7xn500g5mydiosi1ma1o",
           "name": "Mini-jack 3.5",
           "versions": [
             "TRS",
@@ -394,37 +394,37 @@
           "svgUrl": null,
           "color": "#f59e0b",
           "functionIds": [
-            "cmw3kwyi00002d7diybobu4ks"
+            "cmw3l7xmg0002mydihyfu3n1k"
           ],
           "isActive": true
         },
         {
-          "id": "cmw3kwyio00g7d7di5v0j5n7y",
+          "id": "cmw3l7xn500g7mydiu7mfqugy",
           "name": "Bantam TT",
           "versions": [],
           "iconId": "bantam",
           "svgUrl": null,
           "color": "#f59e0b",
           "functionIds": [
-            "cmw3kwyi00002d7diybobu4ks"
+            "cmw3l7xmg0002mydihyfu3n1k"
           ],
           "isActive": true
         },
         {
-          "id": "cmw3kwyio00g9d7di7z4ag1xq",
+          "id": "cmw3l7xn500g9mydii9srml1t",
           "name": "RCA",
           "versions": [],
           "iconId": "rca",
           "svgUrl": null,
           "color": "#f59e0b",
           "functionIds": [
-            "cmw3kwyi00002d7diybobu4ks",
-            "cmw3kwyhz0001d7dirmf5fvaj"
+            "cmw3l7xmg0002mydihyfu3n1k",
+            "cmw3l7xmg0001mydisfhpmpdg"
           ],
           "isActive": true
         },
         {
-          "id": "cmw3kwyio00gcd7die71wv9x7",
+          "id": "cmw3l7xn500gcmydin0pypyxg",
           "name": "Sub-D 25 audio",
           "versions": [
             "AES59 (Yamaha)",
@@ -434,12 +434,12 @@
           "svgUrl": null,
           "color": "#f59e0b",
           "functionIds": [
-            "cmw3kwyi00002d7diybobu4ks"
+            "cmw3l7xmg0002mydihyfu3n1k"
           ],
           "isActive": true
         },
         {
-          "id": "cmw3kwyio00ged7dil0uz4dfa",
+          "id": "cmw3l7xn500gemydif2jcq9ai",
           "name": "EDAC/ELCO",
           "versions": [
             "90 broches",
@@ -449,12 +449,12 @@
           "svgUrl": null,
           "color": "#f59e0b",
           "functionIds": [
-            "cmw3kwyi00002d7diybobu4ks"
+            "cmw3l7xmg0002mydihyfu3n1k"
           ],
           "isActive": true
         },
         {
-          "id": "cmw3kwyio00ggd7diqwc6ns9z",
+          "id": "cmw3l7xn500ggmydibxzrpmk2",
           "name": "speakON",
           "versions": [
             "NL2",
@@ -465,12 +465,12 @@
           "svgUrl": null,
           "color": "#f59e0b",
           "functionIds": [
-            "cmw3kwyi00002d7diybobu4ks"
+            "cmw3l7xmg0002mydihyfu3n1k"
           ],
           "isActive": true
         },
         {
-          "id": "cmw3kwyio00gid7di5jcz1ue7",
+          "id": "cmw3l7xn500gimydi1kw80cev",
           "name": "Euroblock",
           "versions": [
             "3.5mm",
@@ -480,14 +480,14 @@
           "svgUrl": null,
           "color": "#f59e0b",
           "functionIds": [
-            "cmw3kwyi00002d7diybobu4ks",
-            "cmw3kwyi00004d7di1zo2nfss",
-            "cmw3kwyi00005d7ditbl9u4o5"
+            "cmw3l7xmg0002mydihyfu3n1k",
+            "cmw3l7xmg0004mydist83yzue",
+            "cmw3l7xmg0005mydiigozc28p"
           ],
           "isActive": true
         },
         {
-          "id": "cmw3kwyio00gmd7di7f0ifacl",
+          "id": "cmw3l7xn500gmmydie37tkyew",
           "name": "TOSLINK",
           "versions": [
             "Standard",
@@ -497,60 +497,60 @@
           "svgUrl": null,
           "color": "#f59e0b",
           "functionIds": [
-            "cmw3kwyi00002d7diybobu4ks"
+            "cmw3l7xmg0002mydihyfu3n1k"
           ],
           "isActive": true
         },
         {
-          "id": "cmw3kwyio00god7dir9pj90e6",
+          "id": "cmw3l7xn500gomydiw5y2rvkz",
           "name": "DB9 (RS-232/RS-422)",
           "versions": [],
           "iconId": "dsub",
           "svgUrl": null,
           "color": "#a855f7",
           "functionIds": [
-            "cmw3kwyi00004d7di1zo2nfss"
+            "cmw3l7xmg0004mydist83yzue"
           ],
           "isActive": true
         },
         {
-          "id": "cmw3kwyio00gqd7di129b01bo",
+          "id": "cmw3l7xn500gqmyditrclgewo",
           "name": "GPI",
           "versions": [],
           "iconId": "dsub",
           "svgUrl": null,
           "color": "#a855f7",
           "functionIds": [
-            "cmw3kwyi00004d7di1zo2nfss"
+            "cmw3l7xmg0004mydist83yzue"
           ],
           "isActive": true
         },
         {
-          "id": "cmw3kwyio00gsd7di48ss2zdd",
+          "id": "cmw3l7xn500gsmydicb9b0uef",
           "name": "DIN 5 (MIDI)",
           "versions": [],
           "iconId": "din5",
           "svgUrl": null,
           "color": "#a855f7",
           "functionIds": [
-            "cmw3kwyi00004d7di1zo2nfss"
+            "cmw3l7xmg0004mydist83yzue"
           ],
           "isActive": true
         },
         {
-          "id": "cmw3kwyio00gud7dis487f8bp",
+          "id": "cmw3l7xn500gumydi7jsverk9",
           "name": "Hirose 12 broches",
           "versions": [],
           "iconId": "hirose",
           "svgUrl": null,
           "color": "#a855f7",
           "functionIds": [
-            "cmw3kwyi00004d7di1zo2nfss"
+            "cmw3l7xmg0004mydist83yzue"
           ],
           "isActive": true
         },
         {
-          "id": "cmw3kwyio00gwd7dik6a5ok3g",
+          "id": "cmw3l7xn500gwmydi6i8iglzb",
           "name": "Lemo 0B/00",
           "versions": [
             "0B",
@@ -560,62 +560,62 @@
           "svgUrl": null,
           "color": "#10b981",
           "functionIds": [
-            "cmw3kwyi00007d7di7e1881hc"
+            "cmw3l7xmg0007mydi6jjmjgud"
           ],
           "isActive": true
         },
         {
-          "id": "cmw3kwyio00gyd7dildrfvc4r",
+          "id": "cmw3l7xn500gymydio3m8k8o0",
           "name": "Lemo 6 (Intercom)",
           "versions": [],
           "iconId": "lemo",
           "svgUrl": null,
           "color": "#8b5cf6",
           "functionIds": [
-            "cmw3kwyi00009d7didttsy7id"
+            "cmw3l7xmg0009mydivpvljlpu"
           ],
           "isActive": true
         },
         {
-          "id": "cmw3kwyio00h0d7disjw06m53",
+          "id": "cmw3l7xn500h0mydi97jxbl21",
           "name": "Fischer",
           "versions": [],
           "iconId": "lemo",
           "svgUrl": null,
           "color": "#3b82f6",
           "functionIds": [
-            "cmw3kwyhz0001d7dirmf5fvaj",
-            "cmw3kwyi00006d7dif63rdu92"
+            "cmw3l7xmg0001mydisfhpmpdg",
+            "cmw3l7xmg0006mydiqv6774yl"
           ],
           "isActive": true
         },
         {
-          "id": "cmw3kwyio00h3d7di3jidwt50",
+          "id": "cmw3l7xn500h3mydidc9ld4x3",
           "name": "RJ11 (téléphonie analogique)",
           "versions": [],
           "iconId": "rj45",
           "svgUrl": null,
           "color": "#8b5cf6",
           "functionIds": [
-            "cmw3kwyi00009d7didttsy7id",
-            "cmw3kwyi00006d7dif63rdu92"
+            "cmw3l7xmg0009mydivpvljlpu",
+            "cmw3l7xmg0006mydiqv6774yl"
           ],
           "isActive": true
         },
         {
-          "id": "cmw3kwyio00h6d7dixso2rmx7",
+          "id": "cmw3l7xn500h6mydinnnpokvi",
           "name": "D-Tap / P-Tap",
           "versions": [],
           "iconId": "euroblock",
           "svgUrl": null,
           "color": "#ef4444",
           "functionIds": [
-            "cmw3kwyi00005d7ditbl9u4o5"
+            "cmw3l7xmg0005mydiigozc28p"
           ],
           "isActive": true
         },
         {
-          "id": "cmw3kwyio00h8d7dibmtlp0oq",
+          "id": "cmw3l7xn500h8mydi6g7l09gh",
           "name": "DC barrel",
           "versions": [
             "5.5/2.1mm",
@@ -625,24 +625,24 @@
           "svgUrl": null,
           "color": "#ef4444",
           "functionIds": [
-            "cmw3kwyi00005d7ditbl9u4o5"
+            "cmw3l7xmg0005mydiigozc28p"
           ],
           "isActive": true
         },
         {
-          "id": "cmw3kwyip00had7diq230bxt2",
+          "id": "cmw3l7xn500hamydi5pivotx1",
           "name": "Hirose HR10 4 broches",
           "versions": [],
           "iconId": "hirose",
           "svgUrl": null,
           "color": "#ef4444",
           "functionIds": [
-            "cmw3kwyi00005d7ditbl9u4o5"
+            "cmw3l7xmg0005mydiigozc28p"
           ],
           "isActive": true
         },
         {
-          "id": "cmw3kwyip00hcd7dic6bqegre",
+          "id": "cmw3l7xn500hcmydiz0aj56yb",
           "name": "IEC C13/C14",
           "versions": [
             "C13",
@@ -653,24 +653,24 @@
           "svgUrl": null,
           "color": "#ef4444",
           "functionIds": [
-            "cmw3kwyi00005d7ditbl9u4o5"
+            "cmw3l7xmg0005mydiigozc28p"
           ],
           "isActive": true
         },
         {
-          "id": "cmw3kwyip00hed7di8dr59xgj",
+          "id": "cmw3l7xn500hemydibgoizrnn",
           "name": "IEC C7/C8 (fiche figure-8)",
           "versions": [],
           "iconId": "iec13",
           "svgUrl": null,
           "color": "#ef4444",
           "functionIds": [
-            "cmw3kwyi00005d7ditbl9u4o5"
+            "cmw3l7xmg0005mydiigozc28p"
           ],
           "isActive": true
         },
         {
-          "id": "cmw3kwyip00hgd7diyzqkmafj",
+          "id": "cmw3l7xn500hgmydishwr279q",
           "name": "IEC C19/C20",
           "versions": [
             "C19",
@@ -680,24 +680,24 @@
           "svgUrl": null,
           "color": "#ef4444",
           "functionIds": [
-            "cmw3kwyi00005d7ditbl9u4o5"
+            "cmw3l7xmg0005mydiigozc28p"
           ],
           "isActive": true
         },
         {
-          "id": "cmw3kwyip00hid7dim32ifcmy",
+          "id": "cmw3l7xn500himydi7l6ennyt",
           "name": "Schuko",
           "versions": [],
           "iconId": "schuko",
           "svgUrl": null,
           "color": "#ef4444",
           "functionIds": [
-            "cmw3kwyi00005d7ditbl9u4o5"
+            "cmw3l7xmg0005mydiigozc28p"
           ],
           "isActive": true
         },
         {
-          "id": "cmw3kwyip00hkd7divlhlztte",
+          "id": "cmw3l7xn500hkmydi1p9rj00s",
           "name": "CEE P17 mono",
           "versions": [
             "16A"
@@ -706,12 +706,12 @@
           "svgUrl": null,
           "color": "#ef4444",
           "functionIds": [
-            "cmw3kwyi00005d7ditbl9u4o5"
+            "cmw3l7xmg0005mydiigozc28p"
           ],
           "isActive": true
         },
         {
-          "id": "cmw3kwyip00hmd7di18u21w71",
+          "id": "cmw3l7xn500hmmydizmqll6s0",
           "name": "CEE P17 tri",
           "versions": [
             "32A",
@@ -722,25 +722,25 @@
           "svgUrl": null,
           "color": "#ef4444",
           "functionIds": [
-            "cmw3kwyi00005d7ditbl9u4o5"
+            "cmw3l7xmg0005mydiigozc28p"
           ],
           "isActive": true
         },
         {
-          "id": "cmw3kwyip00hod7didzdxna0u",
+          "id": "cmw3l7xn500homydiun3g8br4",
           "name": "Socapex 19",
           "versions": [],
           "iconId": "socapex",
           "svgUrl": null,
           "color": "#ef4444",
           "functionIds": [
-            "cmw3kwyi00005d7ditbl9u4o5",
-            "cmw3kwyi00003d7diie87gkwn"
+            "cmw3l7xmg0005mydiigozc28p",
+            "cmw3l7xmg0003mydiia2kzr9o"
           ],
           "isActive": true
         },
         {
-          "id": "cmw3kwyip00hrd7diyy53e04s",
+          "id": "cmw3l7xn500hrmydifu4a0s21",
           "name": "Harting",
           "versions": [
             "Han 6",
@@ -752,25 +752,25 @@
           "svgUrl": null,
           "color": "#ef4444",
           "functionIds": [
-            "cmw3kwyi00005d7ditbl9u4o5",
-            "cmw3kwyi00006d7dif63rdu92"
+            "cmw3l7xmg0005mydiigozc28p",
+            "cmw3l7xmg0006mydiqv6774yl"
           ],
           "isActive": true
         },
         {
-          "id": "cmw3kwyip00hud7di5cmf5pzw",
+          "id": "cmw3l7xn600humydisgp9u04p",
           "name": "Wieland GST18",
           "versions": [],
           "iconId": "gst18",
           "svgUrl": null,
           "color": "#ef4444",
           "functionIds": [
-            "cmw3kwyi00005d7ditbl9u4o5"
+            "cmw3l7xmg0005mydiigozc28p"
           ],
           "isActive": true
         },
         {
-          "id": "cmw3kwyip00hwd7di5r4itldd",
+          "id": "cmw3l7xn600hwmydicfqshxu1",
           "name": "Camlock/Powerlock",
           "versions": [
             "400A",
@@ -780,12 +780,12 @@
           "svgUrl": null,
           "color": "#ef4444",
           "functionIds": [
-            "cmw3kwyi00005d7ditbl9u4o5"
+            "cmw3l7xmg0005mydiigozc28p"
           ],
           "isActive": true
         },
         {
-          "id": "cmw3kwyip00hyd7dioyjno5sl",
+          "id": "cmw3l7xn600hymydihmh0lozj",
           "name": "powerCON",
           "versions": [
             "20A bleu",
@@ -795,24 +795,24 @@
           "svgUrl": null,
           "color": "#ef4444",
           "functionIds": [
-            "cmw3kwyi00005d7ditbl9u4o5"
+            "cmw3l7xmg0005mydiigozc28p"
           ],
           "isActive": true
         },
         {
-          "id": "cmw3kwyip00i0d7didmfhsm7u",
+          "id": "cmw3l7xn600i0mydi0lyosvqb",
           "name": "powerCON TRUE1",
           "versions": [],
           "iconId": "true1",
           "svgUrl": null,
           "color": "#ef4444",
           "functionIds": [
-            "cmw3kwyi00005d7ditbl9u4o5"
+            "cmw3l7xmg0005mydiigozc28p"
           ],
           "isActive": true
         },
         {
-          "id": "cmw3kwyip00i2d7dijmjahsc5",
+          "id": "cmw3l7xn600i2mydiu3q44ifd",
           "name": "RJ45",
           "versions": [
             "Cat 5e",
@@ -824,72 +824,72 @@
           "svgUrl": null,
           "color": "#06b6d4",
           "functionIds": [
-            "cmw3kwyi00006d7dif63rdu92"
+            "cmw3l7xmg0006mydiqv6774yl"
           ],
           "isActive": true
         },
         {
-          "id": "cmw3kwyip00i4d7dic7ezci72",
+          "id": "cmw3l7xn600i4mydiuum3nvqh",
           "name": "USB-A",
           "versions": [],
           "iconId": "usba",
           "svgUrl": null,
           "color": "#06b6d4",
           "functionIds": [
-            "cmw3kwyi00006d7dif63rdu92"
+            "cmw3l7xmg0006mydiqv6774yl"
           ],
           "isActive": true
         },
         {
-          "id": "cmw3kwyip00i6d7di6dq6uzea",
+          "id": "cmw3l7xn600i6mydikja56js7",
           "name": "USB-B",
           "versions": [],
           "iconId": "usbb",
           "svgUrl": null,
           "color": "#06b6d4",
           "functionIds": [
-            "cmw3kwyi00006d7dif63rdu92"
+            "cmw3l7xmg0006mydiqv6774yl"
           ],
           "isActive": true
         },
         {
-          "id": "cmw3kwyip00i8d7divre0qdbz",
+          "id": "cmw3l7xn600i8mydi0ylfxlou",
           "name": "USB-C",
           "versions": [],
           "iconId": "usbc",
           "svgUrl": null,
           "color": "#06b6d4",
           "functionIds": [
-            "cmw3kwyi00006d7dif63rdu92"
+            "cmw3l7xmg0006mydiqv6774yl"
           ],
           "isActive": true
         },
         {
-          "id": "cmw3kwyip00iad7dittbjhcm8",
+          "id": "cmw3l7xn600iamydi9ucpr6su",
           "name": "Micro-USB",
           "versions": [],
           "iconId": "microusb",
           "svgUrl": null,
           "color": "#06b6d4",
           "functionIds": [
-            "cmw3kwyi00006d7dif63rdu92"
+            "cmw3l7xmg0006mydiqv6774yl"
           ],
           "isActive": true
         },
         {
-          "id": "cmw3kwyip00icd7dipg6hvblp",
+          "id": "cmw3l7xn600icmydi1833idiz",
           "name": "Thunderbolt 3/4",
           "versions": [],
           "iconId": "usbc",
           "svgUrl": null,
           "color": "#06b6d4",
           "functionIds": [
-            "cmw3kwyi00006d7dif63rdu92"
+            "cmw3l7xmg0006mydiqv6774yl"
           ],
           "isActive": true
         },
         {
-          "id": "cmw3kwyip00ied7dihstrr4jx",
+          "id": "cmw3l7xn600iemydixqfe3is3",
           "name": "SFP",
           "versions": [
             "SFP (1G)",
@@ -900,12 +900,12 @@
           "svgUrl": null,
           "color": "#06b6d4",
           "functionIds": [
-            "cmw3kwyi00006d7dif63rdu92"
+            "cmw3l7xmg0006mydiqv6774yl"
           ],
           "isActive": true
         },
         {
-          "id": "cmw3kwyip00igd7dik7riaqzx",
+          "id": "cmw3l7xn600igmydi1xy4dw5f",
           "name": "QSFP",
           "versions": [
             "QSFP+ (40G)",
@@ -916,7 +916,7 @@
           "svgUrl": null,
           "color": "#06b6d4",
           "functionIds": [
-            "cmw3kwyi00006d7dif63rdu92"
+            "cmw3l7xmg0006mydiqv6774yl"
           ],
           "isActive": true
         }

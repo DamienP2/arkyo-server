@@ -19,6 +19,8 @@
 // collector. So the rows are exactly what arkyo's POST handlers write into
 // its main base: name resolutions (functionKey, brandName, connector names),
 // skips (cables whose connector is unknown), defaults of the Prisma schema.
+// One deliberate change (step 0): the stale connector names of the signal,
+// cord and adapter seeds are mapped to seeded connectors (ALIASES/OVERRIDES).
 // Then the non-stale scripts/seed-*.ts run against the same collector (they
 // add the network flags of the signals and link cords to their cable model).
 // Finally the Catalog* rows are converted to the Tenant* shape (decision 3
@@ -26,8 +28,8 @@
 
 import { execFileSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { hostname } from "node:os";
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { hostname, tmpdir } from "node:os";
 import { registerHooks, stripTypeScriptTypes } from "node:module";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -235,7 +237,7 @@ registerHooks({
   },
 });
 
-// ── 1. arkyo's seed routes, in dependency order ───────────────────────────
+// Seed routes run below (step 1).
 // Order of seed-all (functions → types → brands → symbols → connectors →
 // signals → adapters → cable-models → cables → dimensions → print-templates),
 // plus the seeds seed-all does not chain: phases, eq-categories,
@@ -246,8 +248,180 @@ const ROUTES = [
   "functions", "phases", "types", "eq-categories", "brands", "symbols", "connectors", "signals",
   "adapters", "cable-models", "cables", "dimensions", "print-templates", "cable-label-stocks",
 ];
+
+// ── 0. Stale connector names → seeded connectors ──────────────────────────
+// seed-signals, seed-cables and seed-adapters still name connectors as they
+// were before the connector refactor (one "XLR" with versions, one "USB"…),
+// while seed-connectors seeds the current names ("XLR 3", "USB-C"…). arkyo
+// resolves names exactly and silently drops the unknown ones (25 signals
+// without connector, 23 cords skipped, 18 adapters with an empty side).
+// arkyo-server ruling (2026-11-05): map each stale name to the closest seeded
+// connector, explicitly, and keep dropping what cannot be mapped with
+// confidence. The data arrays of these three routes are rewritten in a
+// working copy (routes + scripts, which read the routes from disk); arkyo's
+// handlers then run unchanged on it.
+//
+// Generic aliases: every occurrence of the stale name.
+const ALIASES = {
+  // seed-connectors names it "HD-BNC (Micro-BNC)" (symbol microbnc).
+  "HD-BNC": "HD-BNC (Micro-BNC)",
+  // Same connector, renamed "SMPTE 311M (hybride fibre)" (symbol smpte).
+  "SMPTE 311M (Lemo 3K.93C)": "SMPTE 311M (hybride fibre)",
+  // XLR 3 is the generic audio XLR (versions Analogique, AES/EBU 110Ω): micro,
+  // line, AES, party-line, IFB, LTC. Where the item names XLR 4 / XLR 5, an
+  // override below says so.
+  XLR: "XLR 3",
+  // Renamed with a hyphen; versions TA3 / TA4 / TA5 (labels "TA3").
+  "Mini XLR": "Mini-XLR",
+  // "Sub-D 25 audio" carries the version "TASCAM".
+  "DB-25 Tascam": "Sub-D 25 audio",
+  // "EDAC/ELCO" carries the version "90 broches".
+  "EDAC 90": "EDAC/ELCO",
+  // Same connector, now spelled "speakON" (versions NL2, NL4, NL8).
+  SpeakON: "speakON",
+  // Generic D-sub of the serial links (RS-232, RS-422, VISCA, TSL, DB-9
+  // cords and adapters): "DB9 (RS-232/RS-422)". GPI uses are overridden.
+  DB: "DB9 (RS-232/RS-422)",
+  // etherCON is a version of the seeded "RJ45" ("Cat 5e"… "etherCON").
+  etherCON: "RJ45",
+  // Phoenix is the terminal block seeded as "Euroblock" (versions 3.5 /
+  // 5.08 mm, functions AUDIO, CONTROLE, ENERGIE).
+  "Phoenix / Euro": "Euroblock",
+  // Renamed "Mini-jack 3.5".
+  "Jack 3.5": "Mini-jack 3.5",
+  // Every use is an IEC C13 (labels "IEC C13", cords "… IEC C13 F").
+  IEC: "IEC C13/C14",
+  // CEE P17 mono (version 16A) / tri (versions 32A, 63A, 125A).
+  "CEE Mono": "CEE P17 mono",
+  "CEE Tri": "CEE P17 tri",
+  // N connector, seeded as "Fiche N" (versions 50Ω, 75Ω; adapter label "N").
+  "N-Type": "Fiche N",
+  // "USB": no generic alias (A, B, C, Micro…): every use is overridden.
+};
+// Overrides where the item itself says which variant it uses.
+const OVERRIDES = {
+  // Signal name → stale name → seeded names, in order of occurrence.
+  signals: {
+    // seed-connectors gives "DMX" as a version of XLR 5; the two XLR refs are
+    // XLR 5 (standard) and XLR 3 (as the "XLR3 DMX" cord of seed-cables).
+    DMX512: { XLR: ["XLR 5", "XLR 3"] },
+    RDM: { XLR: ["XLR 5", "XLR 3"] },
+    // Camera DC is the 4-pin XLR.
+    "DC 12V Caméra": { XLR: ["XLR 4"] },
+    // 4-wire is on XLR 4 in seed-cables ("XLR4 M ↔ XLR4 F (4-wire)").
+    "Matrice 4 fils": { XLR: ["XLR 4"] },
+    // Three USB refs: the USB 2.0 connector families A, B and Micro.
+    "USB 2.0": { USB: ["USB-A", "USB-B", "Micro-USB"] },
+    // USB 3.x: A and C.
+    "USB 3.x": { USB: ["USB-A", "USB-C"] },
+    // DisplayPort over USB is the USB-C alternate mode.
+    "DisplayPort 1.4": { USB: ["USB-C"] },
+    "DisplayPort 2.1": { USB: ["USB-C"] },
+    // Thunderbolt 3/4 is on USB-C.
+    "Thunderbolt 3/4": { USB: ["USB-C"] },
+    // seed-connectors has a "GPI" connector (D-sub symbol, CONTROLE).
+    "GPIO / Contact sec": { DB: ["GPI", "GPI"] },
+    "Tally GPI": { DB: ["GPI", "GPI"] },
+  },
+  // Cord name → { left, right }, from the cord's own name.
+  cables: {
+    "XLR4 M ↔ XLR4 F (4-wire)": { left: "XLR 4", right: "XLR 4" },
+    "XLR5 DMX M ↔ XLR5 DMX F": { left: "XLR 5", right: "XLR 5" },
+    "USB-A M ↔ USB-B M": { left: "USB-A", right: "USB-B" },
+    "USB-A M ↔ USB-C M": { left: "USB-A", right: "USB-C" },
+    "USB-C M ↔ USB-C M (TB3/4)": { left: "USB-C", right: "USB-C" },
+  },
+  // Adapter name → { input, outputs[] }, from the adapter's name and port labels.
+  adapters: {
+    "XLR 5 → 2×XLR 3 (intercom)": { input: "XLR 5" },
+    "XLR 5 ↔ XLR 3 (DMX)": { input: "XLR 5" },
+    "USB-C → HDMI 4K": { input: "USB-C" },
+    "USB-C → DisplayPort": { input: "USB-C" },
+    "USB-A → USB-C": { input: "USB-A", outputs: ["USB-C"] },
+  },
+};
+
+const seededConnectors = new Set(
+  [...readFileSync(join(arkyo, "app/api/supervisor/dev/seed-connectors/route.ts"), "utf8")
+    .matchAll(/\{ name: "([^"]+)", functionKeys/g)].map((m) => m[1]),
+);
+for (const target of [
+  ...Object.values(ALIASES),
+  ...Object.values(OVERRIDES.signals).flatMap((o) => Object.values(o).flat()),
+  ...Object.values(OVERRIDES.cables).flatMap((o) => Object.values(o)),
+  ...Object.values(OVERRIDES.adapters).flatMap((o) => [o.input, ...(o.outputs ?? [])].filter(Boolean)),
+]) {
+  if (!seededConnectors.has(target)) throw new Error(`alias vers un connecteur non seedé : ${target}`);
+}
+const used = { signals: new Set(), cables: new Set(), adapters: new Set() };
+const unmapped = new Set();
+const alias = (name) => {
+  if (seededConnectors.has(name)) return name;
+  if (name in ALIASES) return ALIASES[name];
+  unmapped.add(name);
+  return name; // left as is: arkyo drops it
+};
+
+const REWRITE = {
+  signals: {
+    array: "SIGNALS",
+    item(s) {
+      const o = OVERRIDES.signals[s.name];
+      if (o) used.signals.add(s.name);
+      const queues = Object.fromEntries(Object.entries(o ?? {}).map(([k, v]) => [k, [...v]]));
+      return { ...s, connectorRefs: s.connectorRefs.map((r) => ({ ...r, name: queues[r.name]?.shift() ?? alias(r.name) })) };
+    },
+  },
+  cables: {
+    array: "CABLES",
+    item(c) {
+      const o = OVERRIDES.cables[c.name];
+      if (o) used.cables.add(c.name);
+      return { ...c, leftConnector: o?.left ?? alias(c.leftConnector), rightConnector: o?.right ?? alias(c.rightConnector) };
+    },
+  },
+  adapters: {
+    array: "ADAPTERS",
+    item(a) {
+      const o = OVERRIDES.adapters[a.name];
+      if (o) used.adapters.add(a.name);
+      return {
+        ...a,
+        input: { ...a.input, connectorName: o?.input ?? alias(a.input.connectorName) },
+        outputs: a.outputs.map((p, i) => ({ ...p, connectorName: o?.outputs?.[i] ?? alias(p.connectorName) })),
+      };
+    },
+  },
+};
+
+// Working copy: the three routes rewritten, every other route and the
+// scripts copied as they are (the scripts read the routes from their cwd).
+const work = mkdtempSync(join(tmpdir(), "arkyo-seeds-"));
 for (const slug of ROUTES) {
-  const mod = await import(pathToFileURL(join(arkyo, `app/api/supervisor/dev/seed-${slug}/route.ts`)).href);
+  const rel = `app/api/supervisor/dev/seed-${slug}/route.ts`;
+  let src = readFileSync(join(arkyo, rel), "utf8");
+  const rw = REWRITE[slug];
+  if (rw) {
+    const re = new RegExp(`(const ${rw.array}:[^=]*=\\s*)\\[([\\s\\S]*?)\\n\\];`);
+    const m = src.match(re);
+    if (!m) throw new Error(`${rw.array} introuvable dans ${rel}`);
+    const items = new Function(`return [${m[2]}\n];`)().map(rw.item);
+    src = src.replace(re, () => `${m[1]}[\n${items.map((i) => `  ${JSON.stringify(i)}`).join(",\n")}\n];`);
+  }
+  mkdirSync(dirname(join(work, rel)), { recursive: true });
+  writeFileSync(join(work, rel), src);
+}
+mkdirSync(join(work, "scripts"));
+for (const script of ["seed-signals", "seed-cables", "seed-adapters"]) {
+  copyFileSync(join(arkyo, `scripts/${script}.ts`), join(work, `scripts/${script}.ts`));
+}
+for (const [kind, names] of Object.entries(used)) {
+  for (const n of Object.keys(OVERRIDES[kind])) if (!names.has(n)) throw new Error(`override sans effet : ${kind} « ${n} »`);
+}
+
+// ── 1. arkyo's seed routes, in dependency order (ROUTES) ──────────────────
+for (const slug of ROUTES) {
+  const mod = await import(pathToFileURL(join(work, `app/api/supervisor/dev/seed-${slug}/route.ts`)).href);
   const res = await mod.POST();
   if (res.status !== 200) throw new Error(`seed-${slug} : HTTP ${res.status} ${JSON.stringify(res.body)}`);
   console.log(`seed-${slug}`.padEnd(26), JSON.stringify(res.body));
@@ -260,12 +434,15 @@ for (const slug of ROUTES) {
 // connector_mount_simplify), seed-types-brands.ts (reads a TYPES array that
 // no longer exists), seed-equipment.ts (decision 4).
 // The scripts run main() on import and end with $disconnect().
-process.chdir(arkyo); // they read the route files from process.cwd()
+process.chdir(work); // they read the (rewritten) route files from process.cwd()
 for (const script of ["seed-signals", "seed-cables", "seed-adapters"]) {
   const done = new Promise((ok) => (disconnected = ok));
-  await import(pathToFileURL(join(arkyo, `scripts/${script}.ts`)).href);
+  await import(pathToFileURL(join(work, `scripts/${script}.ts`)).href);
   await done;
 }
+process.chdir(repo);
+rmSync(work, { recursive: true, force: true });
+console.log("Connecteurs sans alias (abandonnés comme dans arkyo) :", [...unmapped].join(", ") || "aucun");
 
 // ── 3. Catalog* (main) → Tenant* rows ─────────────────────────────────────
 // Seeded rows are active (Catalog*.isActive was the supervisor's publication

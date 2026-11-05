@@ -67,9 +67,9 @@ const EXPECTED: &[(&str, i64)] = &[
     ("TenantSignalType", 94),         // seed-signals: 94 signals
     ("TenantAdapter", 31),            // seed-adapters: 31 adapters
     ("TenantCableModel", 36),         // seed-cable-models: 36 models
-    // seed-cables: 40 cords, 23 skipped by arkyo itself (connector name
-    // unknown to seed-connectors: "XLR", "USB", "HD-BNC"…).
-    ("TenantCable", 17),
+    // seed-cables: 40 cords (stale connector names mapped by the
+    // extractor's alias table, none dropped).
+    ("TenantCable", 40),
     ("TenantDimensionPreset", 54), // seed-dimensions: 54 presets in 6 categories
     ("TenantPrintTemplate", 4),    // seed-print-templates: 4 cartouches
     ("TenantCableLabelStock", 8),  // seed-cable-label-stocks: LAPP LCK range
@@ -414,6 +414,44 @@ fn seed_ids_are_unique_and_stable() {
         opt_in(&s["brandId"], &brands, "labelStock.brandId");
     }
 
+    // Stale connector names of arkyo's seeds are mapped (alias table of
+    // tools/extract-seeds): no signal without connector, no adapter with an
+    // empty side, and the variants named by the items are kept.
+    for s in signals {
+        assert!(
+            !s["connectorIds"].as_array().unwrap().is_empty(),
+            "signal {} without connector",
+            s["name"]
+        );
+    }
+    for a in rows(&files, "adapters", "TenantAdapter") {
+        for side in ["inputs", "outputs"] {
+            assert!(
+                !a[side].as_array().unwrap().is_empty(),
+                "adapter {}: empty {side}",
+                a["name"]
+            );
+        }
+    }
+    let connector_named = |name: &str| {
+        connectors
+            .iter()
+            .find(|c| c["name"] == name)
+            .unwrap_or_else(|| panic!("connector {name}"))["id"]
+            .clone()
+    };
+    let dmx = signals.iter().find(|s| s["name"] == "DMX512").unwrap();
+    assert_eq!(
+        dmx["connectorIds"],
+        Value::Array(vec![connector_named("XLR 5"), connector_named("XLR 3")])
+    );
+    let usb = rows(&files, "cables", "TenantCable")
+        .iter()
+        .find(|c| c["name"] == "USB-A M ↔ USB-B M")
+        .unwrap();
+    assert_eq!(usb["leftConnectorId"], connector_named("USB-A"));
+    assert_eq!(usb["rightConnectorId"], connector_named("USB-B"));
+
     // Spot checks against arkyo's sources.
     let bnc = connectors.iter().find(|c| c["name"] == "BNC").unwrap();
     assert_eq!(bnc["iconId"], "bnc");
@@ -525,4 +563,43 @@ async fn catalogue_foreign_keys() {
     .execute(&pool)
     .await
     .unwrap();
+}
+
+#[tokio::test]
+async fn type_names_are_unique_per_parent() {
+    // Validated deviation: (name, parentId) instead of arkyo's global unique
+    // name; root types form one sibling group.
+    let d = tempfile::tempdir().unwrap();
+    let pool = open(d.path()).await.unwrap();
+    let insert = |id: &'static str, name: &'static str, parent: Option<&'static str>| {
+        let pool = pool.clone();
+        async move {
+            sqlx::query(
+                "INSERT INTO TenantType (id, name, functionId, parentId, createdAt, updatedAt) \
+                 VALUES (?, ?, 'f', ?, '2026-10-26T10:00:00.000Z', '2026-10-26T10:00:00.000Z')",
+            )
+            .bind(id)
+            .bind(name)
+            .bind(parent)
+            .execute(&pool)
+            .await
+        }
+    };
+    // The seeds already repeat "Production" under two parents.
+    let n: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM TenantType WHERE name = 'Production'")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert!(n >= 2);
+    insert("r1", "Racine", None).await.unwrap();
+    assert!(
+        insert("r2", "Racine", None).await.is_err(),
+        "duplicate root"
+    );
+    insert("s1", "Enfant", Some("r1")).await.unwrap();
+    assert!(
+        insert("s2", "Enfant", Some("r1")).await.is_err(),
+        "duplicate sibling"
+    );
+    insert("s3", "Racine", Some("r1")).await.unwrap();
 }

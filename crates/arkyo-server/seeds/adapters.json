@@ -6,38 +6,73 @@
       "table": "TenantAdapter",
       "rows": [
         {
-          "id": "cmw3kwyiv00l4d7di5zqrqwr1",
+          "id": "cmw3l7xnd00l4mydis6i4vwpp",
           "name": "DB-25 → 8×XLR 3 (Tascam Out)",
           "reference": "DB25-8XLRM-TASCAM",
-          "functionId": "cmw3kwyi00002d7diybobu4ks",
-          "inputs": [],
-          "outputs": [],
+          "functionId": "cmw3l7xmg0002mydihyfu3n1k",
+          "inputs": [
+            {
+              "connectorTypeId": "cmw3l7xn500gcmydin0pypyxg",
+              "gender": "MALE",
+              "quantity": 1,
+              "label": "DB-25"
+            }
+          ],
+          "outputs": [
+            {
+              "connectorTypeId": "cmw3l7xn400fsmydiu3g7piyd",
+              "gender": "MALE",
+              "quantity": 8,
+              "label": "XLR 3 Out"
+            }
+          ],
           "notes": "Breakout Tascam pinout. 8 canaux analogiques ou 4 paires AES.",
           "imageUrl": null,
           "isActive": true,
           "createdById": "system"
         },
         {
-          "id": "cmw3kwyiv00l5d7diu2rm473j",
+          "id": "cmw3l7xnd00l5mydi4mpdrj9k",
           "name": "DB-25 → 8×XLR 3 (Tascam In)",
           "reference": "DB25-8XLRF-TASCAM",
-          "functionId": "cmw3kwyi00002d7diybobu4ks",
-          "inputs": [],
-          "outputs": [],
+          "functionId": "cmw3l7xmg0002mydihyfu3n1k",
+          "inputs": [
+            {
+              "connectorTypeId": "cmw3l7xn500gcmydin0pypyxg",
+              "gender": "MALE",
+              "quantity": 1,
+              "label": "DB-25"
+            }
+          ],
+          "outputs": [
+            {
+              "connectorTypeId": "cmw3l7xn400fsmydiu3g7piyd",
+              "gender": "FEMALE",
+              "quantity": 8,
+              "label": "XLR 3 In"
+            }
+          ],
           "notes": "Breakout Tascam pinout, retours.",
           "imageUrl": null,
           "isActive": true,
           "createdById": "system"
         },
         {
-          "id": "cmw3kwyiv00l6d7diwxescbrj",
+          "id": "cmw3l7xnd00l6mydi6fuhab1f",
           "name": "DB-25 → 8×Jack 6.35 TRS",
           "reference": "DB25-8TRS",
-          "functionId": "cmw3kwyi00002d7diybobu4ks",
-          "inputs": [],
+          "functionId": "cmw3l7xmg0002mydihyfu3n1k",
+          "inputs": [
+            {
+              "connectorTypeId": "cmw3l7xn500gcmydin0pypyxg",
+              "gender": "MALE",
+              "quantity": 1,
+              "label": "DB-25"
+            }
+          ],
           "outputs": [
             {
-              "connectorTypeId": "cmw3kwyio00g3d7dihpex8k1u",
+              "connectorTypeId": "cmw3l7xn400g3mydi6ti1by1z",
               "gender": "MALE",
               "quantity": 8,
               "label": "Jack 6.35"
@@ -49,26 +84,47 @@
           "createdById": "system"
         },
         {
-          "id": "cmw3kwyiv00l7d7di3pku04x4",
+          "id": "cmw3l7xnd00l7mydixuaw6itz",
           "name": "EDAC 90 → 24×XLR 3",
           "reference": "EDAC90-24XLR",
-          "functionId": "cmw3kwyi00002d7diybobu4ks",
-          "inputs": [],
-          "outputs": [],
+          "functionId": "cmw3l7xmg0002mydihyfu3n1k",
+          "inputs": [
+            {
+              "connectorTypeId": "cmw3l7xn500gemydif2jcq9ai",
+              "gender": "MALE",
+              "quantity": 1,
+              "label": "EDAC 90"
+            }
+          ],
+          "outputs": [
+            {
+              "connectorTypeId": "cmw3l7xn400fsmydiu3g7piyd",
+              "gender": "MALE",
+              "quantity": 24,
+              "label": "XLR 3"
+            }
+          ],
           "notes": "Multipair touring 24 voies.",
           "imageUrl": null,
           "isActive": true,
           "createdById": "system"
         },
         {
-          "id": "cmw3kwyiv00l8d7dij8j2ikog",
+          "id": "cmw3l7xnd00l8mydidx5npph7",
           "name": "XLR 3 ↔ Jack 6.35 TRS",
           "reference": "XLR3-TRS",
-          "functionId": "cmw3kwyi00002d7diybobu4ks",
-          "inputs": [],
+          "functionId": "cmw3l7xmg0002mydihyfu3n1k",
+          "inputs": [
+            {
+              "connectorTypeId": "cmw3l7xn400fsmydiu3g7piyd",
+              "gender": "FEMALE",
+              "quantity": 1,
+              "label": "XLR 3"
+            }
+          ],
           "outputs": [
             {
-              "connectorTypeId": "cmw3kwyio00g3d7dihpex8k1u",
+              "connectorTypeId": "cmw3l7xn400g3mydi6ti1by1z",
               "gender": "MALE",
               "quantity": 1,
               "label": "Jack 6.35"
@@ -80,49 +136,91 @@
           "createdById": "system"
         },
         {
-          "id": "cmw3kwyiv00l9d7dimrxh0flz",
+          "id": "cmw3l7xnd00l9mydi2bsh58ox",
           "name": "Mini XLR 3 ↔ XLR 3",
           "reference": "TA3-XLR3",
-          "functionId": "cmw3kwyi00002d7diybobu4ks",
-          "inputs": [],
-          "outputs": [],
+          "functionId": "cmw3l7xmg0002mydihyfu3n1k",
+          "inputs": [
+            {
+              "connectorTypeId": "cmw3l7xn400g1myditg6dqclf",
+              "gender": "FEMALE",
+              "quantity": 1,
+              "label": "TA3"
+            }
+          ],
+          "outputs": [
+            {
+              "connectorTypeId": "cmw3l7xn400fsmydiu3g7piyd",
+              "gender": "MALE",
+              "quantity": 1,
+              "label": "XLR 3"
+            }
+          ],
           "notes": "Bodypack TA3 vers XLR standard.",
           "imageUrl": null,
           "isActive": true,
           "createdById": "system"
         },
         {
-          "id": "cmw3kwyiv00lad7dixmexuj8t",
+          "id": "cmw3l7xnd00lamydilt4nztjr",
           "name": "XLR 5 → 2×XLR 3 (intercom)",
           "reference": "XLR5-2XLR3",
-          "functionId": "cmw3kwyi00009d7didttsy7id",
-          "inputs": [],
-          "outputs": [],
+          "functionId": "cmw3l7xmg0009mydivpvljlpu",
+          "inputs": [
+            {
+              "connectorTypeId": "cmw3l7xn400fymydiw3s6n1o5",
+              "gender": "FEMALE",
+              "quantity": 1,
+              "label": "XLR 5"
+            }
+          ],
+          "outputs": [
+            {
+              "connectorTypeId": "cmw3l7xn400fsmydiu3g7piyd",
+              "gender": "MALE",
+              "quantity": 2,
+              "label": "XLR 3"
+            }
+          ],
           "notes": "Split intercom stéréo vers 2 mono (L+R).",
           "imageUrl": null,
           "isActive": true,
           "createdById": "system"
         },
         {
-          "id": "cmw3kwyiv00lbd7dib2hyd1vz",
+          "id": "cmw3l7xnd00lbmydi25jttrar",
           "name": "XLR 5 ↔ XLR 3 (DMX)",
           "reference": "XLR5-XLR3-DMX",
-          "functionId": "cmw3kwyi00003d7diie87gkwn",
-          "inputs": [],
-          "outputs": [],
+          "functionId": "cmw3l7xmg0003mydiia2kzr9o",
+          "inputs": [
+            {
+              "connectorTypeId": "cmw3l7xn400fymydiw3s6n1o5",
+              "gender": "FEMALE",
+              "quantity": 1,
+              "label": "XLR 5 DMX"
+            }
+          ],
+          "outputs": [
+            {
+              "connectorTypeId": "cmw3l7xn400fsmydiu3g7piyd",
+              "gender": "MALE",
+              "quantity": 1,
+              "label": "XLR 3 DMX"
+            }
+          ],
           "notes": "Adaptateur DMX 5 broches ↔ 3 broches (non-standard mais courant).",
           "imageUrl": null,
           "isActive": true,
           "createdById": "system"
         },
         {
-          "id": "cmw3kwyiv00lcd7di1g1n4r1q",
+          "id": "cmw3l7xnd00lcmydi1iuyg7ho",
           "name": "HDMI → SDI",
           "reference": "HDMI-SDI-CONV",
-          "functionId": "cmw3kwyhz0001d7dirmf5fvaj",
+          "functionId": "cmw3l7xmg0001mydisfhpmpdg",
           "inputs": [
             {
-              "connectorTypeId": "cmw3kwyin00epd7dikgw6vxb1",
+              "connectorTypeId": "cmw3l7xn400epmydir94cdn1f",
               "gender": "FEMALE",
               "quantity": 1,
               "label": "HDMI In"
@@ -130,7 +228,7 @@
           ],
           "outputs": [
             {
-              "connectorTypeId": "cmw3kwyin00ecd7dikcs3byqv",
+              "connectorTypeId": "cmw3l7xn400ecmydijjq8znbt",
               "gender": "FEMALE",
               "quantity": 1,
               "label": "SDI Out"
@@ -142,13 +240,13 @@
           "createdById": "system"
         },
         {
-          "id": "cmw3kwyiv00ldd7dircip5s7f",
+          "id": "cmw3l7xnd00ldmydi8kqs5nkl",
           "name": "SDI → HDMI",
           "reference": "SDI-HDMI-CONV",
-          "functionId": "cmw3kwyhz0001d7dirmf5fvaj",
+          "functionId": "cmw3l7xmg0001mydisfhpmpdg",
           "inputs": [
             {
-              "connectorTypeId": "cmw3kwyin00ecd7dikcs3byqv",
+              "connectorTypeId": "cmw3l7xn400ecmydijjq8znbt",
               "gender": "FEMALE",
               "quantity": 1,
               "label": "SDI In"
@@ -156,7 +254,7 @@
           ],
           "outputs": [
             {
-              "connectorTypeId": "cmw3kwyin00epd7dikgw6vxb1",
+              "connectorTypeId": "cmw3l7xn400epmydir94cdn1f",
               "gender": "FEMALE",
               "quantity": 1,
               "label": "HDMI Out"
@@ -168,13 +266,13 @@
           "createdById": "system"
         },
         {
-          "id": "cmw3kwyiv00led7di5j8pg94j",
+          "id": "cmw3l7xnd00lemydimzqbrnvr",
           "name": "Quad 3G-SDI → 12G-SDI",
           "reference": "QUAD-12G-CONV",
-          "functionId": "cmw3kwyhz0001d7dirmf5fvaj",
+          "functionId": "cmw3l7xmg0001mydisfhpmpdg",
           "inputs": [
             {
-              "connectorTypeId": "cmw3kwyin00ecd7dikcs3byqv",
+              "connectorTypeId": "cmw3l7xn400ecmydijjq8znbt",
               "gender": "FEMALE",
               "quantity": 4,
               "label": "3G-SDI In"
@@ -182,7 +280,7 @@
           ],
           "outputs": [
             {
-              "connectorTypeId": "cmw3kwyin00ecd7dikcs3byqv",
+              "connectorTypeId": "cmw3l7xn400ecmydijjq8znbt",
               "gender": "FEMALE",
               "quantity": 1,
               "label": "12G-SDI Out"
@@ -194,13 +292,13 @@
           "createdById": "system"
         },
         {
-          "id": "cmw3kwyiv00lfd7di3mhqpjd4",
+          "id": "cmw3l7xnd00lfmydi7w4039ey",
           "name": "12G-SDI → Quad 3G-SDI",
           "reference": "12G-QUAD-CONV",
-          "functionId": "cmw3kwyhz0001d7dirmf5fvaj",
+          "functionId": "cmw3l7xmg0001mydisfhpmpdg",
           "inputs": [
             {
-              "connectorTypeId": "cmw3kwyin00ecd7dikcs3byqv",
+              "connectorTypeId": "cmw3l7xn400ecmydijjq8znbt",
               "gender": "FEMALE",
               "quantity": 1,
               "label": "12G-SDI In"
@@ -208,7 +306,7 @@
           ],
           "outputs": [
             {
-              "connectorTypeId": "cmw3kwyin00ecd7dikcs3byqv",
+              "connectorTypeId": "cmw3l7xn400ecmydijjq8znbt",
               "gender": "FEMALE",
               "quantity": 4,
               "label": "3G-SDI Out"
@@ -220,13 +318,13 @@
           "createdById": "system"
         },
         {
-          "id": "cmw3kwyiv00lgd7diaxnwmkxe",
+          "id": "cmw3l7xnd00lgmyditq2kq6dt",
           "name": "SDI ↔ Fibre LC (SFP)",
           "reference": "SDI-FIBER-SFP",
-          "functionId": "cmw3kwyhz0001d7dirmf5fvaj",
+          "functionId": "cmw3l7xmg0001mydisfhpmpdg",
           "inputs": [
             {
-              "connectorTypeId": "cmw3kwyin00ecd7dikcs3byqv",
+              "connectorTypeId": "cmw3l7xn400ecmydijjq8znbt",
               "gender": "FEMALE",
               "quantity": 1,
               "label": "SDI"
@@ -234,7 +332,7 @@
           ],
           "outputs": [
             {
-              "connectorTypeId": "cmw3kwyio00fed7didssyu6iz",
+              "connectorTypeId": "cmw3l7xn400femydia5su2tra",
               "gender": "NEUTRAL",
               "quantity": 1,
               "label": "Fibre LC"
@@ -246,13 +344,13 @@
           "createdById": "system"
         },
         {
-          "id": "cmw3kwyiv00lhd7di6fgzksq8",
+          "id": "cmw3l7xnd00lhmydimmda79s6",
           "name": "opticalCON DUO → 2×LC",
           "reference": "OPTICON-2LC",
-          "functionId": "cmw3kwyhz0001d7dirmf5fvaj",
+          "functionId": "cmw3l7xmg0001mydisfhpmpdg",
           "inputs": [
             {
-              "connectorTypeId": "cmw3kwyio00fpd7diwtb7skqp",
+              "connectorTypeId": "cmw3l7xn400fpmydilbc7mhzx",
               "gender": "NEUTRAL",
               "quantity": 1,
               "label": "opticalCON"
@@ -260,7 +358,7 @@
           ],
           "outputs": [
             {
-              "connectorTypeId": "cmw3kwyio00fed7didssyu6iz",
+              "connectorTypeId": "cmw3l7xn400femydia5su2tra",
               "gender": "NEUTRAL",
               "quantity": 2,
               "label": "LC Duplex"
@@ -272,13 +370,13 @@
           "createdById": "system"
         },
         {
-          "id": "cmw3kwyiv00lid7difsc5kf96",
+          "id": "cmw3l7xnd00limydi0b36u9ve",
           "name": "DisplayPort → HDMI",
           "reference": "DP-HDMI",
-          "functionId": "cmw3kwyhz0001d7dirmf5fvaj",
+          "functionId": "cmw3l7xmg0001mydisfhpmpdg",
           "inputs": [
             {
-              "connectorTypeId": "cmw3kwyin00etd7dig30xsrj3",
+              "connectorTypeId": "cmw3l7xn400etmydikmu0ihyk",
               "gender": "MALE",
               "quantity": 1,
               "label": "DisplayPort"
@@ -286,7 +384,7 @@
           ],
           "outputs": [
             {
-              "connectorTypeId": "cmw3kwyin00epd7dikgw6vxb1",
+              "connectorTypeId": "cmw3l7xn400epmydir94cdn1f",
               "gender": "FEMALE",
               "quantity": 1,
               "label": "HDMI"
@@ -298,14 +396,21 @@
           "createdById": "system"
         },
         {
-          "id": "cmw3kwyiv00ljd7dis88g4isz",
+          "id": "cmw3l7xne00ljmydiecsyh6x9",
           "name": "USB-C → HDMI 4K",
           "reference": "USBC-HDMI",
-          "functionId": "cmw3kwyhz0001d7dirmf5fvaj",
-          "inputs": [],
+          "functionId": "cmw3l7xmg0001mydisfhpmpdg",
+          "inputs": [
+            {
+              "connectorTypeId": "cmw3l7xn600i8mydi0ylfxlou",
+              "gender": "MALE",
+              "quantity": 1,
+              "label": "USB-C"
+            }
+          ],
           "outputs": [
             {
-              "connectorTypeId": "cmw3kwyin00epd7dikgw6vxb1",
+              "connectorTypeId": "cmw3l7xn400epmydir94cdn1f",
               "gender": "FEMALE",
               "quantity": 1,
               "label": "HDMI"
@@ -317,14 +422,21 @@
           "createdById": "system"
         },
         {
-          "id": "cmw3kwyiv00lkd7dixyrjkg0f",
+          "id": "cmw3l7xne00lkmydihjcsvyjr",
           "name": "USB-C → DisplayPort",
           "reference": "USBC-DP",
-          "functionId": "cmw3kwyhz0001d7dirmf5fvaj",
-          "inputs": [],
+          "functionId": "cmw3l7xmg0001mydisfhpmpdg",
+          "inputs": [
+            {
+              "connectorTypeId": "cmw3l7xn600i8mydi0ylfxlou",
+              "gender": "MALE",
+              "quantity": 1,
+              "label": "USB-C"
+            }
+          ],
           "outputs": [
             {
-              "connectorTypeId": "cmw3kwyin00etd7dig30xsrj3",
+              "connectorTypeId": "cmw3l7xn400etmydikmu0ihyk",
               "gender": "FEMALE",
               "quantity": 1,
               "label": "DP"
@@ -336,13 +448,13 @@
           "createdById": "system"
         },
         {
-          "id": "cmw3kwyiv00lld7dicpfwj8sz",
+          "id": "cmw3l7xne00llmydistdnkqft",
           "name": "HDMI A ↔ HDMI C",
           "reference": "HDMI-AC",
-          "functionId": "cmw3kwyhz0001d7dirmf5fvaj",
+          "functionId": "cmw3l7xmg0001mydisfhpmpdg",
           "inputs": [
             {
-              "connectorTypeId": "cmw3kwyin00epd7dikgw6vxb1",
+              "connectorTypeId": "cmw3l7xn400epmydir94cdn1f",
               "gender": "FEMALE",
               "quantity": 1,
               "label": "HDMI A"
@@ -350,7 +462,7 @@
           ],
           "outputs": [
             {
-              "connectorTypeId": "cmw3kwyin00epd7dikgw6vxb1",
+              "connectorTypeId": "cmw3l7xn400epmydir94cdn1f",
               "gender": "MALE",
               "quantity": 1,
               "label": "HDMI C"
@@ -362,14 +474,21 @@
           "createdById": "system"
         },
         {
-          "id": "cmw3kwyiv00lmd7dikamoypv4",
+          "id": "cmw3l7xne00lmmydia4mcq7bp",
           "name": "DB-9 ↔ RJ45 (RS-422)",
           "reference": "DB9-RJ45-422",
-          "functionId": "cmw3kwyi00004d7di1zo2nfss",
-          "inputs": [],
+          "functionId": "cmw3l7xmg0004mydist83yzue",
+          "inputs": [
+            {
+              "connectorTypeId": "cmw3l7xn500gomydiw5y2rvkz",
+              "gender": "MALE",
+              "quantity": 1,
+              "label": "DB-9"
+            }
+          ],
           "outputs": [
             {
-              "connectorTypeId": "cmw3kwyip00i2d7dijmjahsc5",
+              "connectorTypeId": "cmw3l7xn600i2mydiu3q44ifd",
               "gender": "MALE",
               "quantity": 1,
               "label": "RJ45"
@@ -381,25 +500,39 @@
           "createdById": "system"
         },
         {
-          "id": "cmw3kwyiv00lnd7dircsbk85e",
+          "id": "cmw3l7xne00lnmydidjmjj0r8",
           "name": "USB-A → USB-C",
           "reference": "USBA-USBC",
-          "functionId": "cmw3kwyi00006d7dif63rdu92",
-          "inputs": [],
-          "outputs": [],
+          "functionId": "cmw3l7xmg0006mydiqv6774yl",
+          "inputs": [
+            {
+              "connectorTypeId": "cmw3l7xn600i4mydiuum3nvqh",
+              "gender": "MALE",
+              "quantity": 1,
+              "label": "USB-A"
+            }
+          ],
+          "outputs": [
+            {
+              "connectorTypeId": "cmw3l7xn600i8mydi0ylfxlou",
+              "gender": "FEMALE",
+              "quantity": 1,
+              "label": "USB-C"
+            }
+          ],
           "notes": "Adaptateur USB 3.x.",
           "imageUrl": null,
           "isActive": true,
           "createdById": "system"
         },
         {
-          "id": "cmw3kwyiv00lod7digl9ng715",
+          "id": "cmw3l7xne00lomydivcjb1rbe",
           "name": "QSFP+ → 4×SFP+ (breakout)",
           "reference": "QSFP-4SFP",
-          "functionId": "cmw3kwyi00006d7dif63rdu92",
+          "functionId": "cmw3l7xmg0006mydiqv6774yl",
           "inputs": [
             {
-              "connectorTypeId": "cmw3kwyip00igd7dik7riaqzx",
+              "connectorTypeId": "cmw3l7xn600igmydi1xy4dw5f",
               "gender": "NEUTRAL",
               "quantity": 1,
               "label": "QSFP+"
@@ -407,7 +540,7 @@
           ],
           "outputs": [
             {
-              "connectorTypeId": "cmw3kwyip00ied7dihstrr4jx",
+              "connectorTypeId": "cmw3l7xn600iemydixqfe3is3",
               "gender": "NEUTRAL",
               "quantity": 4,
               "label": "SFP+"
@@ -419,13 +552,13 @@
           "createdById": "system"
         },
         {
-          "id": "cmw3kwyiv00lpd7didb12sgrl",
+          "id": "cmw3l7xne00lpmydi8vipb2g5",
           "name": "QSFP28 → 4×SFP28 (breakout)",
           "reference": "QSFP28-4SFP28",
-          "functionId": "cmw3kwyi00006d7dif63rdu92",
+          "functionId": "cmw3l7xmg0006mydiqv6774yl",
           "inputs": [
             {
-              "connectorTypeId": "cmw3kwyip00igd7dik7riaqzx",
+              "connectorTypeId": "cmw3l7xn600igmydi1xy4dw5f",
               "gender": "NEUTRAL",
               "quantity": 1,
               "label": "QSFP28"
@@ -433,7 +566,7 @@
           ],
           "outputs": [
             {
-              "connectorTypeId": "cmw3kwyip00ied7dihstrr4jx",
+              "connectorTypeId": "cmw3l7xn600iemydixqfe3is3",
               "gender": "NEUTRAL",
               "quantity": 4,
               "label": "SFP28"
@@ -445,94 +578,143 @@
           "createdById": "system"
         },
         {
-          "id": "cmw3kwyiv00lqd7diygdb0pfm",
+          "id": "cmw3l7xne00lqmydipi1xoqri",
           "name": "powerCON → IEC C13",
           "reference": "PCON-IEC",
-          "functionId": "cmw3kwyi00005d7ditbl9u4o5",
+          "functionId": "cmw3l7xmg0005mydiigozc28p",
           "inputs": [
             {
-              "connectorTypeId": "cmw3kwyip00hyd7dioyjno5sl",
+              "connectorTypeId": "cmw3l7xn600hymydihmh0lozj",
               "gender": "MALE",
               "quantity": 1,
               "label": "powerCON"
             }
           ],
-          "outputs": [],
+          "outputs": [
+            {
+              "connectorTypeId": "cmw3l7xn500hcmydiz0aj56yb",
+              "gender": "FEMALE",
+              "quantity": 1,
+              "label": "IEC C13"
+            }
+          ],
           "notes": "Adaptateur secteur powerCON bleu vers IEC standard.",
           "imageUrl": null,
           "isActive": true,
           "createdById": "system"
         },
         {
-          "id": "cmw3kwyiv00lrd7di9oh95ysk",
+          "id": "cmw3l7xne00lrmydisgf3f18i",
           "name": "powerCON TRUE1 → IEC C13",
           "reference": "PCONT1-IEC",
-          "functionId": "cmw3kwyi00005d7ditbl9u4o5",
+          "functionId": "cmw3l7xmg0005mydiigozc28p",
           "inputs": [
             {
-              "connectorTypeId": "cmw3kwyip00hyd7dioyjno5sl",
+              "connectorTypeId": "cmw3l7xn600hymydihmh0lozj",
               "gender": "MALE",
               "quantity": 1,
               "label": "TRUE1"
             }
           ],
-          "outputs": [],
+          "outputs": [
+            {
+              "connectorTypeId": "cmw3l7xn500hcmydiz0aj56yb",
+              "gender": "FEMALE",
+              "quantity": 1,
+              "label": "IEC C13"
+            }
+          ],
           "notes": "Touring powerCON TRUE1 vers prise IEC standard.",
           "imageUrl": null,
           "isActive": true,
           "createdById": "system"
         },
         {
-          "id": "cmw3kwyiv00lsd7digfiqst6o",
+          "id": "cmw3l7xne00lsmydie0jfamqm",
           "name": "Schuko → IEC C13",
           "reference": "SCHUKO-IEC",
-          "functionId": "cmw3kwyi00005d7ditbl9u4o5",
+          "functionId": "cmw3l7xmg0005mydiigozc28p",
           "inputs": [
             {
-              "connectorTypeId": "cmw3kwyip00hid7dim32ifcmy",
+              "connectorTypeId": "cmw3l7xn500himydi7l6ennyt",
               "gender": "MALE",
               "quantity": 1,
               "label": "Schuko"
             }
           ],
-          "outputs": [],
+          "outputs": [
+            {
+              "connectorTypeId": "cmw3l7xn500hcmydiz0aj56yb",
+              "gender": "FEMALE",
+              "quantity": 1,
+              "label": "IEC C13"
+            }
+          ],
           "notes": "Cordon prise française/Schuko vers IEC.",
           "imageUrl": null,
           "isActive": true,
           "createdById": "system"
         },
         {
-          "id": "cmw3kwyiv00ltd7di6q46of5p",
+          "id": "cmw3l7xne00ltmydim5xn4vfk",
           "name": "CEE 32A Tri → 3×CEE 16A Mono",
           "reference": "CEE32T-3x16M",
-          "functionId": "cmw3kwyi00005d7ditbl9u4o5",
-          "inputs": [],
-          "outputs": [],
+          "functionId": "cmw3l7xmg0005mydiigozc28p",
+          "inputs": [
+            {
+              "connectorTypeId": "cmw3l7xn500hmmydizmqll6s0",
+              "gender": "MALE",
+              "quantity": 1,
+              "label": "CEE 32A Tri"
+            }
+          ],
+          "outputs": [
+            {
+              "connectorTypeId": "cmw3l7xn500hkmydi1p9rj00s",
+              "gender": "FEMALE",
+              "quantity": 3,
+              "label": "CEE 16A Mono"
+            }
+          ],
           "notes": "Distribution triphasé vers 3 monophasés.",
           "imageUrl": null,
           "isActive": true,
           "createdById": "system"
         },
         {
-          "id": "cmw3kwyiw00lud7dijkl52qee",
+          "id": "cmw3l7xne00lumydia0jfl47l",
           "name": "CEE 63A Tri → 3×CEE 32A Mono",
           "reference": "CEE63T-3x32M",
-          "functionId": "cmw3kwyi00005d7ditbl9u4o5",
-          "inputs": [],
-          "outputs": [],
+          "functionId": "cmw3l7xmg0005mydiigozc28p",
+          "inputs": [
+            {
+              "connectorTypeId": "cmw3l7xn500hmmydizmqll6s0",
+              "gender": "MALE",
+              "quantity": 1,
+              "label": "CEE 63A Tri"
+            }
+          ],
+          "outputs": [
+            {
+              "connectorTypeId": "cmw3l7xn500hkmydi1p9rj00s",
+              "gender": "FEMALE",
+              "quantity": 3,
+              "label": "CEE 32A Mono"
+            }
+          ],
           "notes": "Distribution triphasé 63A vers 3 monophasés 32A.",
           "imageUrl": null,
           "isActive": true,
           "createdById": "system"
         },
         {
-          "id": "cmw3kwyiw00lvd7diq5xnmqkq",
+          "id": "cmw3l7xne00lvmydij9xu3py8",
           "name": "Socapex → 6×powerCON",
           "reference": "SOCA-6PCON",
-          "functionId": "cmw3kwyi00005d7ditbl9u4o5",
+          "functionId": "cmw3l7xmg0005mydiigozc28p",
           "inputs": [
             {
-              "connectorTypeId": "cmw3kwyip00hod7didzdxna0u",
+              "connectorTypeId": "cmw3l7xn500homydiun3g8br4",
               "gender": "MALE",
               "quantity": 1,
               "label": "Socapex"
@@ -540,7 +722,7 @@
           ],
           "outputs": [
             {
-              "connectorTypeId": "cmw3kwyip00hyd7dioyjno5sl",
+              "connectorTypeId": "cmw3l7xn600hymydihmh0lozj",
               "gender": "FEMALE",
               "quantity": 6,
               "label": "powerCON"
@@ -552,13 +734,13 @@
           "createdById": "system"
         },
         {
-          "id": "cmw3kwyiw00lwd7dijnsm5hkd",
+          "id": "cmw3l7xne00lwmydinpdcw56k",
           "name": "Socapex → 6×Schuko",
           "reference": "SOCA-6SCHUKO",
-          "functionId": "cmw3kwyi00005d7ditbl9u4o5",
+          "functionId": "cmw3l7xmg0005mydiigozc28p",
           "inputs": [
             {
-              "connectorTypeId": "cmw3kwyip00hod7didzdxna0u",
+              "connectorTypeId": "cmw3l7xn500homydiun3g8br4",
               "gender": "MALE",
               "quantity": 1,
               "label": "Socapex"
@@ -566,7 +748,7 @@
           ],
           "outputs": [
             {
-              "connectorTypeId": "cmw3kwyip00hid7dim32ifcmy",
+              "connectorTypeId": "cmw3l7xn500himydi7l6ennyt",
               "gender": "FEMALE",
               "quantity": 6,
               "label": "Schuko"
@@ -578,13 +760,13 @@
           "createdById": "system"
         },
         {
-          "id": "cmw3kwyiw00lxd7di58zux87c",
+          "id": "cmw3l7xne00lxmydish97124e",
           "name": "BNC 50Ω → SMA",
           "reference": "BNC50-SMA",
-          "functionId": "cmw3kwyi00008d7dihb1bpim8",
+          "functionId": "cmw3l7xmg0008mydimfbc1gjf",
           "inputs": [
             {
-              "connectorTypeId": "cmw3kwyin00ecd7dikcs3byqv",
+              "connectorTypeId": "cmw3l7xn400ecmydijjq8znbt",
               "gender": "FEMALE",
               "quantity": 1,
               "label": "BNC 50Ω"
@@ -592,7 +774,7 @@
           ],
           "outputs": [
             {
-              "connectorTypeId": "cmw3kwyio00f5d7dii9mta3ig",
+              "connectorTypeId": "cmw3l7xn400f5mydi50yocjue",
               "gender": "MALE",
               "quantity": 1,
               "label": "SMA"
@@ -604,14 +786,21 @@
           "createdById": "system"
         },
         {
-          "id": "cmw3kwyiw00lyd7di959vsrq2",
+          "id": "cmw3l7xne00lymydiz8ve9l19",
           "name": "N-Type → BNC 50Ω",
           "reference": "N-BNC50",
-          "functionId": "cmw3kwyi00008d7dihb1bpim8",
-          "inputs": [],
+          "functionId": "cmw3l7xmg0008mydimfbc1gjf",
+          "inputs": [
+            {
+              "connectorTypeId": "cmw3l7xn400f7mydi5j294ps0",
+              "gender": "FEMALE",
+              "quantity": 1,
+              "label": "N"
+            }
+          ],
           "outputs": [
             {
-              "connectorTypeId": "cmw3kwyin00ecd7dikcs3byqv",
+              "connectorTypeId": "cmw3l7xn400ecmydijjq8znbt",
               "gender": "MALE",
               "quantity": 1,
               "label": "BNC 50Ω"

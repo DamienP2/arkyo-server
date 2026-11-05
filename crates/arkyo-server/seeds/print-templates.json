@@ -6,7 +6,7 @@
       "table": "TenantPrintTemplate",
       "rows": [
         {
-          "id": "cmw3kwyj400oyd7di1fmtkqdc",
+          "id": "cmw3l7xno00plmydi7bghc8tg",
           "key": "STANDARD",
           "name": "Standard",
           "description": "Cartouche classique avec logo, titre, projet, date et n° de plan.",
@@ -225,7 +225,7 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyj400ozd7diabk1rx0x",
+          "id": "cmw3l7xno00pmmydi0fdtoj19",
           "key": "COMPACT",
           "name": "Compact",
           "description": "Cartouche minimaliste avec titre, date et version uniquement.",
@@ -309,7 +309,7 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyj400p0d7dikwmujk9r",
+          "id": "cmw3l7xno00pnmydiutb9fe6p",
           "key": "DETAILED",
           "name": "Détaillé",
           "description": "Cartouche complet avec révisions, validations, normes et signatures.",
@@ -705,7 +705,7 @@
           "isActive": true
         },
         {
-          "id": "cmw3kwyj400p1d7diflpc49ef",
+          "id": "cmw3l7xno00pomydi5gszlm42",
           "key": "BLANK",
           "name": "Vide",
           "description": "Sans cartouche — utile pour les exports en zone à découper.",

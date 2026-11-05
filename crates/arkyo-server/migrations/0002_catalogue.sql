@@ -45,10 +45,13 @@
 --   ajoutées : cablePrefix, cableSuffix, systemCategory (unique, NULL multiples).
 -- TenantPhase            ← CatalogPhase (aucun écart).
 -- TenantType             ← CatalogType
---   ajoutées : iconId, schemaImageUrl. ÉCART D'UNICITÉ : l'unique global sur
---   name du tenant est remplacé par celui de CatalogType (name, functionId,
---   parentId), NULL compris : la taxonomie d'arkyo répète des noms de
---   sous-types sous des parents différents (« Production », « Micro HF »…).
+--   ajoutées : iconId, schemaImageUrl. ÉCART D'UNICITÉ (validé le
+--   2026-11-05) : l'unique global sur name du tenant est remplacé par une
+--   unicité par fratrie (name, parentId), les types racine (parentId NULL)
+--   formant une seule fratrie (COALESCE). C'est la règle de la garde
+--   isDuplicateSibling d'arkyo (même nom sous le même parent → 409) : la
+--   taxonomie d'arkyo répète des noms de sous-types sous des parents
+--   différents (« Production », « Micro HF », « Processeur »…).
 -- TenantPrintTemplate    ← PrintTemplate ; ignorée : isBuiltin.
 -- TenantCableLabelStock  ← CableLabelStock ; ignorée : isBuiltin.
 -- TenantPrintExportModel / TenantPrintExportPage ← PrintExportModel /
@@ -322,8 +325,8 @@ CREATE TABLE "TenantType" (
 CREATE INDEX "TenantType_isActive_idx" ON "TenantType" ("isActive");
 CREATE INDEX "TenantType_parentId_idx" ON "TenantType" ("parentId");
 CREATE INDEX "TenantType_functionId_idx" ON "TenantType" ("functionId");
-CREATE UNIQUE INDEX "TenantType_name_functionId_parentId_key"
-    ON "TenantType" ("name", COALESCE("functionId", ''), COALESCE("parentId", ''));
+CREATE UNIQUE INDEX "TenantType_name_parentId_key"
+    ON "TenantType" ("name", COALESCE("parentId", ''));
 
 CREATE TABLE "TenantPrintTemplate" (
     "id"          TEXT NOT NULL PRIMARY KEY,
