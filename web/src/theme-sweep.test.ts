@@ -181,6 +181,24 @@ const COPIED_FILES = [
   "app/(app)/admin/equipment/[id]/_editor/tab-bar.tsx",
   "app/(app)/admin/equipment/[id]/_editor/types.ts",
   "app/(app)/admin/equipment/[id]/equipment-editor.tsx",
+  // Phase 2 (Task 12) : utilisateurs, espace et profil.
+  "app/(app)/admin/users/page.tsx",
+  "app/(app)/admin/users/users-client.tsx",
+  "app/(app)/admin/users/_components/permissions-panel.tsx",
+  "app/(app)/admin/users/_components/roles-panel.tsx",
+  "app/(app)/admin/users/_components/users-list-panel.tsx",
+  "app/(app)/admin/espace/page.tsx",
+  "app/(app)/admin/espace/espace-client.tsx",
+  "app/(app)/admin/espace/_components/informations-tab.tsx",
+  "app/(app)/profile/page.tsx",
+  "app/(app)/profile/profile-client.tsx",
+  "app/(app)/profile/_components/identity-tab.tsx",
+  "app/(app)/profile/_components/notifications-tab.tsx",
+  "app/(app)/settings/page.tsx",
+  "app/supervisor/users/[id]/_editor/avatar-upload-shared.tsx",
+  "app/supervisor/users/[id]/_editor/types.ts",
+  "app/supervisor/users/[id]/_editor/ui.tsx",
+  "lib/tenant-membership-context.tsx",
 ];
 
 /** Fichiers posés sur la topbar ou le rail : ils suivent le thème (variante « Clair A »). */
@@ -213,6 +231,12 @@ const ROLE_BADGE: Allow = {
   reason:
     "badges de rôle (OWNER, CHEF_PROJET, TECHNICIEN, CONSULTATION) : teinte métier conservée (spec §9.3), " +
     "nuances ajustées pour >= 4,5:1 (voir le test de contraste des badges de rôle ci-dessous)",
+};
+
+/** Mêmes badges de rôle dans le bandeau du profil (OWNER et TECHNICIEN sur une ligne, comme arkyo). */
+const PROFILE_ROLE_BADGE: Allow = {
+  line: /cls: "text-(purple|indigo|emerald|slate)-\d{3} bg-\1-50 dark:text-\1-\d{3} dark:bg-\1-950\/30"/,
+  reason: ROLE_BADGE.reason,
 };
 
 // ── Phase 2 : couleurs métier ou laissées dans le doute (spec §7) ────────────
@@ -273,6 +297,8 @@ const ALLOW: AllowMap = {
   "app/(app)/admin/parametres/_components/cable-label-stocks-section.tsx": [STOCK_DIAMETER],
   // Phase 2 (Task 11) : catalogue et éditeurs.
   "app/(app)/admin/catalogue/_components/equipment-list-panel.tsx": [TAG_2110],
+  // Phase 2 (Task 12) : utilisateurs, espace et profil.
+  "app/(app)/profile/profile-client.tsx": [PROFILE_ROLE_BADGE],
 };
 
 test("aucune couleur d'interface Tailwind codée en dur dans les fichiers copiés (hors exceptions métier)", () => {
@@ -291,6 +317,8 @@ const ALLOW_STATUS: AllowMap = {
     },
   ],
   "app/(app)/admin/_components/users-list-tab.tsx": [PENDING_BADGE],
+  // Phase 2 (Task 12) : utilisateurs, espace et profil.
+  "app/(app)/profile/profile-client.tsx": [PROFILE_ROLE_BADGE],
   "components/adapters/new-adapter-wizard.tsx": WIZARD_ART,
   "components/cables/new-cable-wizard.tsx": WIZARD_ART,
   "components/equipment/new-equipment-wizard.tsx": WIZARD_ART,
@@ -473,6 +501,19 @@ const ALLOW_HEX: AllowMap = {
       reason: "couleurs des directions de port (entrée, sortie, bidirectionnel) : couleur métier",
     },
   ],
+  // Phase 2 (Task 12) : utilisateurs, espace et profil.
+  "app/(app)/admin/users/_components/roles-panel.tsx": [
+    {
+      line: /^\s*"#[0-9a-f]{6}",$|value=\{color \?\? "#6b7280"\}/,
+      reason: "pastilles proposées pour la couleur d'un rôle (choisie par l'utilisateur) et son repli : couleur métier (--role-*)",
+    },
+  ],
+  "app/(app)/admin/users/_components/permissions-panel.tsx": [
+    {
+      line: /^\s*(read|write|admin): \{ bg: "#[0-9a-f]{8}", color: "#[0-9a-f]{6}", label: "[^"]+" \},$/,
+      reason: "niveaux de permission (Lecture gris, Écriture vert, Admin rouge) : statut métier, " + DOUBT,
+    },
+  ],
   "app/(app)/admin/equipment/[id]/_editor/distribution-tab.tsx": [
     {
       line: /^\s*color: "#(71717a|10b981|6366f1|8b5cf6)",$/,
@@ -592,8 +633,8 @@ function bgOver(cls: string, base: [number, number, number]): [number, number, n
   return c.map((v, i) => v * a + base[i] * (1 - a)) as [number, number, number];
 }
 
-test("badges de rôle de la topbar : contraste >= 4,5:1 en clair et en sombre", () => {
-  const roles = [...read("components/layout/topbar.tsx").matchAll(/cls: "([^"]+)"/g)].map((m) => m[1]);
+test.each(["components/layout/topbar.tsx", "app/(app)/profile/profile-client.tsx"])("badges de rôle (%s) : contraste >= 4,5:1 en clair et en sombre", (file) => {
+  const roles = [...read(file).matchAll(/cls: "([^"]+)"/g)].map((m) => m[1]);
   expect(roles).toHaveLength(4);
   const ratios: Record<string, number> = {};
   for (const cls of roles) {

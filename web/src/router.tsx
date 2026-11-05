@@ -26,6 +26,7 @@ import AuthPage from "@/app/auth/auth-page";
 import SetupPage from "@/app/auth/setup-page";
 import PasswordPage from "@/app/auth/password-page";
 import SystemePage from "@/app/(app)/admin/systeme/systeme-page";
+import SettingsPage from "@/app/(app)/settings/page";
 import { ComingSoon } from "@/components/coming-soon";
 import { LoadingState } from "@/components/ui/loading-state";
 
@@ -38,6 +39,13 @@ const NewCablePage = lazy(() => import("@/app/(app)/admin/catalogue/cables/new/p
 const CablePage = lazy(() => import("@/app/(app)/admin/catalogue/cables/[id]/page"));
 const NewAdapterPage = lazy(() => import("@/app/(app)/admin/catalogue/adapters/new/page"));
 const AdapterPage = lazy(() => import("@/app/(app)/admin/catalogue/adapters/[id]/page"));
+const UsersPage = lazy(() => import("@/app/(app)/admin/users/page"));
+const EspacePage = lazy(() => import("@/app/(app)/admin/espace/page"));
+const ProfilePage = lazy(() => import("@/app/(app)/profile/page"));
+
+// arkyo:app/(app)/settings/page.tsx ne rend rien : `redirect()` lève toujours
+// (type `() => void`), l'`errorElement` suit la redirection.
+const SettingsRedirect = SettingsPage as unknown as React.ComponentType;
 
 const errorElement = <NavigationErrorElement />;
 
@@ -89,9 +97,14 @@ export const routes: RouteObject[] = [
           lazyPage("admin/catalogue/cables/:id", CablePage),
           lazyPage("admin/catalogue/adapters/new", NewAdapterPage),
           lazyPage("admin/catalogue/adapters/:id", AdapterPage),
+          lazyPage("admin/users", UsersPage),
+          lazyPage("admin/espace", EspacePage),
           soon("admin/*"),
-          soon("settings/*"),
-          soon("profile"),
+          // `/settings` → `/admin/espace` (arkyo:app/(app)/settings/page.tsx) ;
+          // `/settings/catalog-updates` (mises à jour du catalogue Arkyo, SaaS)
+          // n'est pas repris.
+          { path: "settings", element: <SettingsRedirect />, errorElement },
+          lazyPage("profile", ProfilePage),
         ],
       },
 

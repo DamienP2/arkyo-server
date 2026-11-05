@@ -4,6 +4,8 @@
  * Onglet "Utilisateurs / Liste" — gestion des MEMBRES du tenant par invitation.
  * Pilote `/api/tenant/members` (scopé tenant, gardé members:admin / OWNER) :
  *  - POST   { email, roleKey }        → inviter un membre
+ *    (arkyo-server: comptes locaux — crée le compte, `name` facultatif, et
+ *    renvoie une fois `temporaryPassword`, affiché avec « Copier »)
  *  - PATCH  [membershipId]{ roleKey } → changer le rôle
  *  - DELETE [membershipId]            → révoquer
  * Les ids manipulés sont des `membershipId` (pas des user id globaux).
@@ -16,10 +18,13 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { z } from "zod";
 import { Plus, Trash2, Pencil, Search, Users as UsersIcon, ShieldCheck } from "@/components/ui/icons";
+import { Check, Copy, KeyRound } from "@/components/ui/icons"; // arkyo-server: comptes locaux (mot de passe provisoire)
 
 import { FormDialog, FormSection } from "@/components/ui/form-dialog";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { EmptyState, EmptyStateAction } from "@/components/ui/empty-state";
+import { Button } from "@/components/ui/button"; // arkyo-server: comptes locaux
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog"; // arkyo-server: comptes locaux
 import { api } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
 
@@ -50,6 +55,7 @@ function isOwnerMember(u: UserSafe): boolean {
 
 const schema = z.object({
   email: z.string().email("Email invalide"),
+  name: z.string().max(200), // arkyo-server: comptes locaux (nom facultatif du compte créé)
   roleKey: z.string().min(1, "Rôle requis"),
 });
 type FormValues = z.infer<typeof schema>;
@@ -103,7 +109,10 @@ export function UsersListTab({ view, users, setUsers, roles }: Props) {
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [editEmail, setEditEmail] = useState<string>("");
-  const [defaultValues, setDefaultValues] = useState<FormValues>({ email: "", roleKey: "" });
+  const [defaultValues, setDefaultValues] = useState<FormValues>({ email: "", name: "", roleKey: "" }); // arkyo-server: comptes locaux (name)
+  // arkyo-server: comptes locaux — mot de passe provisoire du compte créé,
+  // gardé en mémoire le temps de la boîte de dialogue, jamais réaffiché.
+  const [created, setCreated] = useState<{ email: string; password: string } | null>(null);
 
   // Lookup rôle par clé + rôles assignables (tout sauf owner).
   const roleByKey = useMemo(() => {
@@ -155,7 +164,7 @@ export function UsersListTab({ view, users, setUsers, roles }: Props) {
   const openInvite = () => {
     setEditId(null);
     setEditEmail("");
-    setDefaultValues({ email: "", roleKey: defaultRoleKey });
+    setDefaultValues({ email: "", name: "", roleKey: defaultRoleKey }); // arkyo-server: comptes locaux (name)
     setOpen(true);
   };
 
@@ -163,7 +172,7 @@ export function UsersListTab({ view, users, setUsers, roles }: Props) {
     if (isOwnerMember(user)) return; // OWNER non éditable ici.
     setEditId(user.membershipId);
     setEditEmail(user.email);
-    setDefaultValues({ email: user.email, roleKey: effectiveKey(user) });
+    setDefaultValues({ email: user.email, name: user.name ?? "", roleKey: effectiveKey(user) }); // arkyo-server: comptes locaux (name)
     setOpen(true);
   };
 
@@ -176,7 +185,14 @@ export function UsersListTab({ view, users, setUsers, roles }: Props) {
         ),
       );
     } else {
-      await api.post(`/api/tenant/members`, { email: values.email, roleKey: values.roleKey });
+      // arkyo-server: comptes locaux — le compte est créé (nom facultatif) et
+      // l'API renvoie une seule fois son mot de passe provisoire.
+      const name = values.name.trim();
+      const member = await api.post<{ email: string; temporaryPassword: string }>(
+        `/api/tenant/members`,
+        { email: values.email, ...(name ? { name } : {}), roleKey: values.roleKey },
+      );
+      setCreated({ email: member.email, password: member.temporaryPassword });
       // Le membre invité peut être un nouvel user (pending) → on recharge le SSR.
       router.refresh();
     }
@@ -460,7 +476,7 @@ export function UsersListTab({ view, users, setUsers, roles }: Props) {
         description={
           editId
             ? "Modifiez le rôle de ce membre dans l'espace."
-            : "Envoyez une invitation par email à rejoindre cet espace."
+            : "Le compte est créé avec un mot de passe provisoire, à changer à la première connexion." // arkyo-server: comptes locaux (pas d'email d'invitation)
         }
         icon={<ShieldCheck className="h-4 w-4 text-[var(--accent)]" />}
         schema={schema}
@@ -486,6 +502,17 @@ export function UsersListTab({ view, users, setUsers, roles }: Props) {
                 </p>
               )}
             </div>
+            {/* arkyo-server: comptes locaux — nom facultatif du compte créé */}
+            {!editId && (
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-[var(--muted-foreground)]">Nom</label>
+                <input
+                  {...register("name")}
+                  placeholder="Prénom Nom"
+                  className="flex h-9 w-full rounded-lg border border-[var(--border)] bg-transparent px-3 text-sm focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:outline-none disabled:opacity-50"
+                />
+              </div>
+            )}
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-[var(--muted-foreground)]">Rôle *</label>
               <select
@@ -507,6 +534,83 @@ export function UsersListTab({ view, users, setUsers, roles }: Props) {
           </FormSection>
         )}
       </FormDialog>
+
+      {/* arkyo-server: comptes locaux — mot de passe provisoire, affiché une fois */}
+      <TemporaryPasswordDialog created={created} onClose={() => setCreated(null)} />
     </>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// arkyo-server: comptes locaux — pas d'email d'invitation : le mot de passe
+// provisoire renvoyé par `POST /api/tenant/members` est montré une seule fois,
+// avec « Copier ». Fermer la boîte l'oublie.
+
+function TemporaryPasswordDialog({
+  created,
+  onClose,
+}: {
+  created: { email: string; password: string } | null;
+  onClose: () => void;
+}) {
+  const [copied, setCopied] = useState(false);
+
+  const copy = async () => {
+    if (!created) return;
+    try {
+      await navigator.clipboard.writeText(created.password);
+      setCopied(true);
+    } catch {
+      setCopied(false);
+    }
+  };
+
+  return (
+    <Dialog
+      open={created !== null}
+      onOpenChange={(o) => {
+        if (!o) {
+          setCopied(false);
+          onClose();
+        }
+      }}
+    >
+      <DialogContent className="max-w-md" showClose={false}>
+        <div className="flex items-start gap-3">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[var(--accent-soft)] text-[var(--accent-strong)]">
+            <KeyRound className="h-4 w-4" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <DialogTitle className="text-base leading-tight font-semibold">
+              Mot de passe provisoire
+            </DialogTitle>
+            <DialogDescription className="mt-1 text-xs text-[var(--muted-foreground)]">
+              Communiquez-le à <strong className="text-[var(--foreground)]">{created?.email}</strong>.
+              Il ne sera plus affiché ; il devra être changé à la première connexion.
+            </DialogDescription>
+          </div>
+        </div>
+        <div className="mt-4 flex items-center gap-2">
+          <code className="flex-1 rounded-lg border border-[var(--border)] bg-[var(--secondary)] px-3 py-2 font-mono text-sm tracking-wider select-all">
+            {created?.password}
+          </code>
+          <Button type="button" variant="outline" onClick={() => void copy()}>
+            {copied ? <Check /> : <Copy />}
+            {copied ? "Copié" : "Copier"}
+          </Button>
+        </div>
+        <div className="mt-5 flex justify-end">
+          <Button
+            type="button"
+            onClick={() => {
+              setCopied(false);
+              onClose();
+            }}
+          >
+            Fermer
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
