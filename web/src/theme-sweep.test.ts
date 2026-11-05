@@ -454,13 +454,6 @@ const ALLOW_HEX: AllowMap = {
   ],
   "app/(app)/admin/equipment/[id]/equipment-editor.tsx": [
     { line: /color: fn\?\.color \?\? "#6366f1" \},/, reason: "couleur de la fonction d'un type créé à la volée (même défaut que mergeCatalogTypes) : couleur métier" },
-    {
-      line: /^\s*const catColor = "#6366f1";$/,
-      reason: "teinte « catColor » des onglets de l'éditeur (ex-couleur de catégorie, composée en hexadécimal + alpha) : " + DOUBT,
-    },
-  ],
-  "app/(app)/admin/equipment/[id]/_editor/custom-fields.tsx": [
-    { line: /^\s*color: "#fff",$/, reason: "texte blanc sur la teinte catColor (voir equipment-editor) : " + DOUBT },
   ],
   "app/(app)/admin/equipment/[id]/_editor/connectivity-tab.tsx": [
     { line: /"#94a3b8"/, reason: "couleur du signal ou de sa fonction et son repli : couleur métier" },

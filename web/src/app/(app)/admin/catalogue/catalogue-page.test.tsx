@@ -484,7 +484,39 @@ describe("éditeurs de cordon et d'adaptateur", () => {
     );
   });
 
-  test("nouveau cordon : POST puis passage en édition", async () => {
+  test("cable_length_presets : longueurs prédéfinies du référentiel (tableau de la route)", async () => {
+    const { fetchSpy } = renderApp(
+      "/admin/catalogue/cables/k1",
+      catalogueApi({
+        "GET /api/tenant/parametres/dimensions": {
+          body: [
+            { id: "d1", category: "CABLE_LENGTH", value: 10, unit: "M", isReel: false, isActive: true },
+            { id: "d2", category: "CABLE_LENGTH", value: 5, unit: "M", isReel: false, isActive: true },
+            { id: "d3", category: "RACK_U", value: 42, unit: "U", isReel: false, isActive: true },
+          ],
+        },
+        "PATCH /api/tenant/catalogue/cables/k1": (init) => ({
+          body: { ...CABLE_ITEM, ...JSON.parse(String(init?.body)) },
+        }),
+      }),
+    );
+    // Puces des longueurs CABLE_LENGTH (5 m déjà retenue, 10 m disponible), pas de RACK_U.
+    const chip10 = await screen.findByRole("button", { name: "10 m" }, { timeout: 5000 });
+    expect(screen.getByRole("button", { name: "5 m" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "42 m" })).toBeNull();
+    expect(screen.queryByText(/Aucune longueur prédéfinie/)).toBeNull();
+
+    fireEvent.click(chip10);
+    await waitFor(
+      () =>
+        expect(sentBody(fetchSpy, "PATCH", "/api/tenant/catalogue/cables/k1")).toMatchObject({
+          availableLengths: [5, 10],
+        }),
+      { timeout: 4000 },
+    );
+  });
+
+  test("nouveau cordon : validation d'arkyo, pas de POST sans nom ni connecteurs", async () => {
     const { router, fetchSpy } = renderApp(
       "/admin/catalogue/cables/new",
       catalogueApi({

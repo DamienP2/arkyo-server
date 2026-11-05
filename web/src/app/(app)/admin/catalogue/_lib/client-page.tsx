@@ -58,18 +58,22 @@ export function CatalogAdminPage<T>({
   const loadRef = useRef(load);
   loadRef.current = load;
   const hasData = useRef(false);
+  // Numéro du dernier chargement lancé : seule sa réponse est appliquée (deux
+  // refresh rapprochés peuvent se résoudre dans le désordre).
+  const seqRef = useRef(0);
 
   const run = useCallback((silent: boolean) => {
+    const seq = ++seqRef.current;
     let cancelled = false;
     loadRef
       .current()
       .then((data) => {
-        if (cancelled) return;
+        if (cancelled || seq !== seqRef.current) return;
         hasData.current = true;
         setState({ kind: "ready", data });
       })
       .catch((e) => {
-        if (cancelled) return;
+        if (cancelled || seq !== seqRef.current) return;
         // Rechargement silencieux (refresh) : on garde les données affichées.
         if (silent && hasData.current) return;
         if (e instanceof ApiError && e.status === 404) {

@@ -72,7 +72,8 @@ export function DistributionTab({
       <header className="flex items-start gap-3 rounded-lg border border-[var(--border)]/60 bg-[var(--card)] px-4 py-3">
         <div
           className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
-          style={{ background: `${catColor}15`, color: catColor }}
+          // arkyo-server: habillage Strata (catColor est var(--accent) : teinte par color-mix)
+          style={{ background: `color-mix(in srgb, ${catColor} 8%, transparent)`, color: catColor }}
         >
           <Eye className="h-4 w-4" />
         </div>

@@ -526,7 +526,9 @@ export function EquipmentEditor({
   //    Category) ayant disparu de la surface superviseur, on retombe sur un
   //    accent neutre — la couleur métier vient désormais de la fonction,
   //    résolue au niveau du bloc Classification (general-tab). ──────────────
-  const catColor = "#6366f1";
+  // arkyo-server: habillage Strata — accent Strata au lieu de l'indigo d'arkyo
+  // (couleur d'interface) ; les teintes `${catColor}xx` passent par color-mix.
+  const catColor = "var(--accent)";
 
   // ── Validation (cross-tab) ──────────────────────────────────────────────
   const errors = useMemo(
@@ -842,7 +844,8 @@ export function EquipmentEditor({
           <div className="flex min-w-0 flex-1 items-center gap-2.5">
             <div
               className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[var(--foreground)]"
-              style={{ background: `${catColor}20` }}
+              // arkyo-server: habillage Strata
+              style={{ background: `color-mix(in srgb, ${catColor} 12.5%, transparent)` }}
             >
               <EquipmentIcon iconUrl={form.iconUrl} size={16} />
             </div>

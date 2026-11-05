@@ -40,6 +40,7 @@ type CategoriesResponse = {
       parentId: string | null;
       iconId?: string | null;
       schemaImageUrl?: string | null;
+      sortOrder?: number;
     }>;
   };
 };
@@ -75,7 +76,7 @@ export async function loadEquipmentRefs() {
   // Types de classification = Arkyo (main) + perso (TenantType), fonction
   // résolue main-first. `source` distingue les deux pour l'UI (repère « perso »).
   const types = mergeCatalogTypes({
-    arkyoTypes: categories.types.personal,
+    arkyoTypes: sortTypes(categories.types.personal),
     tenantTypes: [], // arkyo-server: catalogue unique (voir l'en-tête)
     functions,
     tenantFunctions: [], // arkyo-server: catalogue unique (voir l'en-tête)
@@ -90,4 +91,20 @@ export async function loadEquipmentRefs() {
     types: types as never,
     cableSafetyDefaultMm,
   };
+}
+
+/**
+ * Ordre de `mainDb.catalogType.findMany` dans arkyo : `functionId`, `sortOrder`,
+ * `name` (la route des catégories trie par `sortOrder`, `name`).
+ */
+function sortTypes<T extends { functionId: string | null; sortOrder?: number; name: string }>(
+  types: T[],
+): T[] {
+  const byText = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
+  return [...types].sort(
+    (a, b) =>
+      byText(a.functionId ?? "", b.functionId ?? "") ||
+      (a.sortOrder ?? 0) - (b.sortOrder ?? 0) ||
+      a.name.localeCompare(b.name, "fr"),
+  );
 }

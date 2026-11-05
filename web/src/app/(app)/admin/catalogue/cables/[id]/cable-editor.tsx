@@ -235,13 +235,18 @@ export function CableEditor({
   useEffect(() => {
     let cancelled = false;
     void api
-      .get<{
-        arkyo: Array<{ category: string; value: number; unit: string }>;
-        personal: Array<{ category: string; value: number; unit: string }>;
-      }>("/api/tenant/parametres/dimensions")
+      .get<
+        | {
+            arkyo: Array<{ category: string; value: number; unit: string }>;
+            personal: Array<{ category: string; value: number; unit: string }>;
+          }
+        // arkyo-server: correction (préréglages de longueur jamais affichés, la route renvoie un tableau)
+        | Array<{ category: string; value: number; unit: string }>
+      >("/api/tenant/parametres/dimensions")
       .then((data) => {
         if (cancelled) return;
-        const all = [...(data.arkyo ?? []), ...(data.personal ?? [])]
+        // arkyo-server: correction (préréglages de longueur jamais affichés, la route renvoie un tableau)
+        const all = (Array.isArray(data) ? data : [...(data.arkyo ?? []), ...(data.personal ?? [])])
           .filter((p) => p.category === "CABLE_LENGTH" && p.value > 0)
           .map((p) => p.value);
         const dedup = Array.from(new Set(all)).sort((a, b) => a - b);

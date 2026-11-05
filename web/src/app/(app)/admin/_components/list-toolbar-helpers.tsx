@@ -11,7 +11,8 @@
  *     l'AdminListToolbar via le slot `children`). API générique : on lui passe
  *     directement le tableau de pills à afficher — chaque consommateur compose
  *     ses pills à partir de son état local.
- *   - `toggleInSet`, `PLAN_COLORS`, `PLAN_LABELS`, `PLAN_ORDER` : utilitaires.
+ *   - `toggleInSet` : utilitaire.
+ *     (arkyo-server: PLAN_COLORS / PLAN_LABELS / PLAN_ORDER retirés, pas de plan.)
  *
  * Aucun lien à un modèle métier précis ; tout est paramétré côté appelant.
  */

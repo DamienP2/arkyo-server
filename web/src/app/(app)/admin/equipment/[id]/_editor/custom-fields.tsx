@@ -144,7 +144,8 @@ function CustomFieldRow({
               checked
                 ? {
                     background: catColor,
-                    color: "#fff",
+                    // arkyo-server: habillage Strata (texte lisible sur l'accent, clair et sombre)
+                    color: "var(--accent-foreground)",
                     borderColor: "transparent",
                   }
                 : {
@@ -296,8 +297,10 @@ function AddCustomFieldDialog({
                         isSelected
                           ? {
                               borderColor: catColor,
-                              backgroundColor: `${catColor}15`,
-                              color: catColor,
+                              // arkyo-server: habillage Strata — teinte par color-mix ; texte
+                              // --accent-strong (l'accent clair sur sa teinte fait 4,4:1)
+                              backgroundColor: `color-mix(in srgb, ${catColor} 8%, transparent)`,
+                              color: "var(--accent-strong)",
                             }
                           : undefined
                       }
