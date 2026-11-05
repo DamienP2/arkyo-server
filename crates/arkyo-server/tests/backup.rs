@@ -213,7 +213,8 @@ async fn backup_dumps_sections_and_summary_counts() {
 // ── POST restore ────────────────────────────────────────────────────────────
 
 /// Review Focus 3: export, restore in `replace` on a fresh database, export
-/// again: the same catalogue (createdById rewritten to the restoring user;
+/// again: the same catalogue (createdById rewritten to the restoring user
+/// when the file's author is unknown here, the seeds' `system` kept;
 /// AppConfig rows are upserted by key, so only key/value are compared).
 #[tokio::test]
 async fn backup_restore_replace_roundtrip_identical() {
@@ -257,7 +258,9 @@ async fn backup_restore_replace_roundtrip_identical() {
     let mut d1 = b1["data"].clone();
     for section in ["equipment", "cables", "adapters"] {
         for row in d1[section].as_array_mut().unwrap() {
-            row["createdById"] = Value::String(uid.clone());
+            if row["createdById"] != "system" {
+                row["createdById"] = Value::String(uid.clone());
+            }
         }
     }
     let mut d2 = b2["data"].clone();
@@ -402,6 +405,55 @@ async fn restore_section_failure_keeps_previous_sections() {
     .await
     .unwrap();
     assert_eq!(created_by, uid);
+}
+
+/// Phase 2 smoke (Task 13): the author is rewritten only when it does not
+/// exist here. The seeds' `system` and an existing user stay, so a backup
+/// restored on its own server gives back the same catalogue.
+#[tokio::test]
+async fn restore_keeps_known_authors() {
+    let c = ctx().await;
+    let uid = c.user_id().await;
+    add_user(&c.e.pool, "autre@b.fr", "owner", false).await;
+    let other: String =
+        sqlx::query_scalar(r#"SELECT "id" FROM "User" WHERE "email" = 'autre@b.fr'"#)
+            .fetch_one(&c.e.pool)
+            .await
+            .unwrap();
+    let row = |id: &str, by: &str| json!({ "id": id, "name": id, "createdById": by });
+    let backup = json!({
+        "meta": { "format": "arkyo-backup", "version": 1,
+                  "exportedAt": "2026-11-05T10:00:00.000Z", "sections": ["equipment"] },
+        "data": { "equipment": [
+            row("ceqsystem0000000000000001", "system"),
+            row("ceqother00000000000000001", &other),
+            row("ceqgone000000000000000001", "inconnu"),
+            { "id": "ceqnoauthor00000000000001", "name": "sans auteur" }
+        ] }
+    });
+    for mode in ["replace", "merge"] {
+        let r = c
+            .req(
+                "POST",
+                RESTORE,
+                Some(json!({ "modes": { "equipment": mode }, "backup": backup })),
+            )
+            .await;
+        assert_eq!(r.status, StatusCode::OK, "{:?}", r.body);
+        let by: Vec<(String, String)> =
+            sqlx::query_as(r#"SELECT "id", "createdById" FROM "TenantEquipment" ORDER BY "id""#)
+                .fetch_all(&c.e.pool)
+                .await
+                .unwrap();
+        let want = [
+            ("ceqgone000000000000000001", uid.as_str()),
+            ("ceqnoauthor00000000000001", uid.as_str()),
+            ("ceqother00000000000000001", other.as_str()),
+            ("ceqsystem0000000000000001", "system"),
+        ];
+        let by: Vec<(&str, &str)> = by.iter().map(|(a, b)| (a.as_str(), b.as_str())).collect();
+        assert_eq!(by, want, "mode {mode}");
+    }
 }
 
 #[tokio::test]

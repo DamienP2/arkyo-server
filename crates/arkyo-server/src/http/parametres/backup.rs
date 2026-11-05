@@ -16,8 +16,10 @@
 //!   exactly what it saved;
 //! - each equipment row carries its `defaultComponents` (the component
 //!   slots of a modular host, like `printExportModels` carry their `pages`);
-//! - `createdById` is rewritten to the restoring user (the author in the
-//!   file may not exist here);
+//! - `createdById` is rewritten to the restoring user when the file's
+//!   author does not exist here (missing, or not a user of this server);
+//!   the seeds' author [`SEED_AUTHOR`] and existing users are kept, so a
+//!   backup restored on its own server gives back the same catalogue;
 //! - a failing section still logs the audit row and publishes the event
 //!   when earlier sections were committed.
 
@@ -662,8 +664,32 @@ async fn delete_all(conn: &mut SqliteConnection, t: &Table) -> Result<i64, sqlx:
     Ok(r.rows_affected() as i64)
 }
 
-/// `restoreSimpleModel`, with `createdById` set to `author` when given.
-/// `after` runs on each restored row (the nested children).
+/// `createdById` of the seeded cords and adapters (`tools/extract-seeds`):
+/// no user, kept as is by a restore.
+const SEED_AUTHOR: &str = "system";
+
+/// Author of a restored row: the file's one when it exists here (a user or
+/// [`SEED_AUTHOR`]), else `fallback` (the restoring user).
+async fn known_author(
+    conn: &mut SqliteConnection,
+    data: &Obj,
+    fallback: &str,
+) -> Result<String, sqlx::Error> {
+    let Some(by) = str_of(data, "createdById") else {
+        return Ok(fallback.into());
+    };
+    if by == SEED_AUTHOR {
+        return Ok(by.into());
+    }
+    let found: Option<i64> = sqlx::query_scalar(r#"SELECT 1 FROM "User" WHERE "id" = ?"#)
+        .bind(by)
+        .fetch_optional(&mut *conn)
+        .await?;
+    Ok(if found.is_some() { by } else { fallback }.into())
+}
+
+/// `restoreSimpleModel`, with `createdById` resolved by [`known_author`]
+/// when `author` is given.
 async fn restore_simple(
     conn: &mut SqliteConnection,
     t: &Table,
@@ -679,7 +705,8 @@ async fn restore_simple(
     for (mut data, raw) in valid_rows(rows, allowed) {
         let id = str_of(&data, "id").unwrap_or("").to_string();
         if let Some(a) = author {
-            data.insert("createdById".into(), Value::String(a.into()));
+            let by = known_author(conn, &data, a).await?;
+            data.insert("createdById".into(), Value::String(by));
         }
         if mode == Mode::Replace || !exists(conn, t, &id).await? {
             insert(conn, t, data).await?;
