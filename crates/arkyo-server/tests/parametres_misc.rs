@@ -556,21 +556,55 @@ async fn export_model_pages_crud() {
 
 // ── purge ───────────────────────────────────────────────────────────────────
 
-#[tokio::test]
-async fn purge_resets_to_seeds() {
-    let c = ctx().await;
-    let brands = count(&c.e.pool, "TenantBrand").await;
-    let types = count(&c.e.pool, "TenantType").await;
-    let templates = count(&c.e.pool, "TenantPrintTemplate").await;
-    assert!(brands > 0 && types > 0 && templates > 0);
-    // user data: an equipment, a custom brand, a custom template, config
+const PURGE: &str = "/api/admin/purge";
+
+async fn add_equipment(pool: &SqlitePool, id: &str) {
     sqlx::query(
         r#"INSERT INTO "TenantEquipment" ("id","name","createdById","createdAt","updatedAt")
-           VALUES ('eq1','Eq','u','2026-01-01T00:00:00.000Z','2026-01-01T00:00:00.000Z')"#,
+           VALUES (?,'Eq','u','2026-01-01T00:00:00.000Z','2026-01-01T00:00:00.000Z')"#,
     )
-    .execute(&c.e.pool)
+    .bind(id)
+    .execute(pool)
     .await
     .unwrap();
+}
+
+#[tokio::test]
+async fn purge_single_target_deletes_only() {
+    let c = ctx().await;
+    assert!(count(&c.e.pool, "TenantBrand").await > 0);
+    let types = count(&c.e.pool, "TenantType").await;
+    add_equipment(&c.e.pool, "eq1").await;
+    let bad = c.req("POST", PURGE, Some(json!({"target": "zzz"}))).await;
+    assert_eq!(bad.status, StatusCode::BAD_REQUEST);
+    assert_eq!(bad.body, json!({"error": "Cible inconnue"}));
+    let bad = c.req("POST", PURGE, Some(json!({}))).await;
+    assert_eq!(bad.body, json!({"error": "Cible inconnue"}));
+
+    let r = c
+        .req("POST", PURGE, Some(json!({"target": "brands"})))
+        .await;
+    assert_eq!(r.body, json!({"ok": true}));
+    assert_eq!(count(&c.e.pool, "TenantBrand").await, 0, "not reseeded");
+    assert_eq!(count(&c.e.pool, "TenantEquipment").await, 1);
+    assert_eq!(count(&c.e.pool, "TenantType").await, types);
+    assert_eq!(audit_count(&c.e.pool, "admin.purge", "brands").await, 1);
+    let r = c
+        .req("POST", PURGE, Some(json!({"target": "equipment"})))
+        .await;
+    assert_eq!(r.body, json!({"ok": true}));
+    assert_eq!(count(&c.e.pool, "TenantEquipment").await, 0);
+}
+
+#[tokio::test]
+async fn purge_all_resets_listed_families_and_keeps_print_and_taxonomy() {
+    let c = ctx().await;
+    let brands = count(&c.e.pool, "TenantBrand").await;
+    let connectors = count(&c.e.pool, "TenantConnectorType").await;
+    let cables = count(&c.e.pool, "TenantCable").await;
+    let templates = count(&c.e.pool, "TenantPrintTemplate").await;
+    let functions = count(&c.e.pool, "TenantFunction").await;
+    add_equipment(&c.e.pool, "eq1").await;
     c.req(
         "POST",
         "/api/tenant/parametres/brands",
@@ -583,73 +617,110 @@ async fn purge_resets_to_seeds() {
         Some(json!({"key": "PERSO", "name": "Perso"})),
     )
     .await;
+    c.req(
+        "POST",
+        "/api/tenant/parametres/categories/function",
+        Some(json!({"key": "MAFONCTION", "label": "Ma fonction"})),
+    )
+    .await;
     c.req("PATCH", NUMBERING, Some(json!({"cable_pad": "7"})))
         .await;
-    // a deleted seeded row comes back after the purge
+    sqlx::query(
+        r#"INSERT INTO "CatalogSymbol" ("id","key","label","isBuiltin","createdAt","updatedAt")
+           VALUES ('s1','perso','Perso',0,'2026-01-01T00:00:00.000Z','2026-01-01T00:00:00.000Z')"#,
+    )
+    .execute(&c.e.pool)
+    .await
+    .unwrap();
+    // a deleted seeded cord comes back; a deleted phase does not (kept family)
+    sqlx::query(r#"DELETE FROM "TenantCable""#)
+        .execute(&c.e.pool)
+        .await
+        .unwrap();
     sqlx::query(r#"DELETE FROM "TenantPhase""#)
         .execute(&c.e.pool)
         .await
         .unwrap();
 
-    let bad = c
-        .req("POST", "/api/admin/purge", Some(json!({"target": "zzz"})))
-        .await;
-    assert_eq!(bad.status, StatusCode::BAD_REQUEST);
-    assert_eq!(bad.body, json!({"error": "Cible inconnue"}));
-    let bad = c.req("POST", "/api/admin/purge", Some(json!({}))).await;
-    assert_eq!(bad.body, json!({"error": "Cible inconnue"}));
-
-    let mut rx = c.e.events.subscribe();
-    let r = c
-        .req("POST", "/api/admin/purge", Some(json!({"target": "all"})))
-        .await;
+    let r = c.req("POST", PURGE, Some(json!({"target": "all"}))).await;
     assert_eq!(r.status, StatusCode::OK, "{:?}", r.body);
     assert_eq!(r.body, json!({"ok": true}));
-    assert_eq!(
-        next_event(&mut rx).await,
-        json!({"type":"update","entity":"config","action":"updated"})
-    );
     assert_eq!(count(&c.e.pool, "TenantEquipment").await, 0);
     assert_eq!(count(&c.e.pool, "TenantBrand").await, brands);
-    assert_eq!(count(&c.e.pool, "TenantType").await, types);
-    assert_eq!(count(&c.e.pool, "TenantPrintTemplate").await, templates);
-    assert!(count(&c.e.pool, "TenantPhase").await > 0);
+    assert_eq!(count(&c.e.pool, "TenantConnectorType").await, connectors);
+    assert_eq!(count(&c.e.pool, "TenantCable").await, cables);
+    let one = |sql: &'static str| {
+        let pool = c.e.pool.clone();
+        async move {
+            sqlx::query_scalar::<_, i64>(sql)
+                .fetch_one(&pool)
+                .await
+                .unwrap()
+        }
+    };
+    assert_eq!(
+        one(r#"SELECT COUNT(*) FROM "TenantBrand" WHERE "name"='Ma marque'"#).await,
+        0
+    );
+    assert_eq!(
+        one(r#"SELECT COUNT(*) FROM "CatalogSymbol" WHERE "id"='s1'"#).await,
+        0
+    );
+    assert!(one(r#"SELECT COUNT(*) FROM "CatalogSymbol" WHERE "isBuiltin"=1"#).await > 0);
+    // kept
+    assert_eq!(count(&c.e.pool, "TenantPhase").await, 0);
+    assert_eq!(count(&c.e.pool, "TenantPrintTemplate").await, templates + 1);
+    assert_eq!(count(&c.e.pool, "TenantFunction").await, functions + 1);
     assert_eq!(count(&c.e.pool, "PrintSettings").await, 1);
-    let custom: i64 =
-        sqlx::query_scalar(r#"SELECT COUNT(*) FROM "TenantBrand" WHERE "name" = 'Ma marque'"#)
-            .fetch_one(&c.e.pool)
-            .await
-            .unwrap();
-    assert_eq!(custom, 0);
-    // numbering config survives
     assert_eq!(
         c.req("GET", NUMBERING, None).await.body,
         json!({"cable_pad": "7"})
     );
     assert_eq!(audit_count(&c.e.pool, "admin.purge", "all").await, 1);
+}
 
-    // targeted purge: equipment only, other families untouched
-    sqlx::query(
-        r#"INSERT INTO "TenantEquipment" ("id","name","createdById","createdAt","updatedAt")
-           VALUES ('eq2','Eq','u','2026-01-01T00:00:00.000Z','2026-01-01T00:00:00.000Z')"#,
-    )
-    .execute(&c.e.pool)
-    .await
-    .unwrap();
-    sqlx::query(r#"DELETE FROM "TenantPhase""#)
-        .execute(&c.e.pool)
-        .await
-        .unwrap();
-    let r = c
-        .req(
-            "POST",
-            "/api/admin/purge",
-            Some(json!({"target": "equipment"})),
-        )
+#[tokio::test]
+async fn purge_publishes_family_events() {
+    let c = ctx().await;
+    let mut rx = c.e.events.subscribe();
+    c.req("POST", PURGE, Some(json!({"target": "brands"})))
         .await;
-    assert_eq!(r.body, json!({"ok": true}));
-    assert_eq!(count(&c.e.pool, "TenantEquipment").await, 0);
-    assert_eq!(count(&c.e.pool, "TenantPhase").await, 0, "not reseeded");
+    assert_eq!(
+        next_event(&mut rx).await,
+        json!({"type":"update","entity":"tenant_parametres_brands","action":"purge","id":"bulk"})
+    );
+    c.req("POST", PURGE, Some(json!({"target": "adapters"})))
+        .await;
+    let mut entities = vec![];
+    for _ in 0..3 {
+        entities.push(
+            next_event(&mut rx).await["entity"]
+                .as_str()
+                .unwrap()
+                .to_string(),
+        );
+    }
+    assert!(entities.contains(&"tenant_catalogue".to_string()));
+    c.req("POST", PURGE, Some(json!({"target": "all"}))).await;
+    let mut seen = vec![];
+    for _ in 0..7 {
+        seen.push(
+            next_event(&mut rx).await["entity"]
+                .as_str()
+                .unwrap()
+                .to_string(),
+        );
+    }
+    for want in [
+        "tenant_catalogue",
+        "tenant_parametres_brands",
+        "tenant_parametres_categories",
+        "tenant_parametres_connectors",
+        "tenant_parametres_signals",
+        "tenant_parametres_symbols",
+    ] {
+        assert!(seen.contains(&want.to_string()), "{want}");
+    }
 }
 
 #[tokio::test]
