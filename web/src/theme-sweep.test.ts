@@ -6,7 +6,7 @@ import { resolve } from "node:path";
 
 const read = (p: string) => readFileSync(resolve(__dirname, p), "utf8");
 
-/** Fichiers copiés d'arkyo concernés par la phase 1 (chemins sous web/src). */
+/** Fichiers copiés d'arkyo concernés par le balayage (phase 1, puis phase 2 ; chemins sous web/src). */
 const COPIED_FILES = [
   "components/layout/topbar.tsx",
   "components/layout/sidebar.tsx",
@@ -28,6 +28,78 @@ const COPIED_FILES = [
   "components/synoptique/components/property-patterns.tsx",
   "components/presence/field-presence-ring.tsx",
   "components/ui/connector-icon.tsx",
+  // Phase 2 (Task 9) : fondations partagées du catalogue.
+  "app/(app)/admin/_components/admin-list-toolbar.tsx",
+  "app/(app)/admin/_components/list-toolbar-helpers.tsx",
+  "app/(app)/admin/_components/numbering-tab.tsx",
+  "app/(app)/admin/_components/types.ts",
+  "app/(app)/admin/_components/users-list-tab.tsx",
+  "components/adapters/new-adapter-wizard.tsx",
+  "components/cables/new-cable-wizard.tsx",
+  "components/catalogue/adapter-card.tsx",
+  "components/catalogue/adapter-editor-dialog.tsx",
+  "components/catalogue/brand-picker-modal.tsx",
+  "components/catalogue/brand/brand-card.tsx",
+  "components/catalogue/brand/brand-form-dialog.tsx",
+  "components/catalogue/brand/index.ts",
+  "components/catalogue/cable-card.tsx",
+  "components/catalogue/cable-editor-dialog.tsx",
+  "components/catalogue/cabling/cabling-card.tsx",
+  "components/catalogue/cabling/cabling-form-dialog.tsx",
+  "components/catalogue/cabling/index.ts",
+  "components/catalogue/catalogue-section-header.tsx",
+  "components/catalogue/catalogue-table.tsx",
+  "components/catalogue/category-picker-modal.tsx",
+  "components/catalogue/category-tree/function-card.tsx",
+  "components/catalogue/category-tree/function-form-dialog.tsx",
+  "components/catalogue/category-tree/index.ts",
+  "components/catalogue/category-tree/phase-card.tsx",
+  "components/catalogue/category-tree/phase-form-dialog.tsx",
+  "components/catalogue/category-tree/type-card.tsx",
+  "components/catalogue/category-tree/type-form-dialog.tsx",
+  "components/catalogue/connector-card.tsx",
+  "components/catalogue/connector-icon-picker-modal.tsx",
+  "components/catalogue/connector-multi-picker-modal.tsx",
+  "components/catalogue/connector-picker-modal.tsx",
+  "components/catalogue/connector/connector-card.tsx",
+  "components/catalogue/connector/connector-form-dialog.tsx",
+  "components/catalogue/connector/index.ts",
+  "components/catalogue/editor-status-badge.tsx",
+  "components/catalogue/editor-text-field.ts",
+  "components/catalogue/editor-undo-redo.tsx",
+  "components/catalogue/equipment-card.tsx",
+  "components/catalogue/function-multi-picker-modal.tsx",
+  "components/catalogue/function-picker-modal.tsx",
+  "components/catalogue/inline-type-creator.tsx",
+  "components/catalogue/phase-picker-modal.tsx",
+  "components/catalogue/selection-action-bar.tsx",
+  "components/catalogue/signal/index.ts",
+  "components/catalogue/signal/signal-card.tsx",
+  "components/catalogue/signal/signal-form-dialog.tsx",
+  "components/catalogue/type-picker-modal.tsx",
+  "components/catalogue/types.ts",
+  "components/catalogue/use-editor-autosave.ts",
+  "components/catalogue/use-editor-history.ts",
+  "components/catalogue/use-row-selection.ts",
+  "components/catalogue/use-server-reconcile.ts",
+  "components/equipment/EquipmentModal.tsx",
+  "components/equipment/format-block.tsx",
+  "components/equipment/new-equipment-wizard.tsx",
+  "components/synoptique/components/synoptic-node.tsx",
+  "components/synoptique/types/synoptic.ts",
+  "components/wizard/wizard-backdrop.tsx",
+  "lib/catalog-broadcast.ts",
+  "lib/export/catalogue-export.ts",
+  "lib/export/table-xlsx.ts",
+  "lib/hooks/use-local-storage-state.ts",
+  "lib/services/cable-numbering.ts",
+  "lib/services/dimensions.ts",
+  "lib/services/import/detect-columns.ts",
+  "lib/services/print-layout.ts",
+  "lib/services/text-bbox.ts",
+  "lib/services/username.ts",
+  "lib/type-icons.ts",
+  "lib/types/catalog.ts",
 ];
 
 /** Fichiers posés sur la topbar ou le rail : ils suivent le thème (variante « Clair A »). */
@@ -62,6 +134,38 @@ const ROLE_BADGE: Allow = {
     "nuances ajustées pour >= 4,5:1 (voir le test de contraste des badges de rôle ci-dessous)",
 };
 
+// ── Phase 2 : couleurs métier ou laissées dans le doute (spec §7) ────────────
+
+const DOUBT = "laissée dans le doute (spec §7 : une couleur métier modifiée à tort est pire qu'un bleu Arkyo résiduel)";
+const CONN = "couleur d'un connecteur et son repli : couleur métier";
+const TAG_2110: Allow = {
+  line: /className="[^"]*rounded-md bg-sky-500\/10 [^"]*text-sky-600 dark:text-sky-400">$/,
+  reason: "étiquette « 2110 » (SMPTE ST 2110) d'un équipement : marqueur métier, " + DOUBT,
+};
+const PENDING_BADGE: Allow = {
+  line: /className="shrink-0 rounded-md bg-amber-500\/15 px-1\.5 py-0\.5 text-\[9px\] font-bold text-amber-600">$/,
+  reason: "statut « EN ATTENTE » d'un membre : statut métier, comme la pastille « Personnalisé » de la phase 1",
+};
+const WIZARD_ART: Allow[] = [
+  {
+    line: /\b(fill|stroke)="rgb\(\d+ \d+ \d+ \/ [\d.]+\)"/,
+    reason: "illustrations des assistants (connecteurs XLR/BNC/RJ45, câbles, baies dessinés) : couleurs métier des connecteurs et signaux",
+  },
+  {
+    line: /<span className="h-1 w-1 rounded-full bg-(emerald|amber)-500" \/>/,
+    reason: "voyants des équipements dessinés dans les illustrations des assistants : couleur métier",
+  },
+  {
+    line: /linear-gradient\(135deg, (rgba\(139, 92, 246, 0\.08\)|#8b5cf6 0%)/,
+    reason: "dégradé tricolore décoratif de l'écran d'accueil des assistants (violet, bleu, émeraude) : " + DOUBT,
+  },
+  {
+    line: /^\s*color="#[0-9a-f]{6}"$/,
+    reason: "teinte de l'icône de chaque section ou étape (Identité, Connecteurs…) : " + DOUBT,
+  },
+  { line: /backgroundColor: fn\.color \|\| "#6b7280"/, reason: "couleur de la fonction (catalogue) et son défaut Prisma : couleur métier" },
+];
+
 // ── Neutres et bleus Tailwind (couleurs d'interface d'arkyo) ────────────────
 
 const INTERFACE = /\b(bg|text|border|ring|outline|divide|from|to)-(zinc|gray|slate|neutral|stone|blue|indigo|sky)-\d{2,3}\b/;
@@ -71,6 +175,7 @@ const ALLOW: AllowMap = {
   "components/presence/presence-avatars.tsx": [],
   // Couleurs de connecteurs : couleur métier, en hexadécimal (voir HEX ci-dessous).
   "components/ui/connector-icon.tsx": [],
+  "components/catalogue/equipment-card.tsx": [TAG_2110],
 };
 
 test("aucune couleur d'interface Tailwind codée en dur dans les fichiers copiés (hors exceptions métier)", () => {
@@ -88,6 +193,10 @@ const ALLOW_STATUS: AllowMap = {
       reason: "pastille « Personnalisé » du catalogue : statut métier, laissée dans le doute (spec §7)",
     },
   ],
+  "app/(app)/admin/_components/users-list-tab.tsx": [PENDING_BADGE],
+  "components/adapters/new-adapter-wizard.tsx": WIZARD_ART,
+  "components/cables/new-cable-wizard.tsx": WIZARD_ART,
+  "components/equipment/new-equipment-wizard.tsx": WIZARD_ART,
 };
 
 test("erreurs, succès et alertes suivent --danger, --success et --warning", () => {
@@ -108,6 +217,95 @@ const ALLOW_HEX: AllowMap = {
   ],
   "components/ui/connector-icon.tsx": [
     { line: /color = "#3b82f6",/, reason: "couleur par défaut d'un connecteur : couleur métier" },
+  ],
+  // Phase 2 (Task 9) : fondations partagées du catalogue.
+  "app/(app)/admin/_components/list-toolbar-helpers.tsx": [
+    {
+      line: /^\s*(FREE|STARTER|PRO|ENTERPRISE): "#[0-9a-f]{6}", \/\/ \w+$/,
+      reason: "couleurs des plans (PLAN_COLORS) : couleur métier, consommées par les onglets repris plus tard",
+    },
+    { line: /boxShadow: "0 1px 2px 0 rgb\(0 0 0 \/ 0\.05\)",/, reason: "ombre (équivalent de shadow-sm) : pas une couleur d'interface" },
+  ],
+  "app/(app)/admin/_components/numbering-tab.tsx": [
+    {
+      line: /^const COLOR_(CONTAINER|SUFFIX) = "var\(--arkyo-blue(-light)?, #[0-9a-f]{6}\)";$/,
+      reason: "--arkyo-blue(-light) est déjà remappée sur la palette Strata (globals.css, clair et sombre) : le repli n'est jamais utilisé",
+    },
+  ],
+  "app/(app)/admin/_components/users-list-tab.tsx": [
+    { line: /color: r\?\.color \?\? "#94a3b8" \};/, reason: "couleur du rôle (repli = --role-consultation) : couleur métier" },
+  ],
+  "components/adapters/new-adapter-wizard.tsx": WIZARD_ART,
+  "components/cables/new-cable-wizard.tsx": WIZARD_ART,
+  "components/equipment/new-equipment-wizard.tsx": [
+    ...WIZARD_ART,
+    {
+      line: /style=\{\{ backgroundColor: "#(f59e0b|ef4444)14", color: "#\1" \}\}/,
+      reason: "icônes des étapes Poids (ambre) et Chaleur (rouge) : " + DOUBT,
+    },
+  ],
+  "components/wizard/wizard-backdrop.tsx": [
+    {
+      line: /radial-gradient\(circle, rgb\((139 92 246|59 130 246|16 185 129) \/ \$\{op\d\}\), transparent 70%\)/,
+      reason: "halos décoratifs tricolores du fond des assistants : " + DOUBT,
+    },
+    { line: /"radial-gradient\(circle, rgb\(0 0 0 \/ 0\.08\) 1px, transparent 1px\)",/, reason: "trame de points du fond des assistants : texture, " + DOUBT },
+  ],
+  "components/catalogue/adapter-card.tsx": [
+    { line: /^const ACCENT = "#06b6d4";$/, reason: "couleur par défaut d'un adaptateur (dessin SVG et carte) : couleur métier" },
+    { line: /(srcCt|ct)\?\.color \?\? "#a3a3a3";/, reason: CONN },
+  ],
+  "components/catalogue/adapter-editor-dialog.tsx": [{ line: /color=\{ct\.color \?\? "#3b82f6"\}/, reason: CONN }],
+  "components/catalogue/cable-editor-dialog.tsx": [
+    { line: /^\s*color="#[0-9a-f]{6}"$/, reason: "teinte de l'icône de chaque section de l'éditeur de cordon : " + DOUBT },
+  ],
+  "components/catalogue/cabling/cabling-card.tsx": [{ line: /^const FALLBACK_COLOR = "#a3a3a3";$/, reason: CONN }],
+  "components/catalogue/connector-card.tsx": [{ line: /fn\?\.color \?\? "#a3a3a3";/, reason: CONN }],
+  "components/catalogue/connector/connector-form-dialog.tsx": [{ line: /^const DEFAULT_CONNECTOR_COLOR = "#a3a3a3";$/, reason: CONN }],
+  "components/catalogue/category-tree/function-card.tsx": [
+    { line: /item\.color \?\? "#6b7280";/, reason: "couleur de la fonction et son défaut Prisma : couleur métier" },
+  ],
+  "components/catalogue/category-tree/function-form-dialog.tsx": [
+    {
+      line: /(color: initial\?\.color \?\? |placeholder=)"#3b82f6"/,
+      reason: "couleur choisie par l'utilisateur pour une fonction (défaut et exemple de saisie) : couleur métier",
+    },
+  ],
+  "components/catalogue/signal/signal-card.tsx": [
+    { line: /#6b7280|"#a3a3a3"/, reason: "couleur du signal, défaut Prisma et repli : couleur métier" },
+  ],
+  "components/equipment/EquipmentModal.tsx": [
+    { line: /^const FACE_COLORS = \{ FRONT: "#3b82f6", REAR: "#8b5cf6" \};$/, reason: "couleurs des faces avant/arrière : couleur métier" },
+    {
+      line: /\{ value: "(IN|OUT|BOTH)", label: "[^"]+", short: "[^"]+", color: "#[0-9a-f]{6}" \},/,
+      reason: "couleurs des directions de port (entrée, sortie, bidirectionnel) : couleur métier",
+    },
+    {
+      line: /(background: cat\.color, color: "#fff"|sigCatFilter === cat\.name \? "#fff" : cat\.color)/,
+      reason: "pastilles de catégorie de signal sur leur propre couleur : couleur métier",
+    },
+    { line: /^\s*return "#6366f1";$/, reason: "couleur de catégorie d'équipement par défaut : couleur métier" },
+    {
+      line: /(fill|stroke)=(\{i === 0 \? )?"#(1c1c1e|2a2a2e|2c2c30|3a3a3e|3b82f6)"/,
+      reason: "aperçu dessiné de l'équipement en baie (façade, oreilles, ports) : rendu, pas interface",
+    },
+  ],
+  "components/synoptique/components/synoptic-node.tsx": [
+    {
+      line: /\?\? "#71717a";|isActive \? color : "#(71717a|d1d5db)"/,
+      reason: "couleur du connecteur dans le nœud du synoptique et son repli : rendu des plans",
+    },
+    { line: /fill=(\{isIn \? )?"#(ef4444|22c55e)"/, reason: "flèches d'entrée (rouge) et de sortie (vert) des ports du synoptique : rendu des plans" },
+    { line: /color-mix\(in srgb, #6366f1 12%, var\(--secondary\)\)/, reason: "en-tête des nœuds « panneau » du synoptique : rendu des plans" },
+  ],
+  "components/synoptique/types/synoptic.ts": [
+    { line: /^\s*"#[0-9a-f]{6}",$/, reason: "palette de couleurs du synoptique : couleur métier" },
+  ],
+  "lib/services/print-layout.ts": [
+    {
+      line: /#0f172a|#cbd5e1|#6b7280|"#000000"/,
+      reason: "gabarits d'impression (texte, cadre, catégorie, quadrillage) : rendu des étiquettes imprimées",
+    },
   ],
 };
 
