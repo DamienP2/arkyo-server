@@ -80,8 +80,8 @@
 
 1. **Les formes JSON qu'attend le front copié.** Une liste vide au lieu d'une erreur, `source`/`isAccessible` présents, `brand`/`functions`/`type` résolus. Un écart casse l'écran sans erreur visible. → tests de forme Tasks 4 à 7, et vérification dans le navigateur (Task 13).
 2. **Suppression d'un référentiel utilisé** (fabricant, connecteur, signal, fonction, type) : réponse 409 avec le même message qu'arkyo, rien supprimé. → tests Tasks 3, 4 et 5.
-3. **Sauvegarde/restauration aller-retour.** Exporter puis restaurer en `replace` sur une base neuve redonne exactement le même catalogue. Une section en échec n'annule pas les précédentes (comme arkyo). → test Task 8.
-4. **Import CSV/XLSX** d'un fichier exporté par l'application. Re-import sans perte des champs gérés par l'import d'arkyo, et doublons détectés. → test Task 8.
+3. **Sauvegarde/restauration aller-retour.** Exporter puis restaurer en `replace` sur une base neuve redonne exactement le même catalogue. Une section en échec n'annule pas les précédentes (comme arkyo). → test Task 7.
+4. **Import CSV/XLSX** d'un fichier exporté par l'application. Re-import sans perte des champs gérés par l'import d'arkyo, et doublons détectés. → test Task 7.
 5. **Dernier propriétaire.** On ne peut ni le rétrograder, ni le retirer, ni le désactiver via l'interface des membres (garde de la phase 1). → test Task 8.
 
 ---
