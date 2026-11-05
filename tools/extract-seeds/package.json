@@ -1,0 +1,12 @@
+{
+  "name": "arkyo-extract-seeds",
+  "private": true,
+  "description": "Outil ponctuel : extrait les référentiels de départ d'arkyo vers crates/arkyo-server/seeds/*.json (non livré).",
+  "type": "module",
+  "engines": {
+    "node": ">=23.6"
+  },
+  "scripts": {
+    "extract": "node extract.mjs"
+  }
+}

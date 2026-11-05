@@ -4,6 +4,7 @@ pub mod firewall;
 pub mod http;
 pub mod ids;
 pub mod paths;
+pub mod seeds;
 pub mod service;
 pub mod sessions;
 pub mod update;

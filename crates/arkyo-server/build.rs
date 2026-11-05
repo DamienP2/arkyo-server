@@ -10,6 +10,8 @@ fn main() {
         let _ = std::fs::create_dir_all(&dist);
     }
     println!("cargo:rerun-if-changed=../../web/dist");
+    // sqlx::migrate! embeds the migrations: rebuild when one is added.
+    println!("cargo:rerun-if-changed=migrations");
     gzipped(&dist);
     icon();
 }

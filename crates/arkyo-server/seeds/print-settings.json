@@ -1,0 +1,24 @@
+{
+  "family": "print-settings",
+  "source": "arkyo@88b2e4b:database/main/schema.prisma (PrintSettings, valeurs par défaut)",
+  "tables": [
+    {
+      "table": "PrintSettings",
+      "rows": [
+        {
+          "id": "cmw3kwyji00pbd7dijvqp0mxn",
+          "key": "default",
+          "defaultPaperFormat": "A3",
+          "defaultOrientation": "LANDSCAPE",
+          "defaultMarginTop": 15,
+          "defaultMarginRight": 15,
+          "defaultMarginBottom": 15,
+          "defaultMarginLeft": 15,
+          "watermarkUrl": null,
+          "watermarkOpacity": 0.1,
+          "pdfOptions": {}
+        }
+      ]
+    }
+  ]
+}

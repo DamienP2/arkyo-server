@@ -1,0 +1,1208 @@
+{
+  "family": "brands",
+  "source": "arkyo@88b2e4b:app/api/supervisor/dev/seed-brands/route.ts (+ LAPP de seed-cable-label-stocks)",
+  "tables": [
+    {
+      "table": "TenantBrand",
+      "rows": [
+        {
+          "id": "cmw3kwyig0089d7di389yqs9j",
+          "name": "Sony",
+          "website": "https://www.sony.com",
+          "logoUrl": "https://cdn.simpleicons.org/sony",
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyig008ad7diont2jfb5",
+          "name": "Panasonic",
+          "website": "https://www.panasonic.com",
+          "logoUrl": "https://cdn.simpleicons.org/panasonic",
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyig008bd7dio7dt2qcr",
+          "name": "Canon",
+          "website": "https://www.canon.com",
+          "logoUrl": "https://cdn.simpleicons.org/canon",
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyig008cd7dipp1wsjia",
+          "name": "Ikegami",
+          "website": "https://www.ikegami.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyig008dd7dik4dwozmx",
+          "name": "Hitachi",
+          "website": "https://www.hitachivisioncamera.com",
+          "logoUrl": "https://cdn.simpleicons.org/hitachi",
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyig008ed7diujnrtzv2",
+          "name": "JVC",
+          "website": "https://pro.jvc.com",
+          "logoUrl": "https://cdn.simpleicons.org/jvc",
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyig008fd7di751ltrhs",
+          "name": "ARRI",
+          "website": "https://www.arri.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyig008gd7dif0ui0waw",
+          "name": "RED Digital Cinema",
+          "website": "https://www.red.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyig008hd7dig5vqcsqa",
+          "name": "Blackmagic Design",
+          "website": "https://www.blackmagicdesign.com",
+          "logoUrl": "https://cdn.simpleicons.org/blackmagicdesign",
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyig008id7di800bgzlo",
+          "name": "DJI",
+          "website": "https://www.dji.com",
+          "logoUrl": "https://cdn.simpleicons.org/dji",
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyig008jd7di6w3huh2i",
+          "name": "Z CAM",
+          "website": "https://www.z-cam.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyig008kd7diocuf0qm4",
+          "name": "Phantom (Vision Research)",
+          "website": "https://www.phantomhighspeed.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyig008ld7diteeiwnu5",
+          "name": "Marshall",
+          "website": "https://www.marshall-usa.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyig008md7dia5azksh7",
+          "name": "PTZOptics",
+          "website": "https://ptzoptics.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyig008nd7difl8shj98",
+          "name": "Datavideo",
+          "website": "https://www.datavideo.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyig008od7dik01ujzw3",
+          "name": "BirdDog",
+          "website": "https://birddog.tv",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyih008pd7dibxacsfiv",
+          "name": "Fujinon",
+          "website": "https://www.fujinon.com",
+          "logoUrl": "https://cdn.simpleicons.org/fujifilm",
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyih008qd7dio4pcv0y2",
+          "name": "Angénieux",
+          "website": "https://www.angenieux.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyih008rd7di02gqzlmj",
+          "name": "Zeiss",
+          "website": "https://www.zeiss.com",
+          "logoUrl": "https://cdn.simpleicons.org/zeiss",
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyih008sd7digs542g7b",
+          "name": "Cooke Optics",
+          "website": "https://www.cookeoptics.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyih008td7dina8cjxco",
+          "name": "Leica",
+          "website": "https://www.leica-camera.com",
+          "logoUrl": "https://cdn.simpleicons.org/leica",
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyih008ud7dip7auwy12",
+          "name": "Grass Valley",
+          "website": "https://www.grassvalley.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyih008vd7di10s8zd2d",
+          "name": "Ross Video",
+          "website": "https://www.rossvideo.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyih008wd7dilem5nb0e",
+          "name": "FOR-A",
+          "website": "https://www.for-a.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyih008xd7di2apdm499",
+          "name": "NewTek",
+          "website": "https://www.vizrt.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyih008yd7digvjg1dab",
+          "name": "Vizrt",
+          "website": "https://www.vizrt.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyih008zd7dip6s19h2b",
+          "name": "Ultimatte",
+          "website": "https://www.blackmagicdesign.com/products/ultimatte",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyih0090d7di5cywoakz",
+          "name": "Evertz",
+          "website": "https://www.evertz.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyih0091d7di0cfv5w1t",
+          "name": "Imagine Communications",
+          "website": "https://www.imaginecommunications.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyih0092d7did11ka2fm",
+          "name": "Lawo",
+          "website": "https://www.lawo.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyih0093d7diqnt11pyb",
+          "name": "Nevion",
+          "website": "https://www.nevion.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyih0094d7dikq0x0zth",
+          "name": "Riedel",
+          "website": "https://www.riedel.net",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyih0095d7di3zg13vu7",
+          "name": "TAG Video Systems",
+          "website": "https://tagvs.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyih0096d7disp4b0e1x",
+          "name": "Tektronix / Telestream",
+          "website": "https://www.telestream.net",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyih0097d7disjkj3qju",
+          "name": "PHABRIX",
+          "website": "https://www.phabrix.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyih0098d7di0ow67y71",
+          "name": "Leader",
+          "website": "https://www.leader.co.jp",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyih0099d7dibzrykhm9",
+          "name": "AJA Video Systems",
+          "website": "https://www.aja.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyih009ad7dihhlhfzh8",
+          "name": "Decimator Design",
+          "website": "https://decimator.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyih009bd7diug3lth3j",
+          "name": "TVLogic",
+          "website": "https://www.tvlogic.tv",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyih009cd7di7t7netqg",
+          "name": "Atomos",
+          "website": "https://www.atomos.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyih009dd7did1fxt5zz",
+          "name": "SmallHD",
+          "website": "https://www.smallhd.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyih009ed7di7qqayynu",
+          "name": "Flanders Scientific",
+          "website": "https://www.flandersscientific.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyih009fd7di5jrm8f1b",
+          "name": "Eizo",
+          "website": "https://www.eizo.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyih009gd7dimy190s8e",
+          "name": "Boland",
+          "website": "https://www.bolandcom.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyih009hd7difgaqanzs",
+          "name": "Postium",
+          "website": "https://www.postium.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyih009id7divibt1nlg",
+          "name": "EVS",
+          "website": "https://www.evs.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyih009jd7diuwgu0fc8",
+          "name": "Harmonic",
+          "website": "https://www.harmonicinc.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyih009kd7di384ws4vt",
+          "name": "Imagine ADC",
+          "website": "https://www.imaginecommunications.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyih009ld7dirr7667r6",
+          "name": "AVID",
+          "website": "https://www.avid.com",
+          "logoUrl": "https://cdn.simpleicons.org/avid",
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyih009md7dixp1u1ktp",
+          "name": "Cinegy",
+          "website": "https://www.cinegy.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyih009nd7dibbpr5byz",
+          "name": "ChyronHego / Chyron",
+          "website": "https://www.chyron.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyih009od7di3j5rem6c",
+          "name": "Mosart Medialab",
+          "website": "https://www.vizrt.com/products/mosart",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyih009pd7di5akk9b9z",
+          "name": "Brainstorm",
+          "website": "https://www.brainstorm3d.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyih009qd7didqtydg0q",
+          "name": "Disguise",
+          "website": "https://www.disguise.one",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyih009rd7dioqx33i6s",
+          "name": "Pixotope",
+          "website": "https://www.pixotope.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyih009sd7diy3fykta2",
+          "name": "Haivision",
+          "website": "https://www.haivision.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyih009td7diwv8oizbn",
+          "name": "Net Insight",
+          "website": "https://www.netinsight.net",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyih009ud7dij15y94f7",
+          "name": "Appear",
+          "website": "https://www.appear.net",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyih009vd7die8vmvif3",
+          "name": "Adtec Digital",
+          "website": "https://www.adtecinc.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyih009wd7dih45uy6oc",
+          "name": "VideoFlow",
+          "website": "https://www.video-flow.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyih009xd7dikt1z83in",
+          "name": "TVU Networks",
+          "website": "https://www.tvunetworks.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyih009yd7didkc5tk3f",
+          "name": "LiveU",
+          "website": "https://www.liveu.tv",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyih009zd7dijpq1b24p",
+          "name": "Aviwest",
+          "website": "https://www.aviwest.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyih00a0d7diw02hszgp",
+          "name": "Dejero",
+          "website": "https://www.dejero.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyih00a1d7dief9gp7wh",
+          "name": "Calrec",
+          "website": "https://www.calrec.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyih00a2d7dipnikohia",
+          "name": "Solid State Logic",
+          "website": "https://www.solidstatelogic.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyih00a3d7did74mu9en",
+          "name": "DiGiCo",
+          "website": "https://www.digico.biz",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyih00a4d7diiqv0brlx",
+          "name": "Yamaha Pro Audio",
+          "website": "https://www.yamaha.com/proaudio",
+          "logoUrl": "https://cdn.simpleicons.org/yamaha",
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyih00a5d7diloa9tgad",
+          "name": "Allen & Heath",
+          "website": "https://www.allen-heath.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyih00a6d7diwntkz1n7",
+          "name": "Midas",
+          "website": "https://www.midasconsoles.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyih00a7d7di5ued2x5h",
+          "name": "Soundcraft",
+          "website": "https://www.soundcraft.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyih00a8d7diyiy924jt",
+          "name": "Studer",
+          "website": "https://www.studer.ch",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyih00a9d7di2b3fnimh",
+          "name": "Wheatstone",
+          "website": "https://www.wheatstone.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyih00aad7di2ycgsln6",
+          "name": "AEQ",
+          "website": "https://www.aeq-web.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyih00abd7dikyt8jua1",
+          "name": "Stagetec",
+          "website": "https://www.stagetec.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyih00acd7diptv6xjce",
+          "name": "RME Audio",
+          "website": "https://www.rme-audio.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyih00add7dii88ufhbb",
+          "name": "Apogee",
+          "website": "https://apogeedigital.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyih00aed7di7yko3pb0",
+          "name": "Avid (Pro Tools)",
+          "website": "https://www.avid.com/pro-tools",
+          "logoUrl": "https://cdn.simpleicons.org/avid",
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyih00afd7di95zyvt7g",
+          "name": "Universal Audio",
+          "website": "https://www.uaudio.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyih00agd7diha5rjh60",
+          "name": "Focusrite",
+          "website": "https://www.focusrite.com",
+          "logoUrl": "https://cdn.simpleicons.org/focusrite",
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyih00ahd7did3fq4cq2",
+          "name": "Genelec",
+          "website": "https://www.genelec.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyih00aid7dihurbs6s6",
+          "name": "Neumann.Berlin",
+          "website": "https://www.neumann.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyih00ajd7diuuy2wpaq",
+          "name": "TC Electronic",
+          "website": "https://www.tcelectronic.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyih00akd7dia9knqdwb",
+          "name": "Dolby",
+          "website": "https://www.dolby.com",
+          "logoUrl": "https://cdn.simpleicons.org/dolby",
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyih00ald7dii7zzqpin",
+          "name": "Junger Audio",
+          "website": "https://jungeraudio.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyih00amd7didv5ft5wt",
+          "name": "Linear Acoustic",
+          "website": "https://www.telosalliance.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyih00and7diktl9fwti",
+          "name": "Sennheiser",
+          "website": "https://www.sennheiser.com",
+          "logoUrl": "https://cdn.simpleicons.org/sennheiser",
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyih00aod7diy4nbd1cq",
+          "name": "Shure",
+          "website": "https://www.shure.com",
+          "logoUrl": "https://cdn.simpleicons.org/shure",
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyih00apd7digkb59a65",
+          "name": "Audio-Technica",
+          "website": "https://www.audio-technica.com",
+          "logoUrl": "https://cdn.simpleicons.org/audiotechnica",
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyii00aqd7di3sb6zj24",
+          "name": "Schoeps",
+          "website": "https://www.schoeps.de",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyii00ard7dituj8i1p5",
+          "name": "DPA Microphones",
+          "website": "https://www.dpamicrophones.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyii00asd7di3kczdrun",
+          "name": "Rode",
+          "website": "https://www.rode.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyii00atd7dir0jdlssq",
+          "name": "Beyerdynamic",
+          "website": "https://global.beyerdynamic.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyii00aud7dig2kpzgn9",
+          "name": "Lectrosonics",
+          "website": "https://www.lectrosonics.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyii00avd7diuir0srx9",
+          "name": "Wisycom",
+          "website": "https://www.wisycom.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyii00awd7dienqmvwjc",
+          "name": "Sound Devices",
+          "website": "https://www.sounddevices.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyii00axd7difuafzbln",
+          "name": "Zaxcom",
+          "website": "https://www.zaxcom.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyii00ayd7digret30t0",
+          "name": "Cisco",
+          "website": "https://www.cisco.com",
+          "logoUrl": "https://cdn.simpleicons.org/cisco",
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyii00azd7di3jb36ga2",
+          "name": "Netgear",
+          "website": "https://www.netgear.com",
+          "logoUrl": "https://cdn.simpleicons.org/netgear",
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyii00b0d7digt5rgju8",
+          "name": "Arista Networks",
+          "website": "https://www.arista.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyii00b1d7dikm9gu22g",
+          "name": "Mellanox / NVIDIA",
+          "website": "https://www.nvidia.com/networking",
+          "logoUrl": "https://cdn.simpleicons.org/nvidia",
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyii00b2d7diln17vef6",
+          "name": "Juniper Networks",
+          "website": "https://www.juniper.net",
+          "logoUrl": "https://cdn.simpleicons.org/junipernetworks",
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyii00b3d7ditw9z60rd",
+          "name": "Extreme Networks",
+          "website": "https://www.extremenetworks.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyii00b4d7diywx1rb0y",
+          "name": "HPE / Aruba",
+          "website": "https://www.arubanetworks.com",
+          "logoUrl": "https://cdn.simpleicons.org/hewlettpackardenterprise",
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyii00b5d7disyxhg2yj",
+          "name": "Dell Technologies",
+          "website": "https://www.dell.com",
+          "logoUrl": "https://cdn.simpleicons.org/dell",
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyii00b6d7divcidb7oz",
+          "name": "Supermicro",
+          "website": "https://www.supermicro.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyii00b7d7did6u1je0r",
+          "name": "NetApp",
+          "website": "https://www.netapp.com",
+          "logoUrl": "https://cdn.simpleicons.org/netapp",
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyii00b8d7din442ga6x",
+          "name": "Quantum",
+          "website": "https://www.quantum.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyii00b9d7di4hsc7xop",
+          "name": "Meinberg",
+          "website": "https://www.meinbergglobal.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyii00bad7diizlz36x7",
+          "name": "Tektronix Sync",
+          "website": "https://www.tek.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyii00bbd7diftvh39o5",
+          "name": "Drake",
+          "website": "https://www.drakeb.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyii00bcd7di1ionxj9k",
+          "name": "Plura",
+          "website": "https://www.plurabroadcast.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyii00bdd7diclolrmsv",
+          "name": "Clear-Com",
+          "website": "https://www.clearcom.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyii00bed7diyqg56m5z",
+          "name": "RTS Intercoms",
+          "website": "https://www.rtsintercoms.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyii00bfd7dibygobbyt",
+          "name": "Pliant Technologies",
+          "website": "https://www.plianttech.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyii00bgd7die0r0z226",
+          "name": "Telex",
+          "website": "https://www.telex.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyii00bhd7ditjkrnxbz",
+          "name": "ETC",
+          "website": "https://www.etcconnect.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyii00bid7difnde3k5v",
+          "name": "MA Lighting (grandMA)",
+          "website": "https://www.malighting.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyii00bjd7dihm4go2c3",
+          "name": "Avolites",
+          "website": "https://www.avolites.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyii00bkd7divaa80tll",
+          "name": "ChamSys",
+          "website": "https://chamsys.co.uk",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyii00bld7di3hjkboao",
+          "name": "Robe Lighting",
+          "website": "https://www.robe.cz",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyii00bmd7di6zbphqq8",
+          "name": "Martin Professional",
+          "website": "https://www.martin.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyii00bnd7di819tmzwo",
+          "name": "Clay Paky",
+          "website": "https://www.claypaky.it",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyii00bod7di53uuth44",
+          "name": "Vari-Lite",
+          "website": "https://www.vari-lite.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyii00bpd7di4ljy7whs",
+          "name": "Ayrton",
+          "website": "https://www.ayrton.eu",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyii00bqd7dip0f3ha6l",
+          "name": "Aputure",
+          "website": "https://www.aputure.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyii00brd7di0owvryqg",
+          "name": "Litepanels",
+          "website": "https://www.litepanels.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyii00bsd7dicpu47dkm",
+          "name": "Kino Flo",
+          "website": "https://www.kinoflo.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyii00btd7di0k0pabkr",
+          "name": "Dedolight",
+          "website": "https://www.dedolight.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyii00bud7dilyc3e32g",
+          "name": "ARRI Lighting",
+          "website": "https://www.arri.com/lighting",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyii00bvd7diwcalidnv",
+          "name": "Astera",
+          "website": "https://www.astera-led.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyii00bwd7di0s3xj3gm",
+          "name": "Brompton Technology",
+          "website": "https://www.bromptontech.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyii00bxd7di231ek9cj",
+          "name": "Megapixel VR",
+          "website": "https://megapixelvr.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyii00byd7dilmjpufu9",
+          "name": "Novastar",
+          "website": "https://www.novastar.tech",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyii00bzd7di7w1vto5g",
+          "name": "ROE Visual",
+          "website": "https://www.roevisual.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyii00c0d7diyazwki6v",
+          "name": "Absen",
+          "website": "https://www.absen.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyii00c1d7disftuolxo",
+          "name": "Unilumin",
+          "website": "https://www.unilumin.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyii00c2d7dige9edkvl",
+          "name": "Schneider Electric / APC",
+          "website": "https://www.apc.com",
+          "logoUrl": "https://cdn.simpleicons.org/schneiderelectric",
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyij00c3d7dikljo3oel",
+          "name": "Eaton",
+          "website": "https://www.eaton.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyij00c4d7di2nconiz5",
+          "name": "Vertiv",
+          "website": "https://www.vertiv.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyij00c5d7di2frzhtyz",
+          "name": "Raritan",
+          "website": "https://www.raritan.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyij00c6d7di4747z4sr",
+          "name": "ServerTech",
+          "website": "https://www.servertech.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyij00c7d7di8crfc5dl",
+          "name": "SurgeX",
+          "website": "https://surgex.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyij00c8d7didr8ydz6d",
+          "name": "Furman",
+          "website": "https://www.furmanpower.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyij00c9d7dieg8urwyu",
+          "name": "Middle Atlantic",
+          "website": "https://www.middleatlantic.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyij00cad7diaaah9tf3",
+          "name": "Penn Elcom",
+          "website": "https://www.penn-elcom.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyij00cbd7di73w71zpe",
+          "name": "SKB Cases",
+          "website": "https://www.skbcases.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyij00ccd7diswr74w17",
+          "name": "Pelican",
+          "website": "https://www.pelican.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyij00cdd7dimeiwineq",
+          "name": "Neutrik",
+          "website": "https://www.neutrik.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyij00ced7dilppdb8v9",
+          "name": "Switchcraft",
+          "website": "https://www.switchcraft.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyij00cfd7di957hab98",
+          "name": "Belden",
+          "website": "https://www.belden.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyij00cgd7diam26kork",
+          "name": "Canare",
+          "website": "https://www.canare.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyij00chd7dii2ti0b3c",
+          "name": "Gepco",
+          "website": "https://www.gepco.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyij00cid7dip8a3h5lv",
+          "name": "Mogami",
+          "website": "https://mogamicable.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyij00cjd7dioj39gjjn",
+          "name": "Klotz",
+          "website": "https://www.klotz-ais.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyij00ckd7di42j90j6i",
+          "name": "Sommer Cable",
+          "website": "https://www.sommercable.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyij00cld7didc3udcle",
+          "name": "Cordial",
+          "website": "https://www.cordial.de",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyij00cmd7dijcnhjb4e",
+          "name": "Lapp Group",
+          "website": "https://www.lappgroup.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyij00cnd7digm9zs8d8",
+          "name": "Times Microwave",
+          "website": "https://www.timesmicrowave.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyij00cod7dimy2p1jkh",
+          "name": "Corning",
+          "website": "https://www.corning.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyij00cpd7dihg4094d5",
+          "name": "Sumitomo Electric",
+          "website": "https://global-sei.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyij00cqd7dijdosom5v",
+          "name": "Canford Audio",
+          "website": "https://www.canford.co.uk",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyij00crd7di3yz3967b",
+          "name": "Fischer Connectors",
+          "website": "https://www.fischerconnectors.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyij00csd7ditwt1oplq",
+          "name": "Lemo",
+          "website": "https://www.lemo.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyij00ctd7di2znpid5l",
+          "name": "Sachtler",
+          "website": "https://www.sachtler.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyij00cud7di0fyryo2f",
+          "name": "Vinten",
+          "website": "https://www.vinten.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyij00cvd7didfz34may",
+          "name": "O'Connor",
+          "website": "https://www.ocon.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyij00cwd7diaith8spa",
+          "name": "Miller",
+          "website": "https://www.millertripods.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyij00cxd7di045rqwdl",
+          "name": "Cartoni",
+          "website": "https://www.cartoni.com",
+          "logoUrl": null,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyij00cyd7dipc0a5jf4",
+          "name": "Manfrotto",
+          "website": "https://www.manfrotto.com",
+          "logoUrl": "https://cdn.simpleicons.org/manfrotto",
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyj600p2d7dii47vgxc2",
+          "name": "LAPP",
+          "website": null,
+          "logoUrl": null,
+          "isActive": true
+        }
+      ]
+    }
+  ]
+}

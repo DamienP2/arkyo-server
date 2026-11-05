@@ -1,0 +1,628 @@
+{
+  "family": "adapters",
+  "source": "arkyo@88b2e4b:app/api/supervisor/dev/seed-adapters/route.ts + scripts/seed-adapters.ts",
+  "tables": [
+    {
+      "table": "TenantAdapter",
+      "rows": [
+        {
+          "id": "cmw3kwyiv00l4d7di5zqrqwr1",
+          "name": "DB-25 → 8×XLR 3 (Tascam Out)",
+          "reference": "DB25-8XLRM-TASCAM",
+          "functionId": "cmw3kwyi00002d7diybobu4ks",
+          "inputs": [],
+          "outputs": [],
+          "notes": "Breakout Tascam pinout. 8 canaux analogiques ou 4 paires AES.",
+          "imageUrl": null,
+          "isActive": true,
+          "createdById": "system"
+        },
+        {
+          "id": "cmw3kwyiv00l5d7diu2rm473j",
+          "name": "DB-25 → 8×XLR 3 (Tascam In)",
+          "reference": "DB25-8XLRF-TASCAM",
+          "functionId": "cmw3kwyi00002d7diybobu4ks",
+          "inputs": [],
+          "outputs": [],
+          "notes": "Breakout Tascam pinout, retours.",
+          "imageUrl": null,
+          "isActive": true,
+          "createdById": "system"
+        },
+        {
+          "id": "cmw3kwyiv00l6d7diwxescbrj",
+          "name": "DB-25 → 8×Jack 6.35 TRS",
+          "reference": "DB25-8TRS",
+          "functionId": "cmw3kwyi00002d7diybobu4ks",
+          "inputs": [],
+          "outputs": [
+            {
+              "connectorTypeId": "cmw3kwyio00g3d7dihpex8k1u",
+              "gender": "MALE",
+              "quantity": 8,
+              "label": "Jack 6.35"
+            }
+          ],
+          "notes": "Breakout analogique 8 canaux Tascam vers Jack TRS.",
+          "imageUrl": null,
+          "isActive": true,
+          "createdById": "system"
+        },
+        {
+          "id": "cmw3kwyiv00l7d7di3pku04x4",
+          "name": "EDAC 90 → 24×XLR 3",
+          "reference": "EDAC90-24XLR",
+          "functionId": "cmw3kwyi00002d7diybobu4ks",
+          "inputs": [],
+          "outputs": [],
+          "notes": "Multipair touring 24 voies.",
+          "imageUrl": null,
+          "isActive": true,
+          "createdById": "system"
+        },
+        {
+          "id": "cmw3kwyiv00l8d7dij8j2ikog",
+          "name": "XLR 3 ↔ Jack 6.35 TRS",
+          "reference": "XLR3-TRS",
+          "functionId": "cmw3kwyi00002d7diybobu4ks",
+          "inputs": [],
+          "outputs": [
+            {
+              "connectorTypeId": "cmw3kwyio00g3d7dihpex8k1u",
+              "gender": "MALE",
+              "quantity": 1,
+              "label": "Jack 6.35"
+            }
+          ],
+          "notes": "Adaptateur audio symétrique XLR vers Jack 1/4\".",
+          "imageUrl": null,
+          "isActive": true,
+          "createdById": "system"
+        },
+        {
+          "id": "cmw3kwyiv00l9d7dimrxh0flz",
+          "name": "Mini XLR 3 ↔ XLR 3",
+          "reference": "TA3-XLR3",
+          "functionId": "cmw3kwyi00002d7diybobu4ks",
+          "inputs": [],
+          "outputs": [],
+          "notes": "Bodypack TA3 vers XLR standard.",
+          "imageUrl": null,
+          "isActive": true,
+          "createdById": "system"
+        },
+        {
+          "id": "cmw3kwyiv00lad7dixmexuj8t",
+          "name": "XLR 5 → 2×XLR 3 (intercom)",
+          "reference": "XLR5-2XLR3",
+          "functionId": "cmw3kwyi00009d7didttsy7id",
+          "inputs": [],
+          "outputs": [],
+          "notes": "Split intercom stéréo vers 2 mono (L+R).",
+          "imageUrl": null,
+          "isActive": true,
+          "createdById": "system"
+        },
+        {
+          "id": "cmw3kwyiv00lbd7dib2hyd1vz",
+          "name": "XLR 5 ↔ XLR 3 (DMX)",
+          "reference": "XLR5-XLR3-DMX",
+          "functionId": "cmw3kwyi00003d7diie87gkwn",
+          "inputs": [],
+          "outputs": [],
+          "notes": "Adaptateur DMX 5 broches ↔ 3 broches (non-standard mais courant).",
+          "imageUrl": null,
+          "isActive": true,
+          "createdById": "system"
+        },
+        {
+          "id": "cmw3kwyiv00lcd7di1g1n4r1q",
+          "name": "HDMI → SDI",
+          "reference": "HDMI-SDI-CONV",
+          "functionId": "cmw3kwyhz0001d7dirmf5fvaj",
+          "inputs": [
+            {
+              "connectorTypeId": "cmw3kwyin00epd7dikgw6vxb1",
+              "gender": "FEMALE",
+              "quantity": 1,
+              "label": "HDMI In"
+            }
+          ],
+          "outputs": [
+            {
+              "connectorTypeId": "cmw3kwyin00ecd7dikcs3byqv",
+              "gender": "FEMALE",
+              "quantity": 1,
+              "label": "SDI Out"
+            }
+          ],
+          "notes": "Convertisseur actif HDMI vers 3G-SDI.",
+          "imageUrl": null,
+          "isActive": true,
+          "createdById": "system"
+        },
+        {
+          "id": "cmw3kwyiv00ldd7dircip5s7f",
+          "name": "SDI → HDMI",
+          "reference": "SDI-HDMI-CONV",
+          "functionId": "cmw3kwyhz0001d7dirmf5fvaj",
+          "inputs": [
+            {
+              "connectorTypeId": "cmw3kwyin00ecd7dikcs3byqv",
+              "gender": "FEMALE",
+              "quantity": 1,
+              "label": "SDI In"
+            }
+          ],
+          "outputs": [
+            {
+              "connectorTypeId": "cmw3kwyin00epd7dikgw6vxb1",
+              "gender": "FEMALE",
+              "quantity": 1,
+              "label": "HDMI Out"
+            }
+          ],
+          "notes": "Convertisseur actif SDI vers HDMI.",
+          "imageUrl": null,
+          "isActive": true,
+          "createdById": "system"
+        },
+        {
+          "id": "cmw3kwyiv00led7di5j8pg94j",
+          "name": "Quad 3G-SDI → 12G-SDI",
+          "reference": "QUAD-12G-CONV",
+          "functionId": "cmw3kwyhz0001d7dirmf5fvaj",
+          "inputs": [
+            {
+              "connectorTypeId": "cmw3kwyin00ecd7dikcs3byqv",
+              "gender": "FEMALE",
+              "quantity": 4,
+              "label": "3G-SDI In"
+            }
+          ],
+          "outputs": [
+            {
+              "connectorTypeId": "cmw3kwyin00ecd7dikcs3byqv",
+              "gender": "FEMALE",
+              "quantity": 1,
+              "label": "12G-SDI Out"
+            }
+          ],
+          "notes": "Convertisseur 4×3G-SDI vers 1×12G-SDI.",
+          "imageUrl": null,
+          "isActive": true,
+          "createdById": "system"
+        },
+        {
+          "id": "cmw3kwyiv00lfd7di3mhqpjd4",
+          "name": "12G-SDI → Quad 3G-SDI",
+          "reference": "12G-QUAD-CONV",
+          "functionId": "cmw3kwyhz0001d7dirmf5fvaj",
+          "inputs": [
+            {
+              "connectorTypeId": "cmw3kwyin00ecd7dikcs3byqv",
+              "gender": "FEMALE",
+              "quantity": 1,
+              "label": "12G-SDI In"
+            }
+          ],
+          "outputs": [
+            {
+              "connectorTypeId": "cmw3kwyin00ecd7dikcs3byqv",
+              "gender": "FEMALE",
+              "quantity": 4,
+              "label": "3G-SDI Out"
+            }
+          ],
+          "notes": "Convertisseur 1×12G-SDI vers 4×3G-SDI.",
+          "imageUrl": null,
+          "isActive": true,
+          "createdById": "system"
+        },
+        {
+          "id": "cmw3kwyiv00lgd7diaxnwmkxe",
+          "name": "SDI ↔ Fibre LC (SFP)",
+          "reference": "SDI-FIBER-SFP",
+          "functionId": "cmw3kwyhz0001d7dirmf5fvaj",
+          "inputs": [
+            {
+              "connectorTypeId": "cmw3kwyin00ecd7dikcs3byqv",
+              "gender": "FEMALE",
+              "quantity": 1,
+              "label": "SDI"
+            }
+          ],
+          "outputs": [
+            {
+              "connectorTypeId": "cmw3kwyio00fed7didssyu6iz",
+              "gender": "NEUTRAL",
+              "quantity": 1,
+              "label": "Fibre LC"
+            }
+          ],
+          "notes": "Transceiver SDI/fibre bidirectionnel SFP.",
+          "imageUrl": null,
+          "isActive": true,
+          "createdById": "system"
+        },
+        {
+          "id": "cmw3kwyiv00lhd7di6fgzksq8",
+          "name": "opticalCON DUO → 2×LC",
+          "reference": "OPTICON-2LC",
+          "functionId": "cmw3kwyhz0001d7dirmf5fvaj",
+          "inputs": [
+            {
+              "connectorTypeId": "cmw3kwyio00fpd7diwtb7skqp",
+              "gender": "NEUTRAL",
+              "quantity": 1,
+              "label": "opticalCON"
+            }
+          ],
+          "outputs": [
+            {
+              "connectorTypeId": "cmw3kwyio00fed7didssyu6iz",
+              "gender": "NEUTRAL",
+              "quantity": 2,
+              "label": "LC Duplex"
+            }
+          ],
+          "notes": "Touring fibre vers panel rack LC.",
+          "imageUrl": null,
+          "isActive": true,
+          "createdById": "system"
+        },
+        {
+          "id": "cmw3kwyiv00lid7difsc5kf96",
+          "name": "DisplayPort → HDMI",
+          "reference": "DP-HDMI",
+          "functionId": "cmw3kwyhz0001d7dirmf5fvaj",
+          "inputs": [
+            {
+              "connectorTypeId": "cmw3kwyin00etd7dig30xsrj3",
+              "gender": "MALE",
+              "quantity": 1,
+              "label": "DisplayPort"
+            }
+          ],
+          "outputs": [
+            {
+              "connectorTypeId": "cmw3kwyin00epd7dikgw6vxb1",
+              "gender": "FEMALE",
+              "quantity": 1,
+              "label": "HDMI"
+            }
+          ],
+          "notes": "Adaptateur passif DP++ vers HDMI.",
+          "imageUrl": null,
+          "isActive": true,
+          "createdById": "system"
+        },
+        {
+          "id": "cmw3kwyiv00ljd7dis88g4isz",
+          "name": "USB-C → HDMI 4K",
+          "reference": "USBC-HDMI",
+          "functionId": "cmw3kwyhz0001d7dirmf5fvaj",
+          "inputs": [],
+          "outputs": [
+            {
+              "connectorTypeId": "cmw3kwyin00epd7dikgw6vxb1",
+              "gender": "FEMALE",
+              "quantity": 1,
+              "label": "HDMI"
+            }
+          ],
+          "notes": "DP Alt Mode USB-C vers HDMI 2.0.",
+          "imageUrl": null,
+          "isActive": true,
+          "createdById": "system"
+        },
+        {
+          "id": "cmw3kwyiv00lkd7dixyrjkg0f",
+          "name": "USB-C → DisplayPort",
+          "reference": "USBC-DP",
+          "functionId": "cmw3kwyhz0001d7dirmf5fvaj",
+          "inputs": [],
+          "outputs": [
+            {
+              "connectorTypeId": "cmw3kwyin00etd7dig30xsrj3",
+              "gender": "FEMALE",
+              "quantity": 1,
+              "label": "DP"
+            }
+          ],
+          "notes": "DP Alt Mode USB-C vers DisplayPort 1.4.",
+          "imageUrl": null,
+          "isActive": true,
+          "createdById": "system"
+        },
+        {
+          "id": "cmw3kwyiv00lld7dicpfwj8sz",
+          "name": "HDMI A ↔ HDMI C",
+          "reference": "HDMI-AC",
+          "functionId": "cmw3kwyhz0001d7dirmf5fvaj",
+          "inputs": [
+            {
+              "connectorTypeId": "cmw3kwyin00epd7dikgw6vxb1",
+              "gender": "FEMALE",
+              "quantity": 1,
+              "label": "HDMI A"
+            }
+          ],
+          "outputs": [
+            {
+              "connectorTypeId": "cmw3kwyin00epd7dikgw6vxb1",
+              "gender": "MALE",
+              "quantity": 1,
+              "label": "HDMI C"
+            }
+          ],
+          "notes": "Adaptateur HDMI plein vers mini-HDMI.",
+          "imageUrl": null,
+          "isActive": true,
+          "createdById": "system"
+        },
+        {
+          "id": "cmw3kwyiv00lmd7dikamoypv4",
+          "name": "DB-9 ↔ RJ45 (RS-422)",
+          "reference": "DB9-RJ45-422",
+          "functionId": "cmw3kwyi00004d7di1zo2nfss",
+          "inputs": [],
+          "outputs": [
+            {
+              "connectorTypeId": "cmw3kwyip00i2d7dijmjahsc5",
+              "gender": "MALE",
+              "quantity": 1,
+              "label": "RJ45"
+            }
+          ],
+          "notes": "Adaptateur machine control VTR/serveur RS-422.",
+          "imageUrl": null,
+          "isActive": true,
+          "createdById": "system"
+        },
+        {
+          "id": "cmw3kwyiv00lnd7dircsbk85e",
+          "name": "USB-A → USB-C",
+          "reference": "USBA-USBC",
+          "functionId": "cmw3kwyi00006d7dif63rdu92",
+          "inputs": [],
+          "outputs": [],
+          "notes": "Adaptateur USB 3.x.",
+          "imageUrl": null,
+          "isActive": true,
+          "createdById": "system"
+        },
+        {
+          "id": "cmw3kwyiv00lod7digl9ng715",
+          "name": "QSFP+ → 4×SFP+ (breakout)",
+          "reference": "QSFP-4SFP",
+          "functionId": "cmw3kwyi00006d7dif63rdu92",
+          "inputs": [
+            {
+              "connectorTypeId": "cmw3kwyip00igd7dik7riaqzx",
+              "gender": "NEUTRAL",
+              "quantity": 1,
+              "label": "QSFP+"
+            }
+          ],
+          "outputs": [
+            {
+              "connectorTypeId": "cmw3kwyip00ied7dihstrr4jx",
+              "gender": "NEUTRAL",
+              "quantity": 4,
+              "label": "SFP+"
+            }
+          ],
+          "notes": "Câble breakout 40G vers 4×10G ou DAC actif.",
+          "imageUrl": null,
+          "isActive": true,
+          "createdById": "system"
+        },
+        {
+          "id": "cmw3kwyiv00lpd7didb12sgrl",
+          "name": "QSFP28 → 4×SFP28 (breakout)",
+          "reference": "QSFP28-4SFP28",
+          "functionId": "cmw3kwyi00006d7dif63rdu92",
+          "inputs": [
+            {
+              "connectorTypeId": "cmw3kwyip00igd7dik7riaqzx",
+              "gender": "NEUTRAL",
+              "quantity": 1,
+              "label": "QSFP28"
+            }
+          ],
+          "outputs": [
+            {
+              "connectorTypeId": "cmw3kwyip00ied7dihstrr4jx",
+              "gender": "NEUTRAL",
+              "quantity": 4,
+              "label": "SFP28"
+            }
+          ],
+          "notes": "Câble breakout 100G vers 4×25G.",
+          "imageUrl": null,
+          "isActive": true,
+          "createdById": "system"
+        },
+        {
+          "id": "cmw3kwyiv00lqd7diygdb0pfm",
+          "name": "powerCON → IEC C13",
+          "reference": "PCON-IEC",
+          "functionId": "cmw3kwyi00005d7ditbl9u4o5",
+          "inputs": [
+            {
+              "connectorTypeId": "cmw3kwyip00hyd7dioyjno5sl",
+              "gender": "MALE",
+              "quantity": 1,
+              "label": "powerCON"
+            }
+          ],
+          "outputs": [],
+          "notes": "Adaptateur secteur powerCON bleu vers IEC standard.",
+          "imageUrl": null,
+          "isActive": true,
+          "createdById": "system"
+        },
+        {
+          "id": "cmw3kwyiv00lrd7di9oh95ysk",
+          "name": "powerCON TRUE1 → IEC C13",
+          "reference": "PCONT1-IEC",
+          "functionId": "cmw3kwyi00005d7ditbl9u4o5",
+          "inputs": [
+            {
+              "connectorTypeId": "cmw3kwyip00hyd7dioyjno5sl",
+              "gender": "MALE",
+              "quantity": 1,
+              "label": "TRUE1"
+            }
+          ],
+          "outputs": [],
+          "notes": "Touring powerCON TRUE1 vers prise IEC standard.",
+          "imageUrl": null,
+          "isActive": true,
+          "createdById": "system"
+        },
+        {
+          "id": "cmw3kwyiv00lsd7digfiqst6o",
+          "name": "Schuko → IEC C13",
+          "reference": "SCHUKO-IEC",
+          "functionId": "cmw3kwyi00005d7ditbl9u4o5",
+          "inputs": [
+            {
+              "connectorTypeId": "cmw3kwyip00hid7dim32ifcmy",
+              "gender": "MALE",
+              "quantity": 1,
+              "label": "Schuko"
+            }
+          ],
+          "outputs": [],
+          "notes": "Cordon prise française/Schuko vers IEC.",
+          "imageUrl": null,
+          "isActive": true,
+          "createdById": "system"
+        },
+        {
+          "id": "cmw3kwyiv00ltd7di6q46of5p",
+          "name": "CEE 32A Tri → 3×CEE 16A Mono",
+          "reference": "CEE32T-3x16M",
+          "functionId": "cmw3kwyi00005d7ditbl9u4o5",
+          "inputs": [],
+          "outputs": [],
+          "notes": "Distribution triphasé vers 3 monophasés.",
+          "imageUrl": null,
+          "isActive": true,
+          "createdById": "system"
+        },
+        {
+          "id": "cmw3kwyiw00lud7dijkl52qee",
+          "name": "CEE 63A Tri → 3×CEE 32A Mono",
+          "reference": "CEE63T-3x32M",
+          "functionId": "cmw3kwyi00005d7ditbl9u4o5",
+          "inputs": [],
+          "outputs": [],
+          "notes": "Distribution triphasé 63A vers 3 monophasés 32A.",
+          "imageUrl": null,
+          "isActive": true,
+          "createdById": "system"
+        },
+        {
+          "id": "cmw3kwyiw00lvd7diq5xnmqkq",
+          "name": "Socapex → 6×powerCON",
+          "reference": "SOCA-6PCON",
+          "functionId": "cmw3kwyi00005d7ditbl9u4o5",
+          "inputs": [
+            {
+              "connectorTypeId": "cmw3kwyip00hod7didzdxna0u",
+              "gender": "MALE",
+              "quantity": 1,
+              "label": "Socapex"
+            }
+          ],
+          "outputs": [
+            {
+              "connectorTypeId": "cmw3kwyip00hyd7dioyjno5sl",
+              "gender": "FEMALE",
+              "quantity": 6,
+              "label": "powerCON"
+            }
+          ],
+          "notes": "Distribution Socapex 19 broches vers 6 circuits powerCON.",
+          "imageUrl": null,
+          "isActive": true,
+          "createdById": "system"
+        },
+        {
+          "id": "cmw3kwyiw00lwd7dijnsm5hkd",
+          "name": "Socapex → 6×Schuko",
+          "reference": "SOCA-6SCHUKO",
+          "functionId": "cmw3kwyi00005d7ditbl9u4o5",
+          "inputs": [
+            {
+              "connectorTypeId": "cmw3kwyip00hod7didzdxna0u",
+              "gender": "MALE",
+              "quantity": 1,
+              "label": "Socapex"
+            }
+          ],
+          "outputs": [
+            {
+              "connectorTypeId": "cmw3kwyip00hid7dim32ifcmy",
+              "gender": "FEMALE",
+              "quantity": 6,
+              "label": "Schuko"
+            }
+          ],
+          "notes": "Distribution Socapex vers 6 prises Schuko.",
+          "imageUrl": null,
+          "isActive": true,
+          "createdById": "system"
+        },
+        {
+          "id": "cmw3kwyiw00lxd7di58zux87c",
+          "name": "BNC 50Ω → SMA",
+          "reference": "BNC50-SMA",
+          "functionId": "cmw3kwyi00008d7dihb1bpim8",
+          "inputs": [
+            {
+              "connectorTypeId": "cmw3kwyin00ecd7dikcs3byqv",
+              "gender": "FEMALE",
+              "quantity": 1,
+              "label": "BNC 50Ω"
+            }
+          ],
+          "outputs": [
+            {
+              "connectorTypeId": "cmw3kwyio00f5d7dii9mta3ig",
+              "gender": "MALE",
+              "quantity": 1,
+              "label": "SMA"
+            }
+          ],
+          "notes": "Adaptateur antenne RF BNC vers SMA.",
+          "imageUrl": null,
+          "isActive": true,
+          "createdById": "system"
+        },
+        {
+          "id": "cmw3kwyiw00lyd7di959vsrq2",
+          "name": "N-Type → BNC 50Ω",
+          "reference": "N-BNC50",
+          "functionId": "cmw3kwyi00008d7dihb1bpim8",
+          "inputs": [],
+          "outputs": [
+            {
+              "connectorTypeId": "cmw3kwyin00ecd7dikcs3byqv",
+              "gender": "MALE",
+              "quantity": 1,
+              "label": "BNC 50Ω"
+            }
+          ],
+          "notes": "Adaptateur antenne haute puissance.",
+          "imageUrl": null,
+          "isActive": true,
+          "createdById": "system"
+        }
+      ]
+    }
+  ]
+}

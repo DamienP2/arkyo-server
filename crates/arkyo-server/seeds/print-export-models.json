@@ -1,0 +1,14 @@
+{
+  "family": "print-export-models",
+  "source": "arkyo@88b2e4b:aucun seed dans arkyo (modèles créés depuis le superviseur)",
+  "tables": [
+    {
+      "table": "TenantPrintExportModel",
+      "rows": []
+    },
+    {
+      "table": "TenantPrintExportPage",
+      "rows": []
+    }
+  ]
+}

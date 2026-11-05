@@ -1,0 +1,497 @@
+{
+  "family": "dimensions",
+  "source": "arkyo@88b2e4b:app/api/supervisor/dev/seed-dimensions/route.ts",
+  "tables": [
+    {
+      "table": "TenantDimensionPreset",
+      "rows": [
+        {
+          "id": "cmw3kwyj100ngd7dib9im6ja9",
+          "category": "RACK_U",
+          "value": 1,
+          "unit": "U",
+          "isReel": false,
+          "sortOrder": 1,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyj100nhd7dinkzv7jpe",
+          "category": "RACK_U",
+          "value": 2,
+          "unit": "U",
+          "isReel": false,
+          "sortOrder": 2,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyj100nid7dig3k1i5zy",
+          "category": "RACK_U",
+          "value": 3,
+          "unit": "U",
+          "isReel": false,
+          "sortOrder": 3,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyj100njd7dizg4geamc",
+          "category": "RACK_U",
+          "value": 4,
+          "unit": "U",
+          "isReel": false,
+          "sortOrder": 4,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyj100nkd7dixdr08yuz",
+          "category": "RACK_U",
+          "value": 6,
+          "unit": "U",
+          "isReel": false,
+          "sortOrder": 5,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyj100nld7diloijh0ys",
+          "category": "RACK_U",
+          "value": 9,
+          "unit": "U",
+          "isReel": false,
+          "sortOrder": 6,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyj100nmd7diq9kz74pi",
+          "category": "RACK_U",
+          "value": 12,
+          "unit": "U",
+          "isReel": false,
+          "sortOrder": 7,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyj100nnd7diatkx8f6q",
+          "category": "RACK_U",
+          "value": 16,
+          "unit": "U",
+          "isReel": false,
+          "sortOrder": 8,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyj100nod7dibzmpypvf",
+          "category": "RACK_U",
+          "value": 22,
+          "unit": "U",
+          "isReel": false,
+          "sortOrder": 9,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyj100npd7di8hq2vn1l",
+          "category": "RACK_U",
+          "value": 27,
+          "unit": "U",
+          "isReel": false,
+          "sortOrder": 10,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyj100nqd7diwszgn5j1",
+          "category": "RACK_U",
+          "value": 32,
+          "unit": "U",
+          "isReel": false,
+          "sortOrder": 11,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyj100nrd7di2onla1p2",
+          "category": "RACK_U",
+          "value": 36,
+          "unit": "U",
+          "isReel": false,
+          "sortOrder": 12,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyj100nsd7di72xaq31c",
+          "category": "RACK_U",
+          "value": 42,
+          "unit": "U",
+          "isReel": false,
+          "sortOrder": 13,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyj100ntd7dixgv5d165",
+          "category": "RACK_U",
+          "value": 47,
+          "unit": "U",
+          "isReel": false,
+          "sortOrder": 14,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyj100nud7dir6ru7vj2",
+          "category": "RACK_WIDTH",
+          "value": 10,
+          "unit": "INCH",
+          "isReel": false,
+          "sortOrder": 1,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyj100nvd7dighrxtk6s",
+          "category": "RACK_WIDTH",
+          "value": 19,
+          "unit": "INCH",
+          "isReel": false,
+          "sortOrder": 2,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyj100nwd7divpokqqpz",
+          "category": "RACK_WIDTH",
+          "value": 21,
+          "unit": "INCH",
+          "isReel": false,
+          "sortOrder": 3,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyj100nxd7didynu4na9",
+          "category": "RACK_WIDTH",
+          "value": 23,
+          "unit": "INCH",
+          "isReel": false,
+          "sortOrder": 4,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyj100nyd7di7v637exf",
+          "category": "RACK_DEPTH",
+          "value": 400,
+          "unit": "MM",
+          "isReel": false,
+          "sortOrder": 1,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyj200nzd7dio8yam47z",
+          "category": "RACK_DEPTH",
+          "value": 500,
+          "unit": "MM",
+          "isReel": false,
+          "sortOrder": 2,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyj200o0d7didq878bf8",
+          "category": "RACK_DEPTH",
+          "value": 600,
+          "unit": "MM",
+          "isReel": false,
+          "sortOrder": 3,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyj200o1d7diuqesy5gk",
+          "category": "RACK_DEPTH",
+          "value": 700,
+          "unit": "MM",
+          "isReel": false,
+          "sortOrder": 4,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyj200o2d7dii2l3k6u8",
+          "category": "RACK_DEPTH",
+          "value": 800,
+          "unit": "MM",
+          "isReel": false,
+          "sortOrder": 5,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyj200o3d7dibfqlon1p",
+          "category": "RACK_DEPTH",
+          "value": 900,
+          "unit": "MM",
+          "isReel": false,
+          "sortOrder": 6,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyj200o4d7diqffgtxgh",
+          "category": "RACK_DEPTH",
+          "value": 1000,
+          "unit": "MM",
+          "isReel": false,
+          "sortOrder": 7,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyj200o5d7difi3qu9h5",
+          "category": "RACK_DEPTH",
+          "value": 1200,
+          "unit": "MM",
+          "isReel": false,
+          "sortOrder": 8,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyj200o6d7di7xuuqou5",
+          "category": "CABLE_SAFETY_DEPTH",
+          "value": 50,
+          "unit": "MM",
+          "isReel": false,
+          "sortOrder": 1,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyj200o7d7difjycdnzz",
+          "category": "CABLE_SAFETY_DEPTH",
+          "value": 80,
+          "unit": "MM",
+          "isReel": false,
+          "sortOrder": 2,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyj200o8d7di8vhyd23i",
+          "category": "CABLE_SAFETY_DEPTH",
+          "value": 120,
+          "unit": "MM",
+          "isReel": false,
+          "sortOrder": 3,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyj200o9d7dihhux71gm",
+          "category": "CABLE_SAFETY_DEPTH",
+          "value": 150,
+          "unit": "MM",
+          "isReel": false,
+          "sortOrder": 4,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyj200oad7dih00f41lf",
+          "category": "CABLE_SAFETY_DEPTH",
+          "value": 200,
+          "unit": "MM",
+          "isReel": false,
+          "sortOrder": 5,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyj200obd7diewdwd0ay",
+          "category": "CABLE_LENGTH",
+          "value": 0.5,
+          "unit": "M",
+          "isReel": false,
+          "sortOrder": 1,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyj200ocd7di2stignsx",
+          "category": "CABLE_LENGTH",
+          "value": 1,
+          "unit": "M",
+          "isReel": false,
+          "sortOrder": 2,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyj200odd7di3612120w",
+          "category": "CABLE_LENGTH",
+          "value": 2,
+          "unit": "M",
+          "isReel": false,
+          "sortOrder": 3,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyj200oed7divqqqaqfp",
+          "category": "CABLE_LENGTH",
+          "value": 3,
+          "unit": "M",
+          "isReel": false,
+          "sortOrder": 4,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyj200ofd7di72q7wzoi",
+          "category": "CABLE_LENGTH",
+          "value": 5,
+          "unit": "M",
+          "isReel": false,
+          "sortOrder": 5,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyj200ogd7diel68efpq",
+          "category": "CABLE_LENGTH",
+          "value": 7.5,
+          "unit": "M",
+          "isReel": false,
+          "sortOrder": 6,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyj200ohd7dif6r8fbzr",
+          "category": "CABLE_LENGTH",
+          "value": 10,
+          "unit": "M",
+          "isReel": false,
+          "sortOrder": 7,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyj200oid7di97leuq84",
+          "category": "CABLE_LENGTH",
+          "value": 15,
+          "unit": "M",
+          "isReel": false,
+          "sortOrder": 8,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyj200ojd7dib55t54f5",
+          "category": "CABLE_LENGTH",
+          "value": 20,
+          "unit": "M",
+          "isReel": false,
+          "sortOrder": 9,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyj200okd7diwpkgrcrc",
+          "category": "CABLE_LENGTH",
+          "value": 25,
+          "unit": "M",
+          "isReel": false,
+          "sortOrder": 10,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyj200old7dim28v018x",
+          "category": "CABLE_LENGTH",
+          "value": 30,
+          "unit": "M",
+          "isReel": false,
+          "sortOrder": 11,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyj200omd7di6wa3ey1n",
+          "category": "CABLE_LENGTH",
+          "value": 50,
+          "unit": "M",
+          "isReel": false,
+          "sortOrder": 12,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyj200ond7di1zme5qtz",
+          "category": "CABLE_LENGTH",
+          "value": 75,
+          "unit": "M",
+          "isReel": false,
+          "sortOrder": 13,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyj200ood7diylls68a8",
+          "category": "CABLE_LENGTH",
+          "value": 100,
+          "unit": "M",
+          "isReel": false,
+          "sortOrder": 14,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyj200opd7diirakw4wi",
+          "category": "CABLE_LENGTH",
+          "value": 150,
+          "unit": "M",
+          "isReel": false,
+          "sortOrder": 15,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyj200oqd7di2tgmt19a",
+          "category": "CABLE_LENGTH",
+          "value": 200,
+          "unit": "M",
+          "isReel": false,
+          "sortOrder": 16,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyj200ord7dixceb1udm",
+          "category": "CABLE_LENGTH",
+          "value": 300,
+          "unit": "M",
+          "isReel": false,
+          "sortOrder": 17,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyj200osd7diqxpjagro",
+          "category": "CABLE_LENGTH",
+          "value": 500,
+          "unit": "M",
+          "isReel": false,
+          "sortOrder": 18,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyj200otd7ditoeip4hr",
+          "category": "BEND_RADIUS",
+          "value": 25,
+          "unit": "MM",
+          "isReel": false,
+          "sortOrder": 1,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyj200oud7div5xq7o1y",
+          "category": "BEND_RADIUS",
+          "value": 50,
+          "unit": "MM",
+          "isReel": false,
+          "sortOrder": 2,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyj200ovd7dix4kobqz6",
+          "category": "BEND_RADIUS",
+          "value": 75,
+          "unit": "MM",
+          "isReel": false,
+          "sortOrder": 3,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyj200owd7ditb9auemv",
+          "category": "BEND_RADIUS",
+          "value": 100,
+          "unit": "MM",
+          "isReel": false,
+          "sortOrder": 4,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyj200oxd7dil078vxvc",
+          "category": "BEND_RADIUS",
+          "value": 150,
+          "unit": "MM",
+          "isReel": false,
+          "sortOrder": 5,
+          "isActive": true
+        }
+      ]
+    }
+  ]
+}

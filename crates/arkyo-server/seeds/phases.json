@@ -1,0 +1,81 @@
+{
+  "family": "phases",
+  "source": "arkyo@88b2e4b:app/api/supervisor/dev/seed-phases/route.ts",
+  "tables": [
+    {
+      "table": "TenantPhase",
+      "rows": [
+        {
+          "id": "cmw3kwyi3000cd7dis6j3jdj8",
+          "key": "ACQUISITION",
+          "label": "Acquisition",
+          "sortOrder": 1,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyi3000dd7dizlkdng4q",
+          "key": "PRODUCTION",
+          "label": "Production",
+          "sortOrder": 2,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyi3000ed7di3cdakpef",
+          "key": "POSTPROD",
+          "label": "Post-production",
+          "sortOrder": 3,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyi3000fd7dizn80zzk2",
+          "key": "CONTRIBUTION",
+          "label": "Contribution",
+          "sortOrder": 4,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyi3000gd7dim5qaafsi",
+          "key": "DISTRIBUTION",
+          "label": "Distribution",
+          "sortOrder": 5,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyi3000hd7diothpmuce",
+          "key": "CONVERSION",
+          "label": "Conversion",
+          "sortOrder": 6,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyi3000id7di83ui16y3",
+          "key": "MONITORING",
+          "label": "Monitoring",
+          "sortOrder": 7,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyi3000jd7di5lqwq5qo",
+          "key": "STOCKAGE",
+          "label": "Stockage",
+          "sortOrder": 8,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyi3000kd7dimdluy9m0",
+          "key": "INFRASTRUCTURE",
+          "label": "Infrastructure",
+          "sortOrder": 9,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyi3000ld7div9p0pv8r",
+          "key": "AUTRE",
+          "label": "Autre",
+          "sortOrder": 10,
+          "isActive": true
+        }
+      ]
+    }
+  ]
+}

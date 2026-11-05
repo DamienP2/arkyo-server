@@ -1,4 +1,5 @@
-//! SQLite database: connection options, migrations and built-in role seed.
+//! SQLite database: connection options, migrations, built-in roles and the
+//! starting referentials ([`crate::seeds`]).
 
 use std::path::Path;
 use std::time::Duration;
@@ -10,7 +11,8 @@ use sqlx::SqlitePool;
 
 use crate::ids::{new_id, now_iso};
 
-/// Opens (creating if needed) `<data_dir>/arkyo.db`, migrates it and seeds the built-in roles.
+/// Opens (creating if needed) `<data_dir>/arkyo.db`, migrates it, seeds the
+/// built-in roles and the referentials never seeded yet.
 ///
 /// Migrations already applied by a newer version are ignored: after a rollback
 /// (or the install of an older package) this binary must still open the base.
@@ -37,6 +39,8 @@ pub async fn open(data_dir: &Path) -> anyhow::Result<SqlitePool> {
     migrator.set_ignore_missing(true);
     migrator.run(&pool).await.with_context(ctx)?;
     seed_builtin_roles(&pool).await.with_context(ctx)?;
+    let mode = crate::seeds::startup_mode(&pool).await.with_context(ctx)?;
+    crate::seeds::apply(&pool, mode).await.with_context(ctx)?;
     Ok(pool)
 }
 

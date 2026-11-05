@@ -76,10 +76,11 @@ async fn two_pools_can_write_concurrently() {
         }
     }
     tokio::join!(fill(a.clone(), "a"), fill(b, "b"));
-    let n: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM AppConfig")
-        .fetch_one(&a)
-        .await
-        .unwrap();
+    let n: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM AppConfig WHERE key LIKE 'a-%' OR key LIKE 'b-%'")
+            .fetch_one(&a)
+            .await
+            .unwrap();
     assert_eq!(n, 100);
 }
 

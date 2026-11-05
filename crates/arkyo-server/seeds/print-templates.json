@@ -1,0 +1,722 @@
+{
+  "family": "print-templates",
+  "source": "arkyo@88b2e4b:app/api/supervisor/dev/seed-print-templates/route.ts",
+  "tables": [
+    {
+      "table": "TenantPrintTemplate",
+      "rows": [
+        {
+          "id": "cmw3kwyj400oyd7di1fmtkqdc",
+          "key": "STANDARD",
+          "name": "Standard",
+          "description": "Cartouche classique avec logo, titre, projet, date et n° de plan.",
+          "paperFormat": "A3",
+          "orientation": "LANDSCAPE",
+          "slots": [
+            {
+              "key": "LOGO",
+              "label": "Logo client",
+              "type": "LOGO",
+              "defaultValue": "{client.logo}"
+            },
+            {
+              "key": "TITLE",
+              "label": "Titre",
+              "type": "VARIABLE",
+              "defaultValue": "{rack.name}"
+            },
+            {
+              "key": "PROJECT_NAME",
+              "label": "Projet",
+              "type": "VARIABLE",
+              "defaultValue": "{projet.nom}"
+            },
+            {
+              "key": "CLIENT_NAME",
+              "label": "Client",
+              "type": "VARIABLE",
+              "defaultValue": "{client.nom}"
+            },
+            {
+              "key": "DATE",
+              "label": "Date",
+              "type": "VARIABLE",
+              "defaultValue": "{date.iso}"
+            },
+            {
+              "key": "PLAN_NUMBER",
+              "label": "N° de plan",
+              "type": "VARIABLE",
+              "defaultValue": "{rack.position}"
+            },
+            {
+              "key": "AUTHOR",
+              "label": "Auteur",
+              "type": "VARIABLE",
+              "defaultValue": "{user.fullName}"
+            },
+            {
+              "key": "VERSION",
+              "label": "Version",
+              "type": "TEXT",
+              "defaultValue": "v1.0"
+            }
+          ],
+          "layout": {
+            "version": 1,
+            "gridSize": 5,
+            "elements": [
+              {
+                "id": "STD-border",
+                "type": "RECT",
+                "x": 245,
+                "y": 227,
+                "w": 160,
+                "h": 55,
+                "fill": "transparent",
+                "stroke": "#0f172a",
+                "strokeWidth": 0.4,
+                "rx": 1
+              },
+              {
+                "id": "STD-logo",
+                "type": "IMAGE",
+                "x": 250,
+                "y": 232,
+                "w": 30,
+                "h": 20,
+                "url": "{client.logo}",
+                "isVariable": true
+              },
+              {
+                "id": "STD-title",
+                "type": "TEXT",
+                "x": 285,
+                "y": 234,
+                "w": 115,
+                "h": 10,
+                "text": "{rack.name}",
+                "fontSize": 12,
+                "fontWeight": "bold",
+                "isVariable": true,
+                "color": "#0f172a"
+              },
+              {
+                "id": "STD-project",
+                "type": "TEXT",
+                "x": 285,
+                "y": 244,
+                "w": 115,
+                "h": 6,
+                "text": "{projet.nom}",
+                "fontSize": 7,
+                "color": "#475569",
+                "isVariable": true
+              },
+              {
+                "id": "STD-sep",
+                "type": "LINE",
+                "x1": 250,
+                "y1": 255,
+                "x2": 400,
+                "y2": 255,
+                "stroke": "#cbd5e1",
+                "strokeWidth": 0.3
+              },
+              {
+                "id": "STD-lbl-cli",
+                "type": "TEXT",
+                "x": 250,
+                "y": 260,
+                "w": 30,
+                "h": 4,
+                "text": "CLIENT",
+                "fontSize": 5,
+                "fontWeight": "bold",
+                "color": "#94a3b8"
+              },
+              {
+                "id": "STD-val-cli",
+                "type": "TEXT",
+                "x": 250,
+                "y": 264,
+                "w": 75,
+                "h": 5,
+                "text": "{client.nom}",
+                "fontSize": 7,
+                "isVariable": true,
+                "color": "#0f172a"
+              },
+              {
+                "id": "STD-lbl-dat",
+                "type": "TEXT",
+                "x": 325,
+                "y": 260,
+                "w": 30,
+                "h": 4,
+                "text": "DATE",
+                "fontSize": 5,
+                "fontWeight": "bold",
+                "color": "#94a3b8"
+              },
+              {
+                "id": "STD-val-dat",
+                "type": "TEXT",
+                "x": 325,
+                "y": 264,
+                "w": 50,
+                "h": 5,
+                "text": "{date.iso}",
+                "fontSize": 7,
+                "isVariable": true,
+                "color": "#0f172a"
+              },
+              {
+                "id": "STD-lbl-pln",
+                "type": "TEXT",
+                "x": 250,
+                "y": 270,
+                "w": 30,
+                "h": 4,
+                "text": "N° PLAN",
+                "fontSize": 5,
+                "fontWeight": "bold",
+                "color": "#94a3b8"
+              },
+              {
+                "id": "STD-val-pln",
+                "type": "TEXT",
+                "x": 250,
+                "y": 274,
+                "w": 50,
+                "h": 5,
+                "text": "{rack.position}",
+                "fontSize": 7,
+                "isVariable": true,
+                "color": "#0f172a"
+              },
+              {
+                "id": "STD-lbl-aut",
+                "type": "TEXT",
+                "x": 325,
+                "y": 270,
+                "w": 30,
+                "h": 4,
+                "text": "AUTEUR",
+                "fontSize": 5,
+                "fontWeight": "bold",
+                "color": "#94a3b8"
+              },
+              {
+                "id": "STD-val-aut",
+                "type": "TEXT",
+                "x": 325,
+                "y": 274,
+                "w": 75,
+                "h": 5,
+                "text": "{user.fullName}",
+                "fontSize": 7,
+                "isVariable": true,
+                "color": "#0f172a"
+              }
+            ]
+          },
+          "sortOrder": 1,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyj400ozd7diabk1rx0x",
+          "key": "COMPACT",
+          "name": "Compact",
+          "description": "Cartouche minimaliste avec titre, date et version uniquement.",
+          "paperFormat": "A4",
+          "orientation": "LANDSCAPE",
+          "slots": [
+            {
+              "key": "TITLE",
+              "label": "Titre",
+              "type": "VARIABLE",
+              "defaultValue": "{rack.name}"
+            },
+            {
+              "key": "DATE",
+              "label": "Date",
+              "type": "VARIABLE",
+              "defaultValue": "{date.iso}"
+            },
+            {
+              "key": "VERSION",
+              "label": "Version",
+              "type": "TEXT",
+              "defaultValue": "v1.0"
+            }
+          ],
+          "layout": {
+            "version": 1,
+            "gridSize": 5,
+            "elements": [
+              {
+                "id": "CMP-line",
+                "type": "LINE",
+                "x1": 15,
+                "y1": 190,
+                "x2": 282,
+                "y2": 190,
+                "stroke": "#0f172a",
+                "strokeWidth": 0.4
+              },
+              {
+                "id": "CMP-title",
+                "type": "TEXT",
+                "x": 15,
+                "y": 195,
+                "w": 180,
+                "h": 8,
+                "text": "{rack.name}",
+                "fontSize": 10,
+                "fontWeight": "bold",
+                "isVariable": true,
+                "color": "#0f172a"
+              },
+              {
+                "id": "CMP-date",
+                "type": "TEXT",
+                "x": 200,
+                "y": 195,
+                "w": 40,
+                "h": 8,
+                "text": "{date.iso}",
+                "fontSize": 8,
+                "align": "center",
+                "isVariable": true,
+                "color": "#475569"
+              },
+              {
+                "id": "CMP-ver",
+                "type": "TEXT",
+                "x": 245,
+                "y": 195,
+                "w": 37,
+                "h": 8,
+                "text": "v1.0",
+                "fontSize": 8,
+                "align": "right",
+                "color": "#475569"
+              }
+            ]
+          },
+          "sortOrder": 2,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyj400p0d7dikwmujk9r",
+          "key": "DETAILED",
+          "name": "Détaillé",
+          "description": "Cartouche complet avec révisions, validations, normes et signatures.",
+          "paperFormat": "A2",
+          "orientation": "LANDSCAPE",
+          "slots": [
+            {
+              "key": "LOGO",
+              "label": "Logo client",
+              "type": "LOGO",
+              "defaultValue": "{client.logo}"
+            },
+            {
+              "key": "TITLE",
+              "label": "Titre",
+              "type": "VARIABLE",
+              "defaultValue": "{rack.name}"
+            },
+            {
+              "key": "PROJECT_NAME",
+              "label": "Projet",
+              "type": "VARIABLE",
+              "defaultValue": "{projet.nom}"
+            },
+            {
+              "key": "PROJECT_REF",
+              "label": "Réf. projet",
+              "type": "VARIABLE",
+              "defaultValue": "{projet.reference}"
+            },
+            {
+              "key": "CLIENT_NAME",
+              "label": "Client",
+              "type": "VARIABLE",
+              "defaultValue": "{client.nom}"
+            },
+            {
+              "key": "CLIENT_ADDRESS",
+              "label": "Adresse client",
+              "type": "VARIABLE",
+              "defaultValue": "{client.adresse}"
+            },
+            {
+              "key": "DATE",
+              "label": "Date",
+              "type": "VARIABLE",
+              "defaultValue": "{date.iso}"
+            },
+            {
+              "key": "PLAN_NUMBER",
+              "label": "N° de plan",
+              "type": "VARIABLE",
+              "defaultValue": "{rack.position}"
+            },
+            {
+              "key": "PLAN_TOTAL",
+              "label": "Total plans",
+              "type": "VARIABLE",
+              "defaultValue": "{projet.rackCount}"
+            },
+            {
+              "key": "AUTHOR",
+              "label": "Auteur",
+              "type": "VARIABLE",
+              "defaultValue": "{user.fullName}"
+            },
+            {
+              "key": "REVIEWER",
+              "label": "Validé par",
+              "type": "TEXT"
+            },
+            {
+              "key": "VERSION",
+              "label": "Version",
+              "type": "TEXT",
+              "defaultValue": "v1.0"
+            },
+            {
+              "key": "NORMS",
+              "label": "Normes",
+              "type": "TEXT",
+              "defaultValue": "EIA-310-D · IEC 60297"
+            },
+            {
+              "key": "NOTES",
+              "label": "Notes",
+              "type": "TEXT"
+            }
+          ],
+          "layout": {
+            "version": 1,
+            "gridSize": 5,
+            "elements": [
+              {
+                "id": "DET-border",
+                "type": "RECT",
+                "x": 339,
+                "y": 305,
+                "w": 240,
+                "h": 100,
+                "fill": "transparent",
+                "stroke": "#0f172a",
+                "strokeWidth": 0.5,
+                "rx": 1
+              },
+              {
+                "id": "DET-header-bg",
+                "type": "RECT",
+                "x": 339,
+                "y": 305,
+                "w": 240,
+                "h": 28,
+                "fill": "#0f172a",
+                "stroke": "transparent",
+                "strokeWidth": 0
+              },
+              {
+                "id": "DET-logo",
+                "type": "IMAGE",
+                "x": 344,
+                "y": 309,
+                "w": 36,
+                "h": 20,
+                "url": "{client.logo}",
+                "isVariable": true
+              },
+              {
+                "id": "DET-title",
+                "type": "TEXT",
+                "x": 385,
+                "y": 311,
+                "w": 190,
+                "h": 12,
+                "text": "{rack.name}",
+                "fontSize": 14,
+                "fontWeight": "bold",
+                "color": "#ffffff",
+                "isVariable": true
+              },
+              {
+                "id": "DET-subtitle",
+                "type": "TEXT",
+                "x": 385,
+                "y": 323,
+                "w": 190,
+                "h": 6,
+                "text": "{projet.nom}",
+                "fontSize": 8,
+                "color": "#cbd5e1",
+                "isVariable": true
+              },
+              {
+                "id": "DET-lbl-cli",
+                "type": "TEXT",
+                "x": 344,
+                "y": 339,
+                "w": 30,
+                "h": 4,
+                "text": "CLIENT",
+                "fontSize": 5,
+                "fontWeight": "bold",
+                "color": "#94a3b8"
+              },
+              {
+                "id": "DET-val-cli",
+                "type": "TEXT",
+                "x": 344,
+                "y": 343,
+                "w": 110,
+                "h": 5,
+                "text": "{client.nom}",
+                "fontSize": 8,
+                "fontWeight": "bold",
+                "isVariable": true,
+                "color": "#0f172a"
+              },
+              {
+                "id": "DET-val-cli2",
+                "type": "TEXT",
+                "x": 344,
+                "y": 350,
+                "w": 110,
+                "h": 4,
+                "text": "{client.adresse}",
+                "fontSize": 6,
+                "isVariable": true,
+                "color": "#64748b"
+              },
+              {
+                "id": "DET-lbl-ref",
+                "type": "TEXT",
+                "x": 459,
+                "y": 339,
+                "w": 30,
+                "h": 4,
+                "text": "RÉF. PROJET",
+                "fontSize": 5,
+                "fontWeight": "bold",
+                "color": "#94a3b8"
+              },
+              {
+                "id": "DET-val-ref",
+                "type": "TEXT",
+                "x": 459,
+                "y": 343,
+                "w": 50,
+                "h": 5,
+                "text": "{projet.reference}",
+                "fontSize": 8,
+                "isVariable": true,
+                "color": "#0f172a"
+              },
+              {
+                "id": "DET-lbl-dat",
+                "type": "TEXT",
+                "x": 519,
+                "y": 339,
+                "w": 30,
+                "h": 4,
+                "text": "DATE",
+                "fontSize": 5,
+                "fontWeight": "bold",
+                "color": "#94a3b8"
+              },
+              {
+                "id": "DET-val-dat",
+                "type": "TEXT",
+                "x": 519,
+                "y": 343,
+                "w": 55,
+                "h": 5,
+                "text": "{date.long}",
+                "fontSize": 8,
+                "isVariable": true,
+                "color": "#0f172a"
+              },
+              {
+                "id": "DET-sep1",
+                "type": "LINE",
+                "x1": 344,
+                "y1": 358,
+                "x2": 574,
+                "y2": 358,
+                "stroke": "#e2e8f0",
+                "strokeWidth": 0.3
+              },
+              {
+                "id": "DET-lbl-pln",
+                "type": "TEXT",
+                "x": 344,
+                "y": 363,
+                "w": 30,
+                "h": 4,
+                "text": "N° DE PLAN",
+                "fontSize": 5,
+                "fontWeight": "bold",
+                "color": "#94a3b8"
+              },
+              {
+                "id": "DET-val-pln",
+                "type": "TEXT",
+                "x": 344,
+                "y": 367,
+                "w": 30,
+                "h": 5,
+                "text": "{rack.position}",
+                "fontSize": 8,
+                "fontWeight": "bold",
+                "isVariable": true,
+                "color": "#0f172a"
+              },
+              {
+                "id": "DET-val-tot",
+                "type": "TEXT",
+                "x": 344,
+                "y": 373,
+                "w": 30,
+                "h": 4,
+                "text": "/ {projet.rackCount}",
+                "fontSize": 6,
+                "isVariable": true,
+                "color": "#64748b"
+              },
+              {
+                "id": "DET-lbl-aut",
+                "type": "TEXT",
+                "x": 399,
+                "y": 363,
+                "w": 30,
+                "h": 4,
+                "text": "AUTEUR",
+                "fontSize": 5,
+                "fontWeight": "bold",
+                "color": "#94a3b8"
+              },
+              {
+                "id": "DET-val-aut",
+                "type": "TEXT",
+                "x": 399,
+                "y": 367,
+                "w": 80,
+                "h": 5,
+                "text": "{user.fullName}",
+                "fontSize": 8,
+                "isVariable": true,
+                "color": "#0f172a"
+              },
+              {
+                "id": "DET-lbl-rev",
+                "type": "TEXT",
+                "x": 484,
+                "y": 363,
+                "w": 30,
+                "h": 4,
+                "text": "VALIDÉ PAR",
+                "fontSize": 5,
+                "fontWeight": "bold",
+                "color": "#94a3b8"
+              },
+              {
+                "id": "DET-val-rev",
+                "type": "TEXT",
+                "x": 484,
+                "y": 367,
+                "w": 90,
+                "h": 5,
+                "text": "—",
+                "fontSize": 8,
+                "color": "#0f172a"
+              },
+              {
+                "id": "DET-sep2",
+                "type": "LINE",
+                "x1": 344,
+                "y1": 380,
+                "x2": 574,
+                "y2": 380,
+                "stroke": "#e2e8f0",
+                "strokeWidth": 0.3
+              },
+              {
+                "id": "DET-lbl-nrm",
+                "type": "TEXT",
+                "x": 344,
+                "y": 385,
+                "w": 30,
+                "h": 4,
+                "text": "NORMES",
+                "fontSize": 5,
+                "fontWeight": "bold",
+                "color": "#94a3b8"
+              },
+              {
+                "id": "DET-val-nrm",
+                "type": "TEXT",
+                "x": 344,
+                "y": 390,
+                "w": 180,
+                "h": 5,
+                "text": "EIA-310-D · IEC 60297",
+                "fontSize": 7,
+                "color": "#475569"
+              },
+              {
+                "id": "DET-lbl-ver",
+                "type": "TEXT",
+                "x": 539,
+                "y": 385,
+                "w": 30,
+                "h": 4,
+                "text": "VERSION",
+                "fontSize": 5,
+                "fontWeight": "bold",
+                "color": "#94a3b8",
+                "align": "right"
+              },
+              {
+                "id": "DET-val-ver",
+                "type": "TEXT",
+                "x": 539,
+                "y": 390,
+                "w": 35,
+                "h": 5,
+                "text": "v1.0",
+                "fontSize": 8,
+                "fontWeight": "bold",
+                "color": "#0f172a",
+                "align": "right"
+              }
+            ]
+          },
+          "sortOrder": 3,
+          "isActive": true
+        },
+        {
+          "id": "cmw3kwyj400p1d7diflpc49ef",
+          "key": "BLANK",
+          "name": "Vide",
+          "description": "Sans cartouche — utile pour les exports en zone à découper.",
+          "paperFormat": "A3",
+          "orientation": "LANDSCAPE",
+          "slots": [],
+          "layout": null,
+          "sortOrder": 4,
+          "isActive": true
+        }
+      ]
+    }
+  ]
+}
