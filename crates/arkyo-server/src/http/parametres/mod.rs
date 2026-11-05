@@ -1,5 +1,6 @@
 //! Settings referentials: `/api/tenant/parametres/{brands,connectors,signals,
-//! cabling,categories/**,dimensions/**,symbols,cable-models}`.
+//! cabling,categories/**,dimensions/**,symbols,cable-models,backup/**,
+//! import/**}`.
 //!
 //! Single catalogue (decision 2 of the phase): every row lives in the
 //! `Tenant*` tables and is presented as the tenant's own, so the `arkyo`
@@ -12,11 +13,13 @@
 #![allow(clippy::result_large_err)]
 
 pub mod application;
+mod backup;
 pub mod brands;
 pub mod cabling;
 pub mod categories;
 pub mod connectors;
 mod dimensions;
+mod import;
 mod numbering;
 mod print;
 pub mod signals;
@@ -28,6 +31,7 @@ use std::pin::Pin;
 
 use arkyo_core::permissions::{Domain, Level};
 use axum::body::Bytes;
+use axum::extract::DefaultBodyLimit;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use axum::routing::{get, patch, post};
@@ -36,7 +40,9 @@ use serde_json::{json, Map, Value};
 use sqlx::sqlite::SqliteRow;
 use sqlx::{Column, Row, SqliteConnection, SqlitePool};
 
-pub use valid::{flat_json, validate, validate_flat, Def, Field, Kind, KEY, LABEL, NAME};
+pub use valid::{
+    failure, flat_json, js_type, validate, validate_flat, Def, Field, Kind, KEY, LABEL, NAME,
+};
 
 use super::{error, require, server_error, AppState};
 use crate::audit;
@@ -195,6 +201,24 @@ pub fn router() -> Router<AppState> {
         .route(
             "/tenant/parametres/dimensions/{id}",
             patch(dimensions::update).delete(dimensions::delete),
+        )
+        .route("/tenant/parametres/backup", get(backup::download))
+        .route("/tenant/parametres/backup/summary", get(backup::summary))
+        .route(
+            "/tenant/parametres/backup/restore",
+            post(backup::restore).layer(DefaultBodyLimit::max(backup::MAX_BODY)),
+        )
+        .route(
+            "/tenant/parametres/import/analyze",
+            post(import::analyze).layer(DefaultBodyLimit::max(import::MAX_BODY)),
+        )
+        .route(
+            "/tenant/parametres/import/preview",
+            post(import::preview).layer(DefaultBodyLimit::max(import::MAX_BODY)),
+        )
+        .route(
+            "/tenant/parametres/import/commit",
+            post(import::commit).layer(DefaultBodyLimit::max(import::MAX_BODY)),
         )
 }
 

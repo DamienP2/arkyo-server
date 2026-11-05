@@ -9,7 +9,8 @@ use axum::response::Response;
 use super::application::{patch_map, read_map};
 use crate::http::{AppState, CurrentUser};
 
-const NUMBERING_KEYS: [&str; 15] = [
+/// Also the `AppConfig` keys of the backup (`BACKUP_APP_CONFIG_KEYS`).
+pub(super) const NUMBERING_KEYS: [&str; 15] = [
     "cable_numbering_convention",
     "cable_pad",
     "cable_sep1",

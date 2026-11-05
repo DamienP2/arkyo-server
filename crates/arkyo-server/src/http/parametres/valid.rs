@@ -132,7 +132,8 @@ impl Field {
     }
 }
 
-fn js_type(v: Option<&Value>) -> &'static str {
+/// JavaScript `typeof`-like name of a JSON value, as Zod reports it.
+pub fn js_type(v: Option<&Value>) -> &'static str {
     match v {
         None => "undefined",
         Some(Value::Null) => "null",
@@ -411,7 +412,8 @@ pub fn flat_json(flat: &Flat) -> Value {
     json!({ "formErrors": flat.0, "fieldErrors": flat.1 })
 }
 
-fn failure(flat: Flat) -> Response {
+/// `400 {"error": flatten()}`.
+pub fn failure(flat: Flat) -> Response {
     (
         StatusCode::BAD_REQUEST,
         Json(json!({ "error": flat_json(&flat) })),

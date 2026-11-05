@@ -114,7 +114,7 @@ pub fn router() -> Router<AppState> {
 
 /// arkyo `assertCanWritePersonal`: `catalog:write` (owner passes), else
 /// `403 {code, domain, minLevel}` (no `error` key, like arkyo).
-pub(super) async fn assert_can_write(st: &AppState, user: &User) -> Result<(), Response> {
+pub(crate) async fn assert_can_write(st: &AppState, user: &User) -> Result<(), Response> {
     let (_, perms) = role_permissions(&st.pool, &user.role_key).await;
     if has_permission(&perms, Domain::Catalog, Level::Write) {
         Ok(())

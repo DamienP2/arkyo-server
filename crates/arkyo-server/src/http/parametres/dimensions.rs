@@ -49,7 +49,7 @@ static PATCH: [Field; 6] = [
     Field::new("isActive", Kind::Bool),
 ];
 
-static RES: Res = Res {
+pub(super) static RES: Res = Res {
     table: Table {
         name: "TenantDimensionPreset",
         bools: &["isReel", "isActive"],

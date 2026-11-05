@@ -115,7 +115,7 @@ static TEMPLATE_PATCH: [Field; 8] = [
     Field::new("sortOrder", Kind::Int),
 ];
 
-static TEMPLATE: Res = Res {
+pub(super) static TEMPLATE: Res = Res {
     table: Table {
         name: "TenantPrintTemplate",
         bools: &["isActive"],
@@ -261,7 +261,7 @@ static STOCK_PATCH: [Field; 25] = [
     Field::new("sortOrder", Kind::Int),
 ];
 
-static STOCK: Res = Res {
+pub(super) static STOCK: Res = Res {
     table: Table {
         name: "TenantCableLabelStock",
         bools: &["isActive"],
@@ -378,12 +378,12 @@ async fn restore(
 const MODEL_ENTITY: &str = "tenant_parametres_print";
 const MODEL_NOT_FOUND: &str = "Modèle introuvable.";
 
-static MODEL_TABLE: Table = Table {
+pub(super) static MODEL_TABLE: Table = Table {
     name: "TenantPrintExportModel",
     bools: &["isActive"],
     jsons: &[],
 };
-static PAGE_TABLE: Table = Table {
+pub(super) static PAGE_TABLE: Table = Table {
     name: "TenantPrintExportPage",
     bools: &[],
     jsons: &["layout"],

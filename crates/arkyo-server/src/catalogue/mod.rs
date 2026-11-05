@@ -2,4 +2,5 @@
 
 pub mod duplicate;
 pub mod enrich;
+pub mod import;
 pub mod in_use;
