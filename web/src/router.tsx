@@ -16,6 +16,7 @@
  * les `redirect()` / `notFound()` levés par les pages copiées d'arkyo.
  */
 
+import { lazy, Suspense } from "react";
 import { createBrowserRouter, Navigate, type RouteObject } from "react-router";
 import { NavigationErrorElement, NotFoundPage } from "next/navigation";
 import { Root } from "@/app/root";
@@ -26,8 +27,25 @@ import SetupPage from "@/app/auth/setup-page";
 import PasswordPage from "@/app/auth/password-page";
 import SystemePage from "@/app/(app)/admin/systeme/systeme-page";
 import { ComingSoon } from "@/components/coming-soon";
+import { LoadingState } from "@/components/ui/loading-state";
+
+// Pages du catalogue (phase 2) : chargées à la demande, hors du bundle principal.
+const ParametresPage = lazy(() => import("@/app/(app)/admin/parametres/page"));
 
 const errorElement = <NavigationErrorElement />;
+
+/** Page chargée à la demande (`lazy()`), avec `<LoadingState>` en attendant. */
+function lazyPage(path: string, Page: React.ComponentType): RouteObject {
+  return {
+    path,
+    element: (
+      <Suspense fallback={<LoadingState className="px-8 pt-10" />}>
+        <Page />
+      </Suspense>
+    ),
+    errorElement,
+  };
+}
 
 /** Page pas encore portée. */
 function soon(path: string): RouteObject {
@@ -56,6 +74,7 @@ export const routes: RouteObject[] = [
           soon("panels"),
           soon("templates"),
           { path: "admin/systeme", element: <SystemePage />, errorElement },
+          lazyPage("admin/parametres", ParametresPage),
           soon("admin/*"),
           soon("settings/*"),
           soon("profile"),

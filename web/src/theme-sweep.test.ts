@@ -100,6 +100,49 @@ const COPIED_FILES = [
   "lib/services/username.ts",
   "lib/type-icons.ts",
   "lib/types/catalog.ts",
+  // Phase 2 (Task 10) : page Paramètres.
+  "app/(app)/admin/parametres/page.tsx",
+  "app/(app)/admin/parametres/_components/brand-form-dialog.tsx",
+  "app/(app)/admin/parametres/_components/brands-panel.tsx",
+  "app/(app)/admin/parametres/_components/cable-label-stock-form-dialog.tsx",
+  "app/(app)/admin/parametres/_components/cable-label-stocks-section.tsx",
+  "app/(app)/admin/parametres/_components/cabling-form-dialog.tsx",
+  "app/(app)/admin/parametres/_components/cabling-panel.tsx",
+  "app/(app)/admin/parametres/_components/categories-panel.tsx",
+  "app/(app)/admin/parametres/_components/connector-form-dialog.tsx",
+  "app/(app)/admin/parametres/_components/connectors-panel.tsx",
+  "app/(app)/admin/parametres/_components/dimension-form-dialog.tsx",
+  "app/(app)/admin/parametres/_components/dimensions-panel.tsx",
+  "app/(app)/admin/parametres/_components/export-model-form-dialog.tsx",
+  "app/(app)/admin/parametres/_components/export-pdf-section.tsx",
+  "app/(app)/admin/parametres/_components/function-form-dialog.tsx",
+  "app/(app)/admin/parametres/_components/import-export-panel.tsx",
+  "app/(app)/admin/parametres/_components/import-export/backup-card.tsx",
+  "app/(app)/admin/parametres/_components/import-export/export-card.tsx",
+  "app/(app)/admin/parametres/_components/import-export/hub.tsx",
+  "app/(app)/admin/parametres/_components/import-export/map-step.tsx",
+  "app/(app)/admin/parametres/_components/import-export/report-step.tsx",
+  "app/(app)/admin/parametres/_components/import-export/restore-card.tsx",
+  "app/(app)/admin/parametres/_components/import-export/restore-report.tsx",
+  "app/(app)/admin/parametres/_components/import-export/restore-verify.tsx",
+  "app/(app)/admin/parametres/_components/import-export/stepper.tsx",
+  "app/(app)/admin/parametres/_components/import-export/types.ts",
+  "app/(app)/admin/parametres/_components/import-export/use-import-wizard.ts",
+  "app/(app)/admin/parametres/_components/import-export/use-restore-flow.ts",
+  "app/(app)/admin/parametres/_components/import-export/verify-step.tsx",
+  "app/(app)/admin/parametres/_components/numbering-panel.tsx",
+  "app/(app)/admin/parametres/_components/phase-form-dialog.tsx",
+  "app/(app)/admin/parametres/_components/print-panel.tsx",
+  "app/(app)/admin/parametres/_components/print-template-form-dialog.tsx",
+  "app/(app)/admin/parametres/_components/signal-form-dialog.tsx",
+  "app/(app)/admin/parametres/_components/signals-panel.tsx",
+  "app/(app)/admin/parametres/_components/type-form-dialog.tsx",
+  "app/(app)/admin/parametres/_components/use-parametres-sync.ts",
+  "app/(app)/admin/parametres/_components/use-parametres-visibility.ts",
+  "app/(app)/admin/parametres/parametres-client.tsx",
+  "lib/services/backup.ts",
+  "lib/services/import/coerce.ts",
+  "lib/services/import/parse-tabular.ts",
 ];
 
 /** Fichiers posés sur la topbar ou le rail : ils suivent le thème (variante « Clair A »). */
@@ -142,6 +185,18 @@ const TAG_2110: Allow = {
   line: /className="[^"]*rounded-md bg-sky-500\/10 [^"]*text-sky-600 dark:text-sky-400">$/,
   reason: "étiquette « 2110 » (SMPTE ST 2110) d'un équipement : marqueur métier, " + DOUBT,
 };
+const STOCK_DIAMETER: Allow = {
+  line: /<span className="rounded bg-blue-500\/10 px-1\.5 py-0\.5 text-\[9px\] font-bold tracking-wider text-blue-600 uppercase">$/,
+  reason: "étiquette « Ø min–max » d'une planche d'étiquettes câbles : marqueur produit, comme « 2110 », " + DOUBT,
+};
+const STOCK_LAMINATING: Allow = {
+  line: /<span className="rounded bg-emerald-500\/10 px-1\.5 py-0\.5 text-\[9px\] font-bold tracking-wider text-emerald-600 uppercase">$/,
+  reason: "étiquette « Self-laminating » d'une planche d'étiquettes câbles : marqueur produit, comme « 2110 », " + DOUBT,
+};
+const TOURET_BADGE: Allow = {
+  line: /className="inline-flex shrink-0 items-center rounded bg-amber-500\/10 px-1\.5 py-0\.5 text-\[9px\] font-semibold tracking-wide text-amber-700 uppercase dark:text-amber-400"$/,
+  reason: "étiquette « Touret » d'une longueur de câble : marqueur produit, comme « 2110 », " + DOUBT,
+};
 const PENDING_BADGE: Allow = {
   line: /className="shrink-0 rounded-md bg-amber-500\/15 px-1\.5 py-0\.5 text-\[9px\] font-bold text-amber-600">$/,
   reason: "statut « EN ATTENTE » d'un membre : statut métier, comme la pastille « Personnalisé » de la phase 1",
@@ -176,6 +231,8 @@ const ALLOW: AllowMap = {
   // Couleurs de connecteurs : couleur métier, en hexadécimal (voir HEX ci-dessous).
   "components/ui/connector-icon.tsx": [],
   "components/catalogue/equipment-card.tsx": [TAG_2110],
+  // Phase 2 (Task 10) : page Paramètres.
+  "app/(app)/admin/parametres/_components/cable-label-stocks-section.tsx": [STOCK_DIAMETER],
 };
 
 test("aucune couleur d'interface Tailwind codée en dur dans les fichiers copiés (hors exceptions métier)", () => {
@@ -197,6 +254,9 @@ const ALLOW_STATUS: AllowMap = {
   "components/adapters/new-adapter-wizard.tsx": WIZARD_ART,
   "components/cables/new-cable-wizard.tsx": WIZARD_ART,
   "components/equipment/new-equipment-wizard.tsx": WIZARD_ART,
+  // Phase 2 (Task 10) : page Paramètres.
+  "app/(app)/admin/parametres/_components/cable-label-stocks-section.tsx": [STOCK_LAMINATING],
+  "app/(app)/admin/parametres/_components/dimensions-panel.tsx": [TOURET_BADGE],
 };
 
 test("erreurs, succès et alertes suivent --danger, --success et --warning", () => {
@@ -222,7 +282,7 @@ const ALLOW_HEX: AllowMap = {
   "app/(app)/admin/_components/list-toolbar-helpers.tsx": [
     {
       line: /^\s*(FREE|STARTER|PRO|ENTERPRISE): "#[0-9a-f]{6}", \/\/ \w+$/,
-      reason: "couleurs des plans (PLAN_COLORS) : couleur métier, consommées par les onglets repris plus tard",
+      reason: "couleurs des plans (PLAN_COLORS) : reliquat SaaS, à retirer (plus consommé par les Paramètres ; reste exporté pour les onglets du catalogue)",
     },
     { line: /boxShadow: "0 1px 2px 0 rgb\(0 0 0 \/ 0\.05\)",/, reason: "ombre (équivalent de shadow-sm) : pas une couleur d'interface" },
   ],
@@ -306,6 +366,27 @@ const ALLOW_HEX: AllowMap = {
       line: /#0f172a|#cbd5e1|#6b7280|"#000000"/,
       reason: "gabarits d'impression (texte, cadre, catégorie, quadrillage) : rendu des étiquettes imprimées",
     },
+  ],
+  // Phase 2 (Task 10) : page Paramètres.
+  "app/(app)/admin/parametres/_components/cable-label-stock-form-dialog.tsx": [
+    { line: /value=\{w\.printableColor \|\| "#fde047"\}/, reason: "couleur de la zone imprimable d'une planche (choisie par l'utilisateur) et son défaut : rendu des étiquettes imprimées" },
+  ],
+  "app/(app)/admin/parametres/_components/cable-label-stocks-section.tsx": [
+    {
+      line: /(background: "#ffffff", boxShadow: "0 1px 4px rgba\(0,0,0,0\.08\)"|stroke="#(e2e8f0|facc15|93c5fd)"|fill="#dbeafe"|fill=\{item\.printableColor \|\| "#fde047"\})/,
+      reason: "aperçu dessiné d'une planche d'étiquettes (papier, étiquette, zone imprimable, câble) : rendu des étiquettes imprimées",
+    },
+  ],
+  "app/(app)/admin/parametres/_components/cabling-panel.tsx": [{ line: /const headerColor = fn\?\.color \?\? "#a3a3a3";/, reason: "couleur de la fonction (en-tête de groupe) et son repli : couleur métier" }],
+  "app/(app)/admin/parametres/_components/signals-panel.tsx": [{ line: /const headerColor = fn\?\.color \?\? "#a3a3a3";/, reason: "couleur de la fonction (en-tête de groupe) et son repli : couleur métier" }],
+  "app/(app)/admin/parametres/_components/categories-panel.tsx": [
+    {
+      line: /const headerColor = fn\?\.color \?\? "#a3a3a3";|color: f\.color \?\? "#6b7280" \}\);/,
+      reason: "couleur de la fonction, son défaut Prisma et son repli : couleur métier",
+    },
+  ],
+  "app/(app)/admin/parametres/_components/type-form-dialog.tsx": [
+    { line: /color: f\.color \?\? "#6b7280",/, reason: "couleur de la fonction et son défaut Prisma : couleur métier" },
   ],
 };
 
