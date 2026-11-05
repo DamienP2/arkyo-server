@@ -592,3 +592,67 @@ async fn consultation_cannot_write_403() {
     .await;
     assert_eq!(r.status, StatusCode::UNAUTHORIZED);
 }
+
+#[tokio::test]
+async fn detail_is_the_editor_payload_and_roundtrips() {
+    let c = ctx().await;
+    let cat_id = first_id(&c.e.pool, "TenantEquipmentCategory").await;
+    let cat_name: String =
+        sqlx::query_scalar(r#"SELECT "name" FROM "TenantEquipmentCategory" WHERE "id" = ?"#)
+            .bind(&cat_id)
+            .fetch_one(&c.e.pool)
+            .await
+            .unwrap();
+    // stored order differs from sortOrder order; one unknown id
+    let fns: Vec<String> = sqlx::query_scalar(
+        r#"SELECT "id" FROM "TenantFunction" ORDER BY "sortOrder" DESC LIMIT 2"#,
+    )
+    .fetch_all(&c.e.pool)
+    .await
+    .unwrap();
+    let ids = json!([fns[0], "ghost-fn", fns[1]]);
+    let item = c
+        .create(json!({
+            "name": "Ed", "categoryId": cat_id, "functionIds": ids, "phaseIds": ["ph-x", "ph-y"],
+        }))
+        .await;
+    let id = item["id"].as_str().unwrap();
+    let d = c.req("GET", &format!("/equipment/{id}"), None).await;
+    let it = d.body["item"].clone();
+    assert_eq!(it["category"], cat_name.as_str());
+    assert_eq!(it["sourceType"], "TENANT");
+    assert_eq!(
+        it["functions"],
+        json!([{"functionId": fns[0]}, {"functionId": "ghost-fn"}, {"functionId": fns[1]}])
+    );
+    assert_eq!(
+        it["phases"],
+        json!([{"phaseId": "ph-x"}, {"phaseId": "ph-y"}])
+    );
+    // the editor sends `category` back on every autosave: nothing may change
+    let p = c
+        .req(
+            "PATCH",
+            &format!("/equipment/{id}"),
+            Some(json!({"category": it["category"], "name": it["name"], "typeId": it["typeId"]})),
+        )
+        .await;
+    assert_eq!(p.status, StatusCode::OK, "{:?}", p.body);
+    assert_eq!(p.body["categoryId"], cat_id);
+    assert_eq!(p.body["functionIds"], ids);
+    // an equipment without category: null
+    let n = c.create(json!({"name": "N"})).await;
+    let d = c
+        .req(
+            "GET",
+            &format!("/equipment/{}", n["id"].as_str().unwrap()),
+            None,
+        )
+        .await;
+    assert!(d.body["item"]["category"].is_null());
+    // the list keeps the enriched, sorted functions
+    let l = c.req("GET", "/equipment?q=Ed", None).await;
+    let f = &l.body["personal"][0]["functions"];
+    assert_eq!(f.as_array().unwrap().len(), 2);
+    assert!(f[0]["label"].is_string());
+}

@@ -56,13 +56,8 @@ pub async fn list(
         } else {
             r#"WHERE "isActive" = 1"#
         };
-        let mut rows = list_rows(
-            &st.pool,
-            &CONNECTOR_TYPE,
-            filter,
-            r#""name" COLLATE NOCASE"#,
-        )
-        .await?;
+        let mut rows =
+            list_rows(&st.pool, CONNECTOR_TYPE, filter, r#""name" COLLATE NOCASE"#).await?;
         if by_ids {
             rows.retain(|r| str_of(r, "id").is_some_and(|i| ids.contains(&i)));
         } else if let Some(needle) = q.get("q").filter(|s| !s.is_empty()) {

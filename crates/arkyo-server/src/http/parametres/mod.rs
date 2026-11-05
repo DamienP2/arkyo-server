@@ -11,12 +11,12 @@
 
 #![allow(clippy::result_large_err)]
 
-mod brands;
-mod cabling;
-mod categories;
+pub mod brands;
+pub mod cabling;
+pub mod categories;
 pub mod connectors;
 mod dimensions;
-mod signals;
+pub mod signals;
 mod symbols;
 mod valid;
 

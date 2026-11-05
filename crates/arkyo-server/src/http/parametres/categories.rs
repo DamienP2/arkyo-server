@@ -99,7 +99,7 @@ static CATEGORY_PATCH: [Field; 6] = [
     Field::new("isActive", Kind::Bool),
 ];
 
-static CATEGORY: Res = Res {
+pub static CATEGORY: Res = Res {
     table: Table {
         name: "TenantEquipmentCategory",
         bools: &["isActive"],
@@ -178,7 +178,7 @@ static FUNCTION_PATCH: [Field; 5] = [
     Field::new("isActive", Kind::Bool),
 ];
 
-static FUNCTION: Res = Res {
+pub static FUNCTION: Res = Res {
     table: Table {
         name: "TenantFunction",
         bools: &["isActive"],
@@ -207,7 +207,7 @@ static PHASE_PATCH: [Field; 4] = [
     Field::new("isActive", Kind::Bool),
 ];
 
-static PHASE: Res = Res {
+pub static PHASE: Res = Res {
     table: Table {
         name: "TenantPhase",
         bools: &["isActive"],
@@ -394,7 +394,7 @@ static TYPE_PATCH: [Field; 5] = [
     Field::new("isActive", Kind::Bool),
 ];
 
-static TYPE: Res = Res {
+pub static TYPE: Res = Res {
     table: Table {
         name: "TenantType",
         bools: &["isActive"],

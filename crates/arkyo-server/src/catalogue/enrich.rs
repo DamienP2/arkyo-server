@@ -13,54 +13,19 @@ use std::collections::HashMap;
 use serde_json::Value;
 use sqlx::SqlitePool;
 
-use crate::http::parametres::{list_rows, str_of, Obj, Table};
+use crate::http::parametres::{
+    brands, cabling, categories, connectors, list_rows, signals, str_of, Obj, Table,
+};
 
-pub static BRAND: Table = Table {
-    name: "TenantBrand",
-    bools: &["isActive"],
-    jsons: &[],
-};
-pub static CATEGORY: Table = Table {
-    name: "TenantEquipmentCategory",
-    bools: &["isActive"],
-    jsons: &[],
-};
-pub static FUNCTION: Table = Table {
-    name: "TenantFunction",
-    bools: &["isActive"],
-    jsons: &[],
-};
-pub static PHASE: Table = Table {
-    name: "TenantPhase",
-    bools: &["isActive"],
-    jsons: &[],
-};
-pub static TYPE: Table = Table {
-    name: "TenantType",
-    bools: &["isActive"],
-    jsons: &[],
-};
-pub static CONNECTOR_TYPE: Table = Table {
-    name: "TenantConnectorType",
-    bools: &["isActive"],
-    jsons: &["versions", "functionIds"],
-};
-pub static SIGNAL: Table = Table {
-    name: "TenantSignalType",
-    bools: &[
-        "isIp",
-        "supportsRedundancy",
-        "usesMulticast",
-        "isDefault",
-        "isActive",
-    ],
-    jsons: &["connectorIds"],
-};
-pub static CABLE_MODEL: Table = Table {
-    name: "TenantCableModel",
-    bools: &["isActive"],
-    jsons: &["customFields"],
-};
+// One definition per table: the ones of the settings routes.
+pub static BRAND: &Table = &brands::RES.table;
+pub static CATEGORY: &Table = &categories::CATEGORY.table;
+pub static FUNCTION: &Table = &categories::FUNCTION.table;
+pub static PHASE: &Table = &categories::PHASE.table;
+pub static TYPE: &Table = &categories::TYPE.table;
+pub static CONNECTOR_TYPE: &Table = &connectors::RES.table;
+pub static SIGNAL: &Table = &signals::RES.table;
+pub static CABLE_MODEL: &Table = &cabling::RES.table;
 pub static ADAPTER: Table = Table {
     name: "TenantAdapter",
     bools: &["isActive", "shadowsArkyo"],
@@ -97,7 +62,6 @@ pub struct Refs {
     brands: HashMap<String, Obj>,
     categories: HashMap<String, Obj>,
     functions: HashMap<String, Obj>,
-    phases: HashMap<String, Obj>,
     types: HashMap<String, Obj>,
 }
 
@@ -112,11 +76,10 @@ async fn by_id(pool: &SqlitePool, t: &Table) -> Result<HashMap<String, Obj>, sql
 impl Refs {
     pub async fn load(pool: &SqlitePool) -> Result<Self, sqlx::Error> {
         Ok(Self {
-            brands: by_id(pool, &BRAND).await?,
-            categories: by_id(pool, &CATEGORY).await?,
-            functions: by_id(pool, &FUNCTION).await?,
-            phases: by_id(pool, &PHASE).await?,
-            types: by_id(pool, &TYPE).await?,
+            brands: by_id(pool, BRAND).await?,
+            categories: by_id(pool, CATEGORY).await?,
+            functions: by_id(pool, FUNCTION).await?,
+            types: by_id(pool, TYPE).await?,
         })
     }
 
@@ -159,7 +122,8 @@ pub fn personal_flags(item: &mut Obj) {
 /// Resolves `brand`, `equipmentCategory`, `type` and `functions[]` (sorted
 /// by `sortOrder`, `{id, label, color, sortOrder}` plus `functionId` for the
 /// editor, which reads arkyo's join rows) and adds the `PERSONAL` flags.
-/// With `detail`, also `phases: [{phaseId}]` like arkyo's join rows.
+/// With `detail`, the list `functions` is replaced by the editor payload
+/// (see [`editor_payload`]).
 pub fn enrich_equipment(item: &mut Obj, refs: &Refs, detail: bool) {
     let brand = lookup(&refs.brands, str_of(item, "brandId"));
     let cat = lookup(&refs.categories, str_of(item, "categoryId"));
@@ -179,17 +143,37 @@ pub fn enrich_equipment(item: &mut Obj, refs: &Refs, detail: bool) {
             })
         })
         .collect();
-    if detail {
-        let phases: Vec<Value> = ids_of(item, "phaseIds")
-            .into_iter()
-            .filter(|id| refs.phases.contains_key(id))
-            .map(|id| serde_json::json!({ "phaseId": id }))
-            .collect();
-        item.insert("phases".into(), Value::Array(phases));
-    }
     item.insert("brand".into(), brand);
     item.insert("equipmentCategory".into(), cat);
     item.insert("type".into(), ty);
     item.insert("functions".into(), Value::Array(functions));
     personal_flags(item);
+    if detail {
+        editor_payload(item, refs);
+    }
+}
+
+/// What arkyo's editor page (`admin/catalogue/equipment/[id]/page.tsx`,
+/// PERSONAL branch) hands to the editor on top of the row: `sourceType`,
+/// `functions: [{functionId}]` and `phases: [{phaseId}]` in stored order
+/// (unknown ids kept), and `category` (the name of `categoryId`, or null;
+/// the editor sends it back on every autosave). The fork flags are already
+/// set by [`personal_flags`].
+fn editor_payload(item: &mut Obj, refs: &Refs) {
+    let fns: Vec<Value> = ids_of(item, "functionIds")
+        .into_iter()
+        .map(|id| serde_json::json!({ "functionId": id }))
+        .collect();
+    let phs: Vec<Value> = ids_of(item, "phaseIds")
+        .into_iter()
+        .map(|id| serde_json::json!({ "phaseId": id }))
+        .collect();
+    let cat = str_of(item, "categoryId")
+        .and_then(|id| refs.categories.get(id))
+        .and_then(|c| str_of(c, "name"))
+        .map_or(Value::Null, |n| Value::String(n.to_string()));
+    item.insert("sourceType".into(), "TENANT".into());
+    item.insert("functions".into(), Value::Array(fns));
+    item.insert("phases".into(), Value::Array(phs));
+    item.insert("category".into(), cat);
 }

@@ -32,7 +32,7 @@ pub async fn get(State(st): State<AppState>, _u: CurrentUser) -> Response {
 async fn referentials(st: &AppState) -> Result<Value, sqlx::Error> {
     let pool = &st.pool;
     let by_name = r#""name" COLLATE NOCASE"#;
-    let cats = list_rows(pool, &CATEGORY, ACTIVE, by_name).await?;
+    let cats = list_rows(pool, CATEGORY, ACTIVE, by_name).await?;
     // One level of children, like `include: { children }`.
     let categories: Vec<Value> = cats
         .iter()
@@ -49,13 +49,13 @@ async fn referentials(st: &AppState) -> Result<Value, sqlx::Error> {
             Value::Object(r)
         })
         .collect();
-    let brands = list_rows(pool, &BRAND, ACTIVE, by_name).await?;
+    let brands = list_rows(pool, BRAND, ACTIVE, by_name).await?;
 
     // Connector types: shape shared with arkyo's merged list.
     let mut conn = pool.acquire().await?;
     let symbols = load_symbols(&mut conn).await?;
     drop(conn);
-    let mut connectors = list_rows(pool, &CONNECTOR_TYPE, ACTIVE, by_name).await?;
+    let mut connectors = list_rows(pool, CONNECTOR_TYPE, ACTIVE, by_name).await?;
     for c in &mut connectors {
         let functions: Vec<Value> = function_ids(c)
             .into_iter()
@@ -68,21 +68,21 @@ async fn referentials(st: &AppState) -> Result<Value, sqlx::Error> {
 
     let signals = list_rows(
         pool,
-        &SIGNAL,
+        SIGNAL,
         ACTIVE,
         r#""sortOrder", "name" COLLATE NOCASE"#,
     )
     .await?;
     let functions = list_rows(
         pool,
-        &FUNCTION,
+        FUNCTION,
         ACTIVE,
         r#""sortOrder", "label" COLLATE NOCASE"#,
     )
     .await?;
     let phases = list_rows(
         pool,
-        &PHASE,
+        PHASE,
         ACTIVE,
         r#""sortOrder", "label" COLLATE NOCASE"#,
     )
@@ -91,7 +91,7 @@ async fn referentials(st: &AppState) -> Result<Value, sqlx::Error> {
     // Flat `{ id, name, functionId, parentId, source }`.
     let types: Vec<Value> = list_rows(
         pool,
-        &TYPE,
+        TYPE,
         ACTIVE,
         r#""functionId", "sortOrder", "name" COLLATE NOCASE"#,
     )
@@ -108,7 +108,7 @@ async fn referentials(st: &AppState) -> Result<Value, sqlx::Error> {
     let refs = Refs::load(pool).await?;
     let cable_models: Vec<Value> = list_rows(
         pool,
-        &CABLE_MODEL,
+        CABLE_MODEL,
         ACTIVE,
         r#""sortOrder", "name" COLLATE NOCASE"#,
     )
@@ -217,7 +217,7 @@ async fn items(st: &AppState, kind: &str, ids: &[String]) -> Result<Vec<Value>, 
             rows.iter_mut().for_each(personal_flags);
             rows
         }
-        _ => by_ids(st, &CONNECTOR_TYPE, ids).await?,
+        _ => by_ids(st, CONNECTOR_TYPE, ids).await?,
     };
     Ok(rows.drain(..).map(Value::Object).collect())
 }
