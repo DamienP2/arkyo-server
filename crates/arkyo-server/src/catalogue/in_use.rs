@@ -218,3 +218,39 @@ pub async fn cable_model(conn: &mut SqliteConnection, id: &str) -> Result<Counts
         .await?,
     )])
 }
+
+/// Tables of project data that reference an equipment through
+/// `catalogEquipmentId` (arkyo `assertEquipmentNotInUse`: `RackInventoryItem`
+/// and `RackSlot`).
+///
+/// EXTENSION POINT (phase 3): these tables are created by the phase that
+/// ports projects. Until then they do not exist and the equipment is never
+/// "in use"; once they exist the check below counts them without change.
+const EQUIPMENT_REFERENCES: [(&str, &str); 2] =
+    [("inventory", "RackInventoryItem"), ("slots", "RackSlot")];
+
+/// Equipment: rows of the project tables of [`EQUIPMENT_REFERENCES`] that
+/// exist and point at `id`.
+pub async fn equipment(conn: &mut SqliteConnection, id: &str) -> Result<Counts, sqlx::Error> {
+    let mut out = Counts::new();
+    for (key, table) in EQUIPMENT_REFERENCES {
+        let exists: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = ?",
+        )
+        .bind(table)
+        .fetch_one(&mut *conn)
+        .await?;
+        if exists > 0 {
+            out.push((
+                key,
+                count(
+                    conn,
+                    &format!(r#"SELECT COUNT(*) FROM "{table}" WHERE "catalogEquipmentId" = ?"#),
+                    id,
+                )
+                .await?,
+            ));
+        }
+    }
+    Ok(out)
+}

@@ -33,6 +33,17 @@ pub enum Kind {
     Url,
     /// `assetUrlSchema`: absolute http(s) URL or `/relative/path`.
     Asset,
+    /// `z.string().min(1)` (default message).
+    NonEmpty,
+    /// `z.number()`.
+    Num,
+    /// `z.number().int().min(n)`.
+    IntMin(i64),
+    /// `z.array(z.string().min(1)).min(min).max(max)`.
+    IdArr {
+        min: usize,
+        max: usize,
+    },
     NumNonNeg,
     NumPos,
     /// `z.number().positive(msg)`.
@@ -53,6 +64,8 @@ pub enum Def {
     True,
     Zero,
     EmptyArr,
+    Int(i64),
+    Str(&'static str),
 }
 
 impl Def {
@@ -63,6 +76,8 @@ impl Def {
             Def::True => Value::Bool(true),
             Def::Zero => Value::from(0),
             Def::EmptyArr => Value::Array(vec![]),
+            Def::Int(n) => Value::from(n),
+            Def::Str(s) => Value::String(s.to_string()),
         }
     }
 }
@@ -116,10 +131,20 @@ fn js_type(v: Option<&Value>) -> &'static str {
 
 fn expected(kind: &Kind) -> &'static str {
     match kind {
-        Kind::Str | Kind::Bounded { .. } | Kind::MaxLen(_) | Kind::Url | Kind::Asset => "string",
-        Kind::NumNonNeg | Kind::NumPos | Kind::NumPosMsg(_) | Kind::Int => "number",
+        Kind::Str
+        | Kind::NonEmpty
+        | Kind::Bounded { .. }
+        | Kind::MaxLen(_)
+        | Kind::Url
+        | Kind::Asset => "string",
+        Kind::NumNonNeg
+        | Kind::NumPos
+        | Kind::NumPosMsg(_)
+        | Kind::Int
+        | Kind::Num
+        | Kind::IntMin(_) => "number",
         Kind::Bool => "boolean",
-        Kind::StrArr | Kind::AnyArr => "array",
+        Kind::StrArr | Kind::AnyArr | Kind::IdArr { .. } => "array",
         Kind::Enum(..) => "string",
     }
 }
@@ -183,6 +208,39 @@ fn check(kind: &Kind, v: &Value) -> Vec<String> {
                 errs.push(
                     "La clé doit être en majuscules, chiffres et tirets bas uniquement".into(),
                 );
+            }
+        }
+        (Kind::NonEmpty, Value::String(s)) => {
+            if s.is_empty() {
+                errs.push("Too small: expected string to have >=1 characters".into());
+            }
+        }
+        (Kind::Num, Value::Number(_)) => {}
+        (Kind::IntMin(min), Value::Number(n)) => {
+            if n.as_f64().is_some_and(|f| f.fract() != 0.0) {
+                errs.push("Invalid input: expected int, received number".into());
+            } else if n.as_f64().is_some_and(|f| f < *min as f64) {
+                errs.push(format!("Too small: expected number to be >={min}"));
+            }
+        }
+        (Kind::IdArr { min, max }, Value::Array(items)) => {
+            if items.len() < *min {
+                errs.push(format!("Too small: expected array to have >={min} items"));
+            }
+            if items.len() > *max {
+                errs.push(format!("Too big: expected array to have <={max} items"));
+            }
+            for it in items {
+                match it {
+                    Value::String(s) if s.is_empty() => {
+                        errs.push("Too small: expected string to have >=1 characters".into());
+                    }
+                    Value::String(_) => {}
+                    other => errs.push(format!(
+                        "Invalid input: expected string, received {}",
+                        js_type(Some(other))
+                    )),
+                }
             }
         }
         (Kind::MaxLen(max), Value::String(s)) => {
@@ -253,10 +311,17 @@ fn check(kind: &Kind, v: &Value) -> Vec<String> {
     errs
 }
 
-fn failure(form: Vec<String>, fields: BTreeMap<String, Vec<String>>) -> Response {
+/// `parsed.error.flatten()`.
+pub type Flat = (Vec<String>, BTreeMap<String, Vec<String>>);
+
+pub fn flat_json(flat: &Flat) -> Value {
+    json!({ "formErrors": flat.0, "fieldErrors": flat.1 })
+}
+
+fn failure(flat: Flat) -> Response {
     (
         StatusCode::BAD_REQUEST,
-        Json(json!({ "error": { "formErrors": form, "fieldErrors": fields } })),
+        Json(json!({ "error": flat_json(&flat) })),
     )
         .into_response()
 }
@@ -264,8 +329,14 @@ fn failure(form: Vec<String>, fields: BTreeMap<String, Vec<String>>) -> Response
 /// Validates `body` against `fields`; returns the sent, valid fields.
 #[allow(clippy::result_large_err)]
 pub fn validate(body: &Value, fields: &[Field]) -> Result<Obj, Response> {
+    validate_flat(body, fields).map_err(failure)
+}
+
+/// [`validate`] with the raw `flatten()` result, for routes that wrap it in
+/// their own error envelope.
+pub fn validate_flat(body: &Value, fields: &[Field]) -> Result<Obj, Flat> {
     let Value::Object(obj) = body else {
-        return Err(failure(
+        return Err((
             vec![format!(
                 "Invalid input: expected object, received {}",
                 js_type(Some(body))
@@ -304,7 +375,7 @@ pub fn validate(body: &Value, fields: &[Field]) -> Result<Obj, Response> {
     if errs.is_empty() {
         Ok(out)
     } else {
-        Err(failure(vec![], errs))
+        Err((vec![], errs))
     }
 }
 

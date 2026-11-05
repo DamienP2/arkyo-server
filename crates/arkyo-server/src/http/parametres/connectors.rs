@@ -59,14 +59,14 @@ pub static RES: Res = Res {
     patch: &PATCH,
 };
 
-struct Symbol {
-    key: String,
-    svg_url: Option<String>,
-    svg_url_d: Option<String>,
-    builtin: bool,
+pub struct Symbol {
+    pub key: String,
+    pub svg_url: Option<String>,
+    pub svg_url_d: Option<String>,
+    pub builtin: bool,
 }
 
-async fn load_symbols(conn: &mut SqliteConnection) -> Result<Vec<Symbol>, sqlx::Error> {
+pub async fn load_symbols(conn: &mut SqliteConnection) -> Result<Vec<Symbol>, sqlx::Error> {
     let rows =
         sqlx::query(r#"SELECT "key", "svgUrl", "svgUrlD", "isBuiltin" FROM "CatalogSymbol""#)
             .fetch_all(conn)
@@ -82,16 +82,32 @@ async fn load_symbols(conn: &mut SqliteConnection) -> Result<Vec<Symbol>, sqlx::
         .collect())
 }
 
-/// `deriveHasNeutrikD`: from the symbol the connector references.
-fn has_neutrik_d(icon_id: Option<&str>, svg_url: Option<&str>, symbols: &[Symbol]) -> bool {
-    let found = symbols.iter().find(|s| {
+fn find_symbol<'a>(
+    icon_id: Option<&str>,
+    svg_url: Option<&str>,
+    symbols: &'a [Symbol],
+) -> Option<&'a Symbol> {
+    symbols.iter().find(|s| {
         icon_id.is_some_and(|i| s.key == i || s.svg_url.as_deref() == Some(i))
             || svg_url.is_some_and(|u| s.svg_url.as_deref() == Some(u))
-    });
-    match found {
+    })
+}
+
+/// `deriveHasNeutrikD`: from the symbol the connector references.
+pub fn has_neutrik_d(icon_id: Option<&str>, svg_url: Option<&str>, symbols: &[Symbol]) -> bool {
+    match find_symbol(icon_id, svg_url, symbols) {
         Some(s) => s.svg_url_d.is_some() || (s.builtin && D_TYPE_KEYS.contains(&s.key.as_str())),
         None => icon_id.is_some_and(|i| D_TYPE_KEYS.contains(&i)),
     }
+}
+
+/// `deriveDTypeSvgUrl`: the "D" SVG of the referenced symbol, if any.
+pub fn d_type_svg_url(
+    icon_id: Option<&str>,
+    svg_url: Option<&str>,
+    symbols: &[Symbol],
+) -> Option<String> {
+    find_symbol(icon_id, svg_url, symbols).and_then(|s| s.svg_url_d.clone())
 }
 
 fn derive(row: &mut Obj, symbols: &[Symbol]) {

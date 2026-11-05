@@ -1,10 +1,11 @@
 //! HTTP API: shared state, session middleware, extractors and routing.
 
 mod auth;
+mod catalogue;
 mod events;
 mod me;
 mod notifications;
-mod parametres;
+pub(crate) mod parametres;
 mod presence;
 mod system;
 mod upload;
@@ -192,6 +193,7 @@ pub fn router(state: AppState) -> Router {
         )
         .route("/system/update/rollback", post(system::update_rollback))
         .merge(parametres::router())
+        .merge(catalogue::router())
         .fallback(api_not_found)
         .layer(middleware::from_fn_with_state(state.clone(), session_layer));
     let web = crate::web::routes(&state.data_dir);

@@ -14,7 +14,7 @@
 mod brands;
 mod cabling;
 mod categories;
-mod connectors;
+pub mod connectors;
 mod dimensions;
 mod signals;
 mod symbols;
@@ -33,7 +33,7 @@ use serde_json::{json, Map, Value};
 use sqlx::sqlite::SqliteRow;
 use sqlx::{Column, Row, SqliteConnection, SqlitePool};
 
-pub use valid::{validate, Def, Field, Kind, KEY, LABEL, NAME};
+pub use valid::{flat_json, validate, validate_flat, Def, Field, Kind, KEY, LABEL, NAME};
 
 use super::{error, require, server_error, AppState};
 use crate::audit;
@@ -188,7 +188,7 @@ pub fn router() -> Router<AppState> {
 
 // ── rows ────────────────────────────────────────────────────────────────────
 
-fn row_map(row: &SqliteRow, t: &Table) -> Obj {
+pub fn row_map(row: &SqliteRow, t: &Table) -> Obj {
     let mut m = Obj::new();
     for (i, col) in row.columns().iter().enumerate() {
         let name = col.name();
@@ -243,6 +243,22 @@ pub async fn list_rows(
     Ok(rows.iter().map(|r| row_map(r, t)).collect())
 }
 
+/// [`list_rows`] on an open connection (inside a transaction).
+pub async fn list_rows_conn(
+    conn: &mut SqliteConnection,
+    t: &Table,
+    filter: &str,
+    order: &str,
+) -> Result<Vec<Obj>, sqlx::Error> {
+    let rows = sqlx::query(&format!(
+        r#"SELECT * FROM "{}" {filter} ORDER BY {order}"#,
+        t.name
+    ))
+    .fetch_all(conn)
+    .await?;
+    Ok(rows.iter().map(|r| row_map(r, t)).collect())
+}
+
 pub fn objs(rows: Vec<Obj>) -> Value {
     Value::Array(rows.into_iter().map(Value::Object).collect())
 }
@@ -252,7 +268,7 @@ pub fn arkyo_personal(rows: Vec<Obj>) -> Value {
     json!({ "arkyo": [], "personal": objs(rows) })
 }
 
-fn bind<'q>(
+pub fn bind<'q>(
     q: sqlx::query::Query<'q, sqlx::Sqlite, sqlx::sqlite::SqliteArguments<'q>>,
     v: &Value,
 ) -> sqlx::query::Query<'q, sqlx::Sqlite, sqlx::sqlite::SqliteArguments<'q>> {
@@ -311,11 +327,13 @@ fn write_error(res: &Res, e: sqlx::Error) -> Response {
     db_error(e)
 }
 
-fn parse_body(body: &Bytes) -> Result<Value, Response> {
+pub fn parse_body(body: &Bytes) -> Result<Value, Response> {
     serde_json::from_slice(body).map_err(|_| bad("Corps de requête invalide"))
 }
 
-async fn begin(pool: &SqlitePool) -> Result<sqlx::Transaction<'static, sqlx::Sqlite>, Response> {
+pub async fn begin(
+    pool: &SqlitePool,
+) -> Result<sqlx::Transaction<'static, sqlx::Sqlite>, Response> {
     // IMMEDIATE: the write lock is taken before the checks read.
     pool.begin_with("BEGIN IMMEDIATE").await.map_err(db_error)
 }
