@@ -10,7 +10,10 @@ use serde_json::{json, Value};
 
 const EQUIPMENT: &str = "/api/tenant/catalogue/equipment";
 const CABLES: &str = "/api/tenant/catalogue/cables";
+const ADAPTERS: &str = "/api/tenant/catalogue/adapters";
 const BRANDS: &str = "/api/tenant/parametres/brands";
+/// Every section, like the default selection of `backup-card.tsx`.
+const BACKUP: &str = "/api/tenant/parametres/backup?sections=equipment,cables,adapters,settings";
 
 struct Owner<'a> {
     e: &'a Env,
@@ -28,8 +31,10 @@ impl Owner<'_> {
         r.body
     }
 
-    /// Everything the catalogue screens read: the lists (all items, active
-    /// or not) and the detail of each item we created.
+    /// Everything the catalogue screens read (the lists, active items or
+    /// not, and the detail of each item we created) plus the full backup
+    /// export, which covers every table the purge empties and the restore
+    /// rewrites (adapters and every settings referential included).
     async fn snapshot(&self, ids: &Ids) -> Value {
         let ok = StatusCode::OK;
         let mut eq = self.ok("GET", EQUIPMENT, None, ok).await;
@@ -37,8 +42,15 @@ impl Owner<'_> {
             .ok("GET", &format!("{EQUIPMENT}?isActive=false"), None, ok)
             .await;
         let mut cables = self.ok("GET", CABLES, None, ok).await;
+        let mut adapters = self.ok("GET", ADAPTERS, None, ok).await;
         let mut brands = self.ok("GET", BRANDS, None, ok).await;
-        for list in [&mut eq, &mut eq_off, &mut cables, &mut brands] {
+        for list in [
+            &mut eq,
+            &mut eq_off,
+            &mut cables,
+            &mut adapters,
+            &mut brands,
+        ] {
             for key in ["arkyo", "personal"] {
                 sort_by_id(&mut list[key]);
             }
@@ -52,12 +64,32 @@ impl Owner<'_> {
             .ok("GET", &format!("{CABLES}/{}", ids.cable), None, ok)
             .await;
         details.insert(format!("cables/{}", ids.cable), d);
+        let d = self
+            .ok("GET", &format!("{ADAPTERS}/{}", ids.adapter), None, ok)
+            .await;
+        details.insert(format!("adapters/{}", ids.adapter), d);
+        let mut backup = self.ok("GET", BACKUP, None, ok).await;
+        // The export time is the only field that changes between two exports
+        // of the same catalogue.
+        backup["meta"].as_object_mut().unwrap().remove("exportedAt");
+        // AppConfig rows are upserted by key with their value only, so the
+        // restore stamps `updatedAt` with the restore time (arkyo
+        // `restoreAppConfig`: `upsert({ update: { value } })` and Prisma's
+        // `@updatedAt`). Key, value and id are still compared.
+        for row in backup["data"]["settings"]["appConfig"]
+            .as_array_mut()
+            .unwrap()
+        {
+            row.as_object_mut().unwrap().remove("updatedAt");
+        }
         json!({
             "equipment": eq,
             "equipmentInactive": eq_off,
             "cables": cables,
+            "adapters": adapters,
             "brands": brands,
             "details": details,
+            "backup": backup,
         })
     }
 }
@@ -66,6 +98,7 @@ struct Ids {
     equipment: String,
     copy: String,
     cable: String,
+    adapter: String,
 }
 
 /// JSON paths where `a` and `b` differ (readable failure message).
@@ -273,10 +306,43 @@ async fn phase2_backup_purge_restore_keeps_catalogue() {
             StatusCode::CREATED,
         )
         .await;
+    // 5b. Adapter (`buildPayload` of `adapter-editor.tsx`).
+    let adapter = o
+        .ok(
+            "POST",
+            ADAPTERS,
+            Some(json!({
+                "name": "Adaptateur Test",
+                "reference": "AD-1",
+                "functionId": null,
+                "inputs": [{ "connectorTypeId": left, "gender": "MALE", "quantity": 1, "label": "Entrée" }],
+                "outputs": [{ "connectorTypeId": right, "gender": "FEMALE", "quantity": 2, "label": "Sorties" }],
+                "notes": null,
+                "imageUrl": null
+            })),
+            StatusCode::CREATED,
+        )
+        .await;
+    // 5c. Settings that a purge keeps but a restore rewrites, so the export
+    // comparison covers them too: numbering (`numbering-tab.tsx`) and a PDF
+    // export model (`export-model-form-dialog.tsx`).
+    for update in [json!({ "cable_pad": "3" }), json!({ "cable_sep1": "." })] {
+        o.ok("PATCH", "/api/admin/config", Some(update), StatusCode::OK)
+            .await;
+    }
+    o.ok(
+        "POST",
+        "/api/tenant/parametres/print/export-models",
+        Some(json!({ "key": "DOSSIER", "name": "Dossier", "description": null })),
+        StatusCode::CREATED,
+    )
+    .await;
+
     let ids = Ids {
         equipment,
         copy: copy_id,
         cable: cable["id"].as_str().unwrap().to_string(),
+        adapter: adapter["id"].as_str().unwrap().to_string(),
     };
 
     let before = o.snapshot(&ids).await;
@@ -288,16 +354,28 @@ async fn phase2_backup_purge_restore_keeps_catalogue() {
         .unwrap()
         .iter()
         .any(|b| b["id"] == brand.as_str()));
+    assert!(before["adapters"]["personal"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|a| a["id"] == ids.adapter.as_str()));
+    // The export compared below is not vacuous: our rows and every settings
+    // referential are in it.
+    let data = &before["backup"]["data"];
+    for (section, n) in [("equipment", 2), ("cables", 1), ("adapters", 1)] {
+        assert!(data[section].as_array().unwrap().len() >= n, "{section}");
+    }
+    let settings = data["settings"].as_object().unwrap();
+    let empty: Vec<&String> = settings
+        .iter()
+        .filter(|(_, v)| v.as_array().unwrap().is_empty())
+        .map(|(k, _)| k)
+        .collect();
+    // exportTemplates has no screen before phase 6: it stays empty.
+    assert_eq!(empty, ["exportTemplates"], "{:?}", settings.keys());
 
     // 6. Backup, every section (backup-card.tsx default selection).
-    let backup = o
-        .ok(
-            "GET",
-            "/api/tenant/parametres/backup?sections=equipment,cables,adapters,settings",
-            None,
-            StatusCode::OK,
-        )
-        .await;
+    let backup = o.ok("GET", BACKUP, None, StatusCode::OK).await;
     assert_eq!(backup["meta"]["format"], "arkyo-backup");
 
     // 7-9 twice: the front's default mode (merge), then « Remplacer ».
@@ -320,6 +398,19 @@ async fn phase2_backup_purge_restore_keeps_catalogue() {
             .req("GET", &format!("{EQUIPMENT}/{}", ids.equipment), None)
             .await;
         assert_eq!(r.status, StatusCode::NOT_FOUND, "{:?}", r.body);
+        let r = o
+            .req("GET", &format!("{ADAPTERS}/{}", ids.adapter), None)
+            .await;
+        assert_eq!(r.status, StatusCode::NOT_FOUND, "{:?}", r.body);
+        let brands = o.ok("GET", BRANDS, None, StatusCode::OK).await;
+        assert!(
+            !brands["personal"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|b| b["id"] == brand.as_str()),
+            "the purge kept the brand"
+        );
 
         // 8. Restore every section (restore-verify.tsx sends `{modes, backup}`).
         let modes = json!({ "equipment": mode, "cables": mode,
