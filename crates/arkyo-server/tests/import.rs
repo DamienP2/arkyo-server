@@ -244,6 +244,78 @@ async fn import_analyze_errors_and_limits() {
     assert_eq!(r.body["code"], "INSUFFICIENT_PERMISSION");
 }
 
+/// Size guards before any dense allocation (final review, Important 1):
+/// a sheet, a JSON matrix or a CSV wider than 200 columns is refused with
+/// arkyo-style French errors, and a sparse XLSX whose used range spans the
+/// whole sheet (A1 + XFD1048576) is refused quickly, without allocating
+/// the dense range.
+#[tokio::test]
+async fn import_rejects_too_many_columns() {
+    use rust_xlsxwriter::Workbook;
+    const XLSX: &str = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+    let c = ctx().await;
+    let too_many = |r: &Reply| {
+        assert_eq!(r.status, StatusCode::BAD_REQUEST, "{:?}", r.body["error"]);
+        assert_eq!(r.body["error"], "Trop de colonnes (max 200)");
+    };
+
+    // JSON matrix: a 100 000-cell header row and short data rows.
+    let header: Vec<Value> = (0..100_000).map(|_| json!("a")).collect();
+    let mut matrix = vec![Value::Array(header)];
+    matrix.extend((0..5000).map(|_| json!(["x"])));
+    too_many(
+        &c.req("POST", ANALYZE, Some(json!({ "matrix": matrix })))
+            .await,
+    );
+    // 200 columns stay accepted.
+    let header: Vec<Value> = (0..200).map(|i| json!(format!("C{i}"))).collect();
+    let ok = c
+        .req("POST", ANALYZE, Some(json!({ "matrix": [header, ["x"]] })))
+        .await;
+    assert_eq!(ok.status, StatusCode::OK, "{:?}", ok.body);
+    assert_eq!(ok.body["headers"].as_array().unwrap().len(), 200);
+
+    // CSV, JSON and multipart.
+    let csv = format!("{}\nx\n", vec!["a"; 201].join(";"));
+    too_many(&c.req("POST", ANALYZE, Some(json!({ "csv": csv }))).await);
+    too_many(&c.upload("large.csv", "text/csv", csv.as_bytes()).await);
+
+    // XLSX 201 columns wide.
+    let mut wb = Workbook::new();
+    let ws = wb.add_worksheet();
+    ws.write_string(0, 0, "Nom").unwrap();
+    ws.write_string(0, 200, "Fin").unwrap();
+    too_many(
+        &c.upload("large.xlsx", XLSX, &wb.save_to_buffer().unwrap())
+            .await,
+    );
+}
+
+/// A1 + XFD1048576: a < 10 Ko file whose dense range would be 1.7e10 cells.
+/// Not run against the unguarded code (it would exhaust the machine).
+#[tokio::test]
+async fn import_rejects_sparse_xlsx_without_allocating() {
+    use rust_xlsxwriter::Workbook;
+    let c = ctx().await;
+    let mut wb = Workbook::new();
+    let ws = wb.add_worksheet();
+    ws.write_string(0, 0, "Nom").unwrap();
+    ws.write_string(1_048_575, 16_383, "x").unwrap();
+    let bytes = wb.save_to_buffer().unwrap();
+    assert!(bytes.len() < 10_000);
+    let start = std::time::Instant::now();
+    let r = c
+        .upload(
+            "bombe.xlsx",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            &bytes,
+        )
+        .await;
+    assert_eq!(r.status, StatusCode::BAD_REQUEST, "{:?}", r.body);
+    assert_eq!(r.body["error"], "Trop de colonnes (max 200)");
+    assert!(start.elapsed() < std::time::Duration::from_secs(5));
+}
+
 #[tokio::test]
 async fn import_xlsx_same_as_csv() {
     use rust_xlsxwriter::Workbook;

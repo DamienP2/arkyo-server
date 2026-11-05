@@ -25,14 +25,16 @@ use crate::catalogue::import::coerce::{coerce_row, ColumnMap};
 use crate::catalogue::import::detect::{
     detect_columns, normalize_token, TargetField, ALL_TARGET_FIELDS, DEFAULT_THRESHOLD,
 };
-use crate::catalogue::import::parse::{normalize_matrix, parse_csv, parse_xlsx, TabularMatrix};
+use crate::catalogue::import::parse::{
+    normalize_matrix, parse_csv, parse_xlsx, too_many_columns_message, ParseError, TabularMatrix,
+    MAX_ROWS,
+};
 use crate::catalogue::import::preview::{preview_rows, ExistingEquipment};
 use crate::catalogue::import::resolve::distinct_values;
 use crate::http::catalogue::assert_can_write;
-use crate::http::{error, AppState, CurrentUser};
+use crate::http::{error, server_error, AppState, CurrentUser};
 use crate::ids::{new_id, now_iso};
 
-const MAX_ROWS: usize = 5000;
 /// 8 Mo of CSV text (`z.string().max(MAX_CSV_BYTES)`).
 const MAX_CSV_CHARS: usize = 8 * 1024 * 1024;
 /// 12 Mo of file.
@@ -177,11 +179,41 @@ fn check_rows(o: &Obj, errs: &mut Errs) -> Vec<Vec<String>> {
 
 // ── analyze ─────────────────────────────────────────────────────────────────
 
-/// `boundMatrix`: at most `MAX_ROWS` data rows, silently.
-fn bound_matrix(m: TabularMatrix) -> TabularMatrix {
-    let mut m = m;
-    m.rows.truncate(MAX_ROWS);
-    m
+/// `boundMatrix`: at most `MAX_ROWS` data rows, silently (the parsers stop
+/// there); more than `MAX_COLS` columns answer 400 (arkyo-server: the
+/// single process hosts the whole site, a width bomb must not reach it).
+fn bound_matrix(m: Result<TabularMatrix, ParseError>) -> Result<TabularMatrix, Response> {
+    match m {
+        Ok(m) => Ok(m),
+        Err(ParseError::TooManyColumns) => {
+            Err(error(StatusCode::BAD_REQUEST, &too_many_columns_message()))
+        }
+        Err(ParseError::TooLarge) => Err(error(
+            StatusCode::PAYLOAD_TOO_LARGE,
+            "Fichier trop volumineux",
+        )),
+        Err(ParseError::Unreadable(e)) => {
+            tracing::warn!("import xlsx: {e}");
+            Err(error(
+                StatusCode::UNPROCESSABLE_ENTITY,
+                "Impossible de lire le fichier XLSX côté serveur. Renvoyez la matrice pré-parsée (champ `matrix`).",
+            ))
+        }
+    }
+}
+
+/// CPU-bound parsing off the async workers.
+async fn blocking<F>(f: F) -> Result<TabularMatrix, Response>
+where
+    F: FnOnce() -> Result<TabularMatrix, ParseError> + Send + 'static,
+{
+    match tokio::task::spawn_blocking(f).await {
+        Ok(m) => bound_matrix(m),
+        Err(e) => {
+            tracing::error!("import: {e}");
+            Err(server_error())
+        }
+    }
 }
 
 /// `readMatrixFromRequest`: multipart `file` (CSV or XLSX), or JSON
@@ -217,7 +249,7 @@ async fn read_matrix(st: &AppState, req: Request) -> Result<TabularMatrix, Respo
             None
         }
     };
-    let matrix: Option<Vec<Vec<Value>>> = match o.get("matrix") {
+    let matrix: Option<Vec<Value>> = match o.get("matrix") {
         None => None,
         Some(Value::Array(items)) => {
             if items.len() > MAX_ROWS + 1 {
@@ -226,14 +258,12 @@ async fn read_matrix(st: &AppState, req: Request) -> Result<TabularMatrix, Respo
                     format!("Too big: expected array to have <={} items", MAX_ROWS + 1),
                 );
             }
-            let mut rows = Vec::with_capacity(items.len());
             for it in items {
-                match it {
-                    Value::Array(cells) => rows.push(cells.clone()),
-                    other => errs.add("matrix", expected("array", Some(other))),
+                if !it.is_array() {
+                    errs.add("matrix", expected("array", Some(it)));
                 }
             }
-            Some(rows)
+            Some(items.clone())
         }
         other => {
             errs.add("matrix", expected("array", other));
@@ -261,10 +291,18 @@ async fn read_matrix(st: &AppState, req: Request) -> Result<TabularMatrix, Respo
     };
     errs.into_result()?;
     if let Some(csv) = csv {
-        return Ok(bound_matrix(parse_csv(csv)));
+        let csv = csv.to_string();
+        return blocking(move || parse_csv(&csv)).await;
     }
     if let Some(matrix) = matrix {
-        return Ok(bound_matrix(normalize_matrix(&matrix, sheet_names)));
+        return blocking(move || {
+            let rows = matrix.iter().map(|r| match r {
+                Value::Array(cells) => cells.as_slice(),
+                _ => &[],
+            });
+            normalize_matrix(rows, sheet_names)
+        })
+        .await;
     }
     Err(error(
         StatusCode::BAD_REQUEST,
@@ -297,15 +335,9 @@ async fn read_file(st: &AppState, req: Request) -> Result<TabularMatrix, Respons
             ));
         }
         if name.ends_with(".xlsx") || mime.contains("spreadsheetml") {
-            return parse_xlsx(&bytes).map(bound_matrix).map_err(|e| {
-                tracing::warn!("import xlsx: {e}");
-                error(
-                    StatusCode::UNPROCESSABLE_ENTITY,
-                    "Impossible de lire le fichier XLSX côté serveur. Renvoyez la matrice pré-parsée (champ `matrix`).",
-                )
-            });
+            return blocking(move || parse_xlsx(&bytes)).await;
         }
-        return Ok(bound_matrix(parse_csv(&String::from_utf8_lossy(&bytes))));
+        return blocking(move || parse_csv(&String::from_utf8_lossy(&bytes))).await;
     }
 }
 
