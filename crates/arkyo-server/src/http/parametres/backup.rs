@@ -592,6 +592,85 @@ fn column_value(t: &Table, key: &str, v: &Value) -> Value {
     }
 }
 
+/// A restored value whose JSON type does not fit its column (the tables are
+/// not STRICT: it would be stored as is and break the pages reading it).
+#[derive(Debug)]
+struct BadValue(String);
+
+impl std::fmt::Display for BadValue {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.0)
+    }
+}
+
+impl std::error::Error for BadValue {}
+
+fn bad_value(t: &Table, key: &str, expected: &str) -> sqlx::Error {
+    sqlx::Error::Decode(Box::new(BadValue(format!(
+        "Valeur invalide pour « {key} » ({}) : {expected} attendu",
+        t.name
+    ))))
+}
+
+/// The detail of a failed section: a [`BadValue`] message as is.
+fn error_detail(e: &sqlx::Error) -> String {
+    if let sqlx::Error::Decode(inner) = e {
+        if let Some(b) = inner.downcast_ref::<BadValue>() {
+            return b.0.clone();
+        }
+    }
+    e.to_string()
+}
+
+/// Checks each field against its column: booleans (`t.bools`) a boolean,
+/// JSON columns (`t.jsons`) an array or object, `INTEGER` columns an
+/// integer, `REAL` columns a number, the others (text) a string. `null` is
+/// left to the column's constraints.
+async fn check_types(
+    conn: &mut SqliteConnection,
+    t: &Table,
+    data: &Obj,
+) -> Result<(), sqlx::Error> {
+    let types: HashMap<String, String> = sqlx::query_as::<_, (String, String)>(
+        r#"SELECT "name", upper("type") FROM pragma_table_info(?)"#,
+    )
+    .bind(t.name)
+    .fetch_all(&mut *conn)
+    .await?
+    .into_iter()
+    .collect();
+    for (key, v) in data {
+        if v.is_null() {
+            continue;
+        }
+        let k = key.as_str();
+        let (ok, expected) = if t.bools.contains(&k) {
+            (v.is_boolean(), "booléen")
+        } else if t.jsons.contains(&k) {
+            (v.is_array() || v.is_object(), "tableau ou objet JSON")
+        } else {
+            match types.get(k).map(String::as_str) {
+                None => continue,
+                Some(ty) if ty.contains("INT") => (
+                    v.is_i64()
+                        || v.is_u64()
+                        || v.as_f64()
+                            .is_some_and(|f| f.is_finite() && f.fract() == 0.0),
+                    "nombre entier",
+                ),
+                Some(ty) if ty.contains("REAL") || ty.contains("FLOA") || ty.contains("DOUB") => {
+                    (v.is_number(), "nombre")
+                }
+                Some(_) => (v.is_string(), "texte"),
+            }
+        };
+        if !ok {
+            return Err(bad_value(t, k, expected));
+        }
+    }
+    Ok(())
+}
+
 async fn exists(conn: &mut SqliteConnection, t: &Table, id: &str) -> Result<bool, sqlx::Error> {
     Ok(get_row(conn, t, id).await?.is_some())
 }
@@ -624,6 +703,7 @@ async fn insert(conn: &mut SqliteConnection, t: &Table, mut data: Obj) -> Result
             data.insert((*k).into(), Value::String(now.clone()));
         }
     }
+    check_types(conn, t, &data).await?;
     let cols: Vec<String> = data.keys().map(|k| format!("\"{k}\"")).collect();
     let values = data.iter().map(|(k, v)| column_value(t, k, v)).collect();
     let sql = format!(
@@ -646,6 +726,7 @@ async fn update(
     if !data.contains_key("updatedAt") {
         data.insert("updatedAt".into(), Value::String(now_iso()));
     }
+    check_types(conn, t, &data).await?;
     let sets: Vec<String> = data.keys().map(|k| format!("\"{k}\" = ?")).collect();
     let mut values: Vec<Value> = data.iter().map(|(k, v)| column_value(t, k, v)).collect();
     values.push(Value::String(id.into()));
@@ -764,6 +845,9 @@ async fn restore_categories(
         let Some(parent) = p.get("parentId") else {
             continue;
         };
+        if !parent.is_null() && !parent.is_string() {
+            return Err(bad_value(CATEGORY, "parentId", "texte"));
+        }
         sqlx::query(r#"UPDATE "TenantEquipmentCategory" SET "parentId" = ? WHERE "id" = ?"#)
             .bind(parent.as_str())
             .bind(str_of(&p, "id"))
@@ -984,7 +1068,7 @@ async fn restore_section(
     // Dropping the transaction on error rolls the section back.
     run.await.map_err(|e| {
         tracing::warn!("restauration {section}: {e}");
-        e.to_string()
+        error_detail(&e)
     })
 }
 

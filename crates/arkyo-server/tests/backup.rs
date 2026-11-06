@@ -407,6 +407,124 @@ async fn restore_section_failure_keeps_previous_sections() {
     assert_eq!(created_by, uid);
 }
 
+/// Final review, Minor 1: each restored field must have its column's JSON
+/// type (text, boolean, integer, real, JSON array/object); otherwise the
+/// section is refused with a French message and rolled back, nothing stored.
+#[tokio::test]
+async fn restore_rejects_wrong_scalar_types() {
+    let c = ctx().await;
+    let brand = |extra: Value| {
+        let mut b = json!({ "id": "cbrandtyped00000000000001", "name": "Marque Typée",
+                            "isActive": true });
+        for (k, v) in extra.as_object().unwrap() {
+            b[k] = v.clone();
+        }
+        b
+    };
+    let backup = |settings: Value, equipment: Value| {
+        json!({
+            "meta": { "format": "arkyo-backup", "version": 1,
+                      "exportedAt": "2026-11-05T10:00:00.000Z",
+                      "sections": ["settings", "equipment"] },
+            "data": { "settings": settings, "equipment": equipment }
+        })
+    };
+    let cases = [
+        (
+            "settings",
+            backup(
+                json!({ "brands": [brand(json!({ "name": 123 }))] }),
+                json!([]),
+            ),
+            "« name »",
+        ),
+        (
+            "settings",
+            backup(
+                json!({ "brands": [brand(json!({ "isActive": "false" }))] }),
+                json!([]),
+            ),
+            "« isActive »",
+        ),
+        (
+            "settings",
+            backup(
+                json!({ "connectors": [{ "id": "cconntyped000000000000001", "name": "C",
+                                         "functionIds": "abc" }] }),
+                json!([]),
+            ),
+            "« functionIds »",
+        ),
+        (
+            "equipment",
+            backup(
+                json!({}),
+                json!([{ "id": "ceqtyped00000000000000001", "name": "E", "heightU": "2" }]),
+            ),
+            "« heightU »",
+        ),
+        (
+            "equipment",
+            backup(
+                json!({}),
+                json!([{ "id": "ceqtyped00000000000000001", "name": "E", "weight": true }]),
+            ),
+            "« weight »",
+        ),
+    ];
+    for (section, b, field) in cases {
+        let r = c
+            .req(
+                "POST",
+                RESTORE,
+                Some(json!({ "modes": { section: "merge" }, "backup": b })),
+            )
+            .await;
+        assert_eq!(r.status, StatusCode::BAD_REQUEST, "{field}: {:?}", r.body);
+        let msg = r.body["error"].as_str().unwrap();
+        assert!(
+            msg.starts_with("Échec de la restauration de la section"),
+            "{msg}"
+        );
+        assert!(msg.contains("Valeur invalide pour"), "{msg}");
+        assert!(msg.contains(field), "{msg}");
+    }
+    assert_eq!(
+        count(
+            &c.e.pool,
+            r#"SELECT COUNT(*) FROM "TenantBrand" WHERE "id"='cbrandtyped00000000000001'"#
+        )
+        .await,
+        0
+    );
+    assert_eq!(
+        count(
+            &c.e.pool,
+            r#"SELECT COUNT(*) FROM "TenantConnectorType" WHERE "id"='cconntyped000000000000001'"#
+        )
+        .await,
+        0
+    );
+    assert_eq!(
+        count(&c.e.pool, r#"SELECT COUNT(*) FROM "TenantEquipment""#).await,
+        0
+    );
+    // Well-typed values (nulls, integers, reals) still go in.
+    let ok = backup(
+        json!({ "brands": [brand(json!({ "website": null }))] }),
+        json!([{ "id": "ceqtyped00000000000000001", "name": "E", "heightU": 2,
+                 "weight": 6.5, "dmxModes": [], "notes": null }]),
+    );
+    let r = c
+        .req(
+            "POST",
+            RESTORE,
+            Some(json!({ "modes": { "settings": "merge", "equipment": "merge" }, "backup": ok })),
+        )
+        .await;
+    assert_eq!(r.status, StatusCode::OK, "{:?}", r.body);
+}
+
 /// Phase 2 smoke (Task 13): the author is rewritten only when it does not
 /// exist here. The seeds' `system` and an existing user stay, so a backup
 /// restored on its own server gives back the same catalogue.
