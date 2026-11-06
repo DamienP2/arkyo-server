@@ -274,15 +274,26 @@ async fn create_patch_delete_roundtrip() {
     assert_eq!(g.status, StatusCode::NOT_FOUND);
 }
 
-/// Stand-in for the phase-3 inventory tables arkyo checks before a delete.
+/// Places the equipment in a rack (tables of migration 0003), which arkyo
+/// checks before a delete.
 async fn use_in_rack(pool: &SqlitePool, equipment_id: &str) {
-    sqlx::query(r#"CREATE TABLE IF NOT EXISTS "RackSlot" ("id" TEXT PRIMARY KEY, "catalogEquipmentId" TEXT)"#)
-        .execute(pool)
-        .await
-        .unwrap();
-    sqlx::query(r#"INSERT INTO "RackSlot" ("id","catalogEquipmentId") VALUES (?, ?)"#)
+    let now = arkyo_server::ids::now_iso();
+    let rack = arkyo_server::ids::new_id();
+    sqlx::query(
+        r#"INSERT INTO "Rack" ("id","name","createdAt","updatedAt") VALUES (?, 'Baie', ?, ?)"#,
+    )
+    .bind(&rack)
+    .bind(&now)
+    .bind(&now)
+    .execute(pool)
+    .await
+    .unwrap();
+    sqlx::query(r#"INSERT INTO "RackSlot" ("id","rackId","catalogEquipmentId","createdAt","updatedAt") VALUES (?, ?, ?, ?, ?)"#)
         .bind(arkyo_server::ids::new_id())
+        .bind(&rack)
         .bind(equipment_id)
+        .bind(&now)
+        .bind(&now)
         .execute(pool)
         .await
         .unwrap();

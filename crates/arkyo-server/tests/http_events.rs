@@ -152,3 +152,74 @@ async fn audit_row_written() {
     assert_eq!(row.5.as_deref(), Some(r#"{"name":"B"}"#));
     assert_eq!(row.6.len(), 24);
 }
+
+#[tokio::test]
+async fn publish_meta_serializes_camel_case() {
+    use arkyo_server::events::{EventBus, EventMeta};
+    let bus = EventBus::new();
+    let mut rx = bus.subscribe();
+    bus.publish_meta(
+        "rack",
+        "updated",
+        Some("r1"),
+        EventMeta {
+            project_id: Some("p".into()),
+            client_id: Some("c".into()),
+            ..Default::default()
+        },
+    );
+    let v: serde_json::Value = serde_json::from_str(&rx.recv().await.unwrap()).unwrap();
+    assert_eq!(
+        v,
+        json!({"type":"update","entity":"rack","action":"updated","id":"r1","projectId":"p","clientId":"c"})
+    );
+    bus.publish_meta(
+        "project",
+        "created",
+        None,
+        EventMeta {
+            rack_id: Some("r".into()),
+            item_id: Some("i".into()),
+            data: Some(json!({"n": 1})),
+            ..Default::default()
+        },
+    );
+    let v: serde_json::Value = serde_json::from_str(&rx.recv().await.unwrap()).unwrap();
+    assert_eq!(
+        v,
+        json!({"type":"update","entity":"project","action":"created","rackId":"r","itemId":"i","data":{"n":1}})
+    );
+    // Like arkyo's truthy checks: an empty id is omitted.
+    bus.publish_meta(
+        "x",
+        "y",
+        None,
+        EventMeta {
+            project_id: Some(String::new()),
+            ..Default::default()
+        },
+    );
+    let v: serde_json::Value = serde_json::from_str(&rx.recv().await.unwrap()).unwrap();
+    assert_eq!(v, json!({"type":"update","entity":"x","action":"y"}));
+}
+
+#[test]
+fn client_id_header_read_and_bounded() {
+    use arkyo_server::http::client_id;
+    use axum::http::{HeaderMap, HeaderValue};
+    let mut h = HeaderMap::new();
+    assert_eq!(client_id::read(&h), None);
+    let uuid = "0b7e9c1a-3f5d-4c2e-9a8b-1d2e3f4a5b6c";
+    h.insert("X-Client-Id", HeaderValue::from_static(uuid));
+    assert_eq!(client_id::read(&h).as_deref(), Some(uuid));
+    h.insert("x-client-id", HeaderValue::from_static(""));
+    assert_eq!(client_id::read(&h), None);
+    let long = "a".repeat(client_id::MAX_LEN + 1);
+    h.insert("x-client-id", HeaderValue::from_str(&long).unwrap());
+    assert_eq!(client_id::read(&h), None);
+    let max = "a".repeat(client_id::MAX_LEN);
+    h.insert("x-client-id", HeaderValue::from_str(&max).unwrap());
+    assert_eq!(client_id::read(&h).as_deref(), Some(max.as_str()));
+    h.insert("x-client-id", HeaderValue::from_bytes(b"\xff\xfe").unwrap());
+    assert_eq!(client_id::read(&h), None);
+}

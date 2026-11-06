@@ -3,6 +3,7 @@
 mod admin;
 mod auth;
 mod catalogue;
+pub mod client_id;
 mod espace;
 mod events;
 mod me;
