@@ -52,6 +52,9 @@ pub async fn list(State(st): State<AppState>, _u: CurrentUser) -> Response {
 /// `connector-icon.tsx`. Any session; without one, `{}` (code drawing).
 /// A built-in row stores `svgUrl` null (the symbols list substitutes the
 /// key): a value equal to the key is that placeholder, not an override.
+/// `(key, svg, svgD)` of an overridden built-in symbol.
+type Override = (String, Option<String>, Option<String>);
+
 pub async fn overrides(
     State(st): State<AppState>,
     session: Option<Extension<Resolved>>,
@@ -59,7 +62,7 @@ pub async fn overrides(
     if session.is_none() {
         return Json(json!({})).into_response();
     }
-    let rows: Result<Vec<(String, Option<String>, Option<String>)>, _> = sqlx::query_as(
+    let rows: Result<Vec<Override>, _> = sqlx::query_as(
         r#"SELECT "key", NULLIF("svgUrl", "key"), NULLIF("svgUrlD", "key") FROM "CatalogSymbol"
            WHERE "isBuiltin" = 1
              AND (NULLIF("svgUrl", "key") IS NOT NULL OR NULLIF("svgUrlD", "key") IS NOT NULL)"#,
