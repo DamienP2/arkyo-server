@@ -304,6 +304,27 @@ const COPIED_FILES = [
   "lib/export/technical-table-pdf.ts",
   "lib/print/technical-frame.ts",
   "lib/services/export/csv.ts",
+  // Phase 4b (Task 3) : composants rack partagés. Les bouchons 4b restants
+  // (`rack/**`, `rack-placement-canvas`) ne sont pas des copies (décision 1).
+  "app/(app)/rigs/[id]/rack/[rackId]/_components/draggable-bom-item.tsx",
+  "app/(app)/rigs/[id]/rack/[rackId]/_components/draggable-items.tsx",
+  "app/(app)/rigs/[id]/rack/[rackId]/_components/draggable-slot.tsx",
+  "app/(app)/rigs/[id]/rack/[rackId]/_components/panel-rack-visual.tsx",
+  "app/(app)/rigs/[id]/rack/[rackId]/_components/port-label-editor.tsx",
+  "app/(app)/rigs/[id]/rack/[rackId]/_components/projected-slot.tsx",
+  "app/(app)/rigs/[id]/rack/[rackId]/_components/rack-visual.tsx",
+  "app/(app)/rigs/[id]/rack/[rackId]/_components/side-rack-visual.tsx",
+  "app/(app)/rigs/[id]/rack/[rackId]/_components/toast-stack.tsx",
+  "app/(app)/rigs/[id]/rack/[rackId]/_hooks/use-rack-bom.ts",
+  "app/(app)/rigs/[id]/rack/[rackId]/_shell/slot-context-menu.tsx",
+  "components/synoptique/components/slot-properties-panel.tsx",
+  "components/synoptique/hooks/use-confirm.ts",
+  "components/synoptique/hooks/use-rack-sync.ts",
+  "components/synoptique/hooks/use-toasts.ts",
+  "components/synoptique/lib/collision.ts",
+  "components/synoptique/lib/panel-labels.ts",
+  "lib/hooks/use-catalog-lookup.ts",
+  "lib/services/rack-inventory.ts",
 ];
 
 /** Fichiers posés sur la topbar ou le rail : ils suivent le thème (variante « Clair A »). */
@@ -500,6 +521,51 @@ const EXPORT_RENDER_HEX: Allow[] = [
   },
 ];
 
+/** Phase 4b (Task 3) : composants rack partagés (élévations, vue de côté, panels, étiquettes). */
+const RACK_DRAWING = "rendu des plans (élévation et vue de côté du contenant)";
+const SIDE_VIEW_DRAWING: Allow[] = [
+  {
+    line: /rgba\(96,165,250,0\.(12|28|9)\)|text-blue-400\/80/,
+    reason: "zone de sécurité câbles hachurée bleue, sa borne et sa cote (vue de côté) : " + RACK_DRAWING,
+  },
+  {
+    line: /rgba\(234,179,8,0\.(10|25)\)|bg-yellow-100 px-1 text-\[7px\] font-medium leading-tight text-yellow-900 shadow-sm dark:bg-yellow-900\/40 dark:text-yellow-200/,
+    reason: "zone de dépassement hachurée jaune hors du contenant et son badge ⚠ (vue de côté) : " + RACK_DRAWING,
+  },
+  {
+    line: /#fecaca, #fecaca 2px, #fee2e2 2px, #fee2e2 7px|border: "1\.5px solid #ef4444",|className="shrink-0 text-red-500"|font-mono leading-none font-semibold text-red-600"/,
+    reason: "collision avant/arrière hachurée rouge, son pictogramme et sa cote (vue de côté) : " + RACK_DRAWING,
+  },
+  {
+    line: /border-l border-dashed border-zinc-(200\/70|400\/50)"$/,
+    reason: "ligne médiane et ligne arrière intérieure en pointillés (vue de côté) : " + RACK_DRAWING,
+  },
+];
+const PANEL_FACEPLATE: Allow[] = [
+  {
+    line: /rgba\(0,0,0,0\.(35|55|22|45|06|3|04)\)|solid #(aaa|bbb)"/,
+    reason: "façade d'un panel de patch dessinée sur fond blanc (vis, trous, connecteurs) : " + RACK_DRAWING,
+  },
+];
+const PANEL_FACEPLATE_WHITE: Allow = {
+  line: /<div className="h-full w-full" style=\{\{ background: "#fff" \}\}>$/,
+  reason: "fond blanc de la façade d'un panel en vue réelle (`PanelRackVisual`) : " + RACK_DRAWING,
+};
+const PORT_LABEL_STRIP: Allow = {
+  line: /^\s*background: "#ffffff",$|text-\[9px\] font-bold tracking-wide text-\[#111\] uppercase/,
+  reason: "bandeau d'étiquettes N2 d'un panel, toujours blanc à encre noire comme l'étiquette imprimée : rendu des étiquettes",
+};
+const FREE_STANDING_TAG: Allow = {
+  line: /<span className="font-semibold text-amber-600( dark:text-amber-400)?">Libre<\/span>$/,
+  reason: "étiquette « Libre » d'un équipement non rackable (posé sur étagère) : marqueur métier, comme « Lum », " + DOUBT,
+};
+const DRAG_OVERLAY_ON_CATEGORY: Allow = {
+  line: /^\s*<(div|p) className="mt-0\.5 (flex items-center gap-2 )?text-\[10px\] text-zinc-400">$/,
+  reason:
+    "sous-titre de l'aperçu de glisser, posé sur la teinte claire fixe de la couleur de catégorie (`hexTint`) : " +
+    "rendu de l'équipement dans sa couleur métier",
+};
+
 // ── Neutres et bleus Tailwind (couleurs d'interface d'arkyo) ────────────────
 
 const INTERFACE = /\b(bg|text|border|ring|outline|divide|from|to)-(zinc|gray|slate|neutral|stone|blue|indigo|sky)-\d{2,3}\b/;
@@ -526,6 +592,9 @@ const ALLOW: AllowMap = {
   "app/(fullscreen)/project/[id]/_editor/project-header-block.tsx": [PROJECT_STATUS_BADGE],
   // Phase 4a (Task 11) : assistant « Ajouter un contenant » (mêmes contenants dessinés que l'assistant contenant).
   "app/(fullscreen)/project/[id]/inventaire/_components/add-container-wizard.tsx": [RACK_MOCKUP, CONTAINER_MOCKUP],
+  // Phase 4b (Task 3) : composants rack partagés.
+  "app/(app)/rigs/[id]/rack/[rackId]/_components/draggable-items.tsx": [DRAG_OVERLAY_ON_CATEGORY],
+  "app/(app)/rigs/[id]/rack/[rackId]/_components/side-rack-visual.tsx": SIDE_VIEW_DRAWING,
 };
 
 test("aucune couleur d'interface Tailwind codée en dur dans les fichiers copiés (hors exceptions métier)", () => {
@@ -571,6 +640,9 @@ const ALLOW_STATUS: AllowMap = {
   "app/(fullscreen)/project/[id]/inventaire/_components/location-sheet.tsx": [FREE_EQUIPMENT_GREEN],
   // Phase 4a (Task 11) : inventaire 2/3.
   "app/(fullscreen)/project/[id]/inventaire/_components/add-container-wizard.tsx": [...WIZARD_ART, RACK_MOCKUP, CONTAINER_MOCKUP],
+  // Phase 4b (Task 3) : composants rack partagés.
+  "app/(app)/rigs/[id]/rack/[rackId]/_components/draggable-items.tsx": [FREE_STANDING_TAG],
+  "app/(app)/rigs/[id]/rack/[rackId]/_components/side-rack-visual.tsx": SIDE_VIEW_DRAWING,
 };
 
 test("erreurs, succès et alertes suivent --danger, --success et --warning", () => {
@@ -900,6 +972,21 @@ const ALLOW_HEX: AllowMap = {
   "app/(fullscreen)/project/[id]/inventaire/_components/rack-mini-svg.tsx": CATEGORY_FALLBACK_PALETTE,
   "app/(fullscreen)/project/[id]/reseau/_components/shared/export-capture.ts": EXPORT_RENDER_HEX,
   "lib/print/technical-frame.ts": EXPORT_RENDER_HEX,
+  // Phase 4b (Task 3) : composants rack partagés.
+  "app/(app)/rigs/[id]/rack/[rackId]/_components/draggable-bom-item.tsx": [
+    {
+      line: /^\s*\? "#71717a"$/,
+      reason: "couleur des accessoires de rack (plaque, étagère, tiroir) dans la liste d'inventaire : couleur métier",
+    },
+  ],
+  "app/(app)/rigs/[id]/rack/[rackId]/_components/draggable-items.tsx": [{ line: /ps\?\.connectorType\?\.color \?\? "#555";/, reason: CONN }],
+  "app/(app)/rigs/[id]/rack/[rackId]/_components/draggable-slot.tsx": [PANEL_FACEPLATE_WHITE],
+  "app/(app)/rigs/[id]/rack/[rackId]/_components/panel-rack-visual.tsx": PANEL_FACEPLATE,
+  "app/(app)/rigs/[id]/rack/[rackId]/_components/port-label-editor.tsx": [PORT_LABEL_STRIP],
+  "app/(app)/rigs/[id]/rack/[rackId]/_components/side-rack-visual.tsx": SIDE_VIEW_DRAWING,
+  "components/synoptique/components/slot-properties-panel.tsx": [
+    { line: /const color = ct\?\.color \?\? "#71717a";/, reason: CONN },
+  ],
 };
 
 test("aucune couleur hexadécimale ou rgb() d'interface dans les fichiers copiés (hors photo et métier)", () => {
