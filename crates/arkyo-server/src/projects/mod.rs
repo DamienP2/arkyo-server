@@ -2,4 +2,5 @@
 //! the local helpers of arkyo:app/api/tenant/projects/[id]/**).
 
 pub mod cable_code;
+pub mod enrich;
 pub mod naming;
