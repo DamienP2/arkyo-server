@@ -30,12 +30,16 @@ export function ComingSoon({ back = false }: { back?: boolean }) {
 
 function BackLink() {
   const navigate = useNavigate();
-  // `key` vaut "default" pour la première entrée de l'onglet : rien derrière.
-  const hasHistory = useLocation().key !== "default";
+  // Le routeur navigateur numérote ses entrées (`history.state.idx`) : 0 = rien
+  // derrière, même après une redirection `replace` depuis un favori. Le routeur
+  // mémoire (tests) n'a pas d'`idx` : on retombe sur `key` ("default" = première entrée).
+  const key = useLocation().key;
   return (
     <Link
       to="/dashboard"
       onClick={(e) => {
+        const idx = (window.history.state as { idx?: number } | null)?.idx;
+        const hasHistory = typeof idx === "number" ? idx > 0 : key !== "default";
         if (!hasHistory) return;
         e.preventDefault();
         void navigate(-1);

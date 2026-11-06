@@ -21,6 +21,21 @@ describe("ComingSoon plein écran", () => {
     await waitFor(() => expect(router.state.location.pathname).toBe("/dashboard"));
   });
 
+  test("Retour après redirection depuis un favori : tableau de bord", async () => {
+    // `/projects/p1` redirige en `replace` : la clé n'est plus "default", mais
+    // le routeur navigateur indique `idx: 0` (rien derrière dans l'onglet).
+    const { router } = renderApp("/projects/p1", signedInApi());
+    expect(await screen.findByText("Bientôt disponible")).toBeInTheDocument();
+    const saved = window.history.state;
+    window.history.replaceState({ ...(saved ?? {}), idx: 0 }, "");
+    try {
+      fireEvent.click(screen.getByRole("link", { name: "Retour" }));
+      await waitFor(() => expect(router.state.location.pathname).toBe("/dashboard"));
+    } finally {
+      window.history.replaceState(saved, "");
+    }
+  });
+
   test("Retour avec historique : page précédente", async () => {
     const { router } = renderApp("/racks/r1", signedInApi());
     expect(await screen.findByText("Bientôt disponible")).toBeInTheDocument();
