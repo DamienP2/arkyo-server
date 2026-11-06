@@ -13,7 +13,6 @@ use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use axum::Json;
 use serde_json::{json, Value};
-use sqlx::{Row, SqliteConnection};
 
 use super::super::parametres::{
     begin, bind, db_error, js_type, parse_body, str_of, validate_flat, Def, Field, Kind, Obj,
@@ -23,6 +22,7 @@ use super::{invalid, link_rack, next_position, project_rig, project_row};
 use crate::audit;
 use crate::events::EventMeta;
 use crate::ids::{new_id, now_iso};
+use crate::inventory::clone::{clone_rack_into, CloneScope, CloneTarget};
 use crate::projects::naming::ensure_unique_rack_name;
 
 const RACK_TYPES: &[&str] = &[
@@ -220,15 +220,37 @@ async fn create_inner(
             .await
             .map_err(db_error)?;
             for src in &sources {
-                let (id, rack_name, rack_type) =
-                    clone_rack(&mut tx, project_id, src, name, location_id)
+                // `name || srcRack.name` (name is min(1), so always the body's).
+                let base = if name.is_empty() {
+                    sqlx::query_scalar(r#"SELECT "name" FROM "Rack" WHERE "id" = ?"#)
+                        .bind(src)
+                        .fetch_one(&mut *tx)
                         .await
-                        .map_err(db_error)?;
-                link_rack(&mut tx, &rig_id, &id, position)
+                        .map_err(db_error)?
+                } else {
+                    name.to_string()
+                };
+                let unique = ensure_unique_rack_name(&mut tx, Some(project_id), &base)
+                    .await
+                    .map_err(db_error)?;
+                // The inline copy of route.ts:150-218 (slots, inventory
+                // derived from them), shared with `cloneRackInto`.
+                let rack = clone_rack_into(
+                    &mut tx,
+                    src,
+                    CloneTarget {
+                        name: &unique,
+                        location_id: Some(location_id),
+                        scope: CloneScope::SlotsOnly,
+                    },
+                )
+                .await
+                .map_err(db_error)?;
+                link_rack(&mut tx, &rig_id, &rack.id, position)
                     .await
                     .map_err(db_error)?;
                 position += 1;
-                created.push(summary(&id, &rack_name, &rack_type));
+                created.push(summary(&rack.id, &rack.name, &rack.rack_type));
             }
             continue;
         }
@@ -300,119 +322,4 @@ async fn create_inner(
         Json(json!({ "rigConfigId": rig_id, "racks": created })),
     )
         .into_response())
-}
-
-/// Clones the template rack `src` into a new project rack (route.ts:150-218):
-/// the fields arkyo copies, a name unique in the project, the slots (not
-/// their connections), then one `RackInventoryItem` per catalogue reference
-/// of the slots (quantity = slot count), bound to those slots. Returns the
-/// new rack's `(id, name, rackType)`.
-async fn clone_rack(
-    conn: &mut SqliteConnection,
-    project_id: &str,
-    src: &str,
-    name: &str,
-    location_id: &str,
-) -> Result<(String, String, String), sqlx::Error> {
-    let rack = sqlx::query(
-        r#"SELECT "name","totalU","depthMm","maxWeightKg","maxPowerW","emptyWeightKg","notes",
-                  "rackType","hasWheels" FROM "Rack" WHERE "id" = ?"#,
-    )
-    .bind(src)
-    .fetch_one(&mut *conn)
-    .await?;
-    // `name || srcRack.name` (name is min(1), so always the body's).
-    let base = if name.is_empty() {
-        rack.try_get::<String, _>("name")?
-    } else {
-        name.to_string()
-    };
-    let unique = ensure_unique_rack_name(conn, Some(project_id), &base).await?;
-    let rack_type: String = rack.try_get("rackType")?;
-    let id = new_id();
-    let now = now_iso();
-    sqlx::query(
-        r#"INSERT INTO "Rack" ("id","name","totalU","depthMm","maxWeightKg","maxPowerW",
-               "emptyWeightKg","notes","rackType","hasWheels","locationId","createdAt","updatedAt")
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)"#,
-    )
-    .bind(&id)
-    .bind(&unique)
-    .bind(rack.try_get::<i64, _>("totalU")?)
-    .bind(rack.try_get::<i64, _>("depthMm")?)
-    .bind(rack.try_get::<Option<f64>, _>("maxWeightKg")?)
-    .bind(rack.try_get::<Option<f64>, _>("maxPowerW")?)
-    .bind(rack.try_get::<Option<f64>, _>("emptyWeightKg")?)
-    .bind(rack.try_get::<Option<String>, _>("notes")?)
-    .bind(&rack_type)
-    .bind(rack.try_get::<i64, _>("hasWheels")?)
-    .bind(location_id)
-    .bind(&now)
-    .bind(&now)
-    .execute(&mut *conn)
-    .await?;
-
-    let slots = sqlx::query(
-        r#"SELECT "catalogEquipmentId","panelId","view","startU","heightU","widthFraction",
-                  "column","label","notes" FROM "RackSlot" WHERE "rackId" = ? ORDER BY "createdAt", "id""#,
-    )
-    .bind(src)
-    .fetch_all(&mut *conn)
-    .await?;
-    // Quantity per catalogue reference, in the order of first appearance.
-    let mut bom: Vec<(String, i64)> = Vec::new();
-    for slot in &slots {
-        let equipment: Option<String> = slot.try_get("catalogEquipmentId")?;
-        sqlx::query(
-            r#"INSERT INTO "RackSlot" ("id","rackId","catalogEquipmentId","panelId","view","startU",
-                   "heightU","widthFraction","column","label","notes","createdAt","updatedAt")
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)"#,
-        )
-        .bind(new_id())
-        .bind(&id)
-        .bind(&equipment)
-        .bind(slot.try_get::<Option<String>, _>("panelId")?)
-        .bind(slot.try_get::<String, _>("view")?)
-        .bind(slot.try_get::<Option<i64>, _>("startU")?)
-        .bind(slot.try_get::<Option<f64>, _>("heightU")?)
-        .bind(slot.try_get::<String, _>("widthFraction")?)
-        .bind(slot.try_get::<i64, _>("column")?)
-        .bind(slot.try_get::<Option<String>, _>("label")?)
-        .bind(slot.try_get::<Option<String>, _>("notes")?)
-        .bind(&now)
-        .bind(&now)
-        .execute(&mut *conn)
-        .await?;
-        if let Some(eq) = equipment {
-            match bom.iter_mut().find(|(e, _)| *e == eq) {
-                Some((_, n)) => *n += 1,
-                None => bom.push((eq, 1)),
-            }
-        }
-    }
-    for (equipment, quantity) in &bom {
-        let item = new_id();
-        sqlx::query(
-            r#"INSERT INTO "RackInventoryItem" ("id","rackId","catalogEquipmentId","quantity","createdAt","updatedAt")
-               VALUES (?,?,?,?,?,?)"#,
-        )
-        .bind(&item)
-        .bind(&id)
-        .bind(equipment)
-        .bind(quantity)
-        .bind(&now)
-        .bind(&now)
-        .execute(&mut *conn)
-        .await?;
-        sqlx::query(
-            r#"UPDATE "RackSlot" SET "inventoryItemId" = ?
-               WHERE "rackId" = ? AND "catalogEquipmentId" = ? AND "inventoryItemId" IS NULL"#,
-        )
-        .bind(&item)
-        .bind(&id)
-        .bind(equipment)
-        .execute(&mut *conn)
-        .await?;
-    }
-    Ok((id, unique, rack_type))
 }

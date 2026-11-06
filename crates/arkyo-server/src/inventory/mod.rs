@@ -8,6 +8,8 @@
 //!   (rack-inventory-api.ts, and the project variant inlined in
 //!   `app/api/tenant/projects/[id]/racks/[rackId]/inventory/route.ts`);
 //! - [`catalog`]: the inventory catalogue panel (catalog-merge.ts).
+//! - [`clone`]: copy of a rack and its content with remapped ids
+//!   (rack-clone.ts `cloneRackInto`).
 //!
 //! Single local catalogue: arkyo's "main DB first, tenant fallback" lookups
 //! read the `Tenant*` tables directly, snapshots do not exist (`snapshotId`
@@ -20,6 +22,7 @@
 pub mod api;
 pub mod auto_label;
 pub mod catalog;
+pub mod clone;
 pub mod sync;
 pub mod validate;
 

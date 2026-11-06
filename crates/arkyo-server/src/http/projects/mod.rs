@@ -1,6 +1,6 @@
 //! Projects: arkyo:app/api/tenant/projects/** ([`tenant`], [`locations`],
-//! [`locations_item`], [`racks`], [`racks_item`], [`inventory`],
-//! [`inventory_item`]) and arkyo:app/api/projects/route.ts ([`legacy`]).
+//! [`locations_item`], [`racks`], [`racks_item`], [`racks_template`],
+//! [`inventory`], [`inventory_item`]) and arkyo:app/api/projects/route.ts ([`legacy`]).
 //!
 //! Shared here: the `Project` row as Prisma returns it, arkyo's
 //! `{ error: "Validation invalide", issues }` envelope (`zodIssuesFromError`),
@@ -16,6 +16,7 @@ mod locations;
 mod locations_item;
 mod racks;
 mod racks_item;
+mod racks_template;
 mod tenant;
 
 use std::collections::BTreeMap;
@@ -53,6 +54,14 @@ pub fn router() -> Router<AppState> {
         .route(
             "/tenant/projects/{id}/racks/reorder",
             post(racks_item::reorder),
+        )
+        .route(
+            "/tenant/projects/{id}/racks/clone-from-template",
+            post(racks_template::clone_from_template),
+        )
+        .route(
+            "/tenant/projects/{id}/racks/{rack_id}/save-as-template",
+            post(racks_template::save_as_template),
         )
         .route(
             "/tenant/projects/{id}/racks/{rack_id}",
