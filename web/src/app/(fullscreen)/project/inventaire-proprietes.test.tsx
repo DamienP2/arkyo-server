@@ -405,7 +405,7 @@ describe("éditeur projet : inventaire 3/3", () => {
 
     // Aucune URL de CDN ni balise <script> injectée dans la fermeture
     // d'imports de l'inventaire et de ses exports.
-    const SRC = resolve(__dirname, "../..");
+    const SRC = resolve(__dirname, "../../.."); // `web/src` (alias `@/`)
     const project = resolve(__dirname, "[id]");
     const entries = [
       resolve(project, "inventaire/inventaire-client.tsx"),

@@ -344,6 +344,17 @@ const COPIED_FILES = [
   "app/(fullscreen)/project/[id]/rack/_components/rack-placement-canvas.tsx",
   // Phase 4b (Task 6) : vue « par emplacement » de l'onglet Rack.
   "app/(fullscreen)/project/[id]/rack/_components/location-placement-canvas.tsx",
+  // Phase 4b (Task 7) : exports de l'onglet Rack 1/2. Le composeur et le
+  // panneau des vues restent des bouchons jusqu'à la Task 8 (décision 1).
+  "app/(fullscreen)/project/[id]/_components/export-cartouche-options.tsx",
+  "app/(fullscreen)/project/[id]/_components/export-pdf-model-options.tsx",
+  "app/(fullscreen)/project/[id]/rack/_components/rack-export.tsx",
+  "app/(fullscreen)/project/[id]/rack/_components/rack-export-capture.ts",
+  "app/(fullscreen)/project/[id]/rack/_components/rack-export-layout.ts",
+  "app/(fullscreen)/project/[id]/rack/_components/rack-export-stage.tsx",
+  "lib/pdf/synoptic-export.ts",
+  "lib/print/export-with-cartouche.ts",
+  "lib/print/render-print-layout.ts",
 ];
 
 /** Fichiers posés sur la topbar ou le rail : ils suivent le thème (variante « Clair A »). */
@@ -1009,6 +1020,25 @@ const ALLOW_HEX: AllowMap = {
   // Phase 4b (Task 4) : onglet Rack (pastille et badge du type de contenant).
   "app/(fullscreen)/project/[id]/rack/_components/rack-info-panel.tsx": [RACK_TYPE_COLORS],
   "app/(fullscreen)/project/[id]/rack/_components/rack-tab-side-panel.tsx": [RACK_TYPE_COLORS],
+  // Phase 4b (Task 7) : exports de l'onglet Rack 1/2 (feuille, cartouche et PDF).
+  "app/(fullscreen)/project/[id]/rack/_components/rack-export.tsx": [
+    { line: /^\s*background: "#ffffff",$/, reason: "fond blanc de la page capturée en image (PNG, JPG) : rendu des exports" },
+  ],
+  "app/(fullscreen)/project/[id]/rack/_components/rack-export-capture.ts": [
+    { line: /^\s*background: opaque \? "#ffffff" : undefined,$/, reason: "fond blanc d'une vue aplatie en JPEG pour le PDF : rendu des exports" },
+  ],
+  "lib/pdf/synoptic-export.ts": [
+    { line: /"#[0-9a-f]{6}"/, reason: "cadre « dessin technique » et cartouche de secours dessinés par jsPDF : rendu des PDF" },
+  ],
+  "lib/print/export-with-cartouche.ts": [
+    { line: /"#ffffff"/, reason: "fond blanc de la feuille et de la zone de dessin du PDF : rendu des PDF" },
+  ],
+  "lib/print/render-print-layout.ts": [
+    {
+      line: /"#ffffff"|fill="#f1f5f9" stroke="#cbd5e1"/,
+      reason: "fond de feuille et repère d'image non résolue du layout d'impression (SVG rasterisé dans le PDF) : rendu des PDF",
+    },
+  ],
 };
 
 test("aucune couleur hexadécimale ou rgb() d'interface dans les fichiers copiés (hors photo et métier)", () => {
