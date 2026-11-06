@@ -6,7 +6,7 @@ Ce fichier liste ce que la phase 3 (tableau de bord, projets et assistant, modè
 
 - **Éditeur de rack.** `/racks/:rackId` et `/rigs/:id/rack/:rackId` restent `ComingSoon`, comme `/project/:id/*`. Il dépend de 21 routes `/api/racks/:id/**` (inventaire §6.2).
   - Les liens qui y mènent (cartes de contenant, fin d'assistant, cartes de projet) ouvrent l'écran `ComingSoon`.
-  - Aucune route n'écrit encore `RackSlot` ni `RackInventoryItem`. Le parcours de bout en bout (`tests/phase3_smoke.rs`) les insère en SQL.
+  - Aucun écran de la phase n'écrit encore `RackSlot` ni `RackInventoryItem` : seul le clonage `fromTemplateId` de `POST /api/tenant/projects/:id/racks` le fait, et aucun écran ne l'appelle. Le parcours de bout en bout (`tests/phase3_smoke.rs`) les insère en SQL.
 - **Fiche projet.** Elle fait partie de l'éditeur projet ; `/projects/:id` redirige comme arkyo.
 - **Audit.** Les deux `GET …/audit` (projet, rack) et `audit-panel` arrivent avec l'éditeur.
 - **SSE par rack.** Le flux temps réel par rack reste à faire.

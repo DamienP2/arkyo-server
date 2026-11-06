@@ -38,6 +38,10 @@ async function load() {
   // ── Cross-DB enrichment ──────────────────────────────────────────────────
   // arkyo-server: fait par l'API : chaque slot de rack porte déjà `equipment`
   // (ou `null`), chaque slot de panel `connectorType` (ou `null`).
+  // arkyo-server: les slots de panel portent aussi `connectorTypeId` (colonne
+  // du modèle, renvoyée par l'API) : l'occupation des panels de l'onglet
+  // Panels (`slots.filter(s => s.connectorTypeId)`) est donc réelle, là où
+  // arkyo, qui n'enrichissait qu'avec `connectorType`, affichait toujours 0/N.
   const racks = racksRaw;
   const panels = panelsRaw;
 
