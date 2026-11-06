@@ -65,7 +65,8 @@ export function DraggableEquipment({
           <p className="truncate text-xs leading-tight font-medium">{equipment.name}</p>
           <div className="mt-0.5 flex items-center gap-2 text-[10px] text-[var(--muted-foreground)]">
             <span className="font-semibold text-[var(--foreground)]">{equipment.heightU}U</span>
-            <span className="font-medium text-[var(--accent)]">{WIDTH_CONFIG[wf].label}</span>
+            {/* arkyo-server: habillage Strata (texte d'accent sur la teinte : --accent-strong) */}
+            <span className="font-medium text-[var(--accent-strong)]">{WIDTH_CONFIG[wf].label}</span>
             {equipment.powerW && (
               <span className="flex items-center gap-0.5">
                 <Zap className="h-2.5 w-2.5" />
