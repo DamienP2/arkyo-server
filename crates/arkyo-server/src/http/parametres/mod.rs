@@ -372,7 +372,7 @@ pub async fn begin(
     pool: &SqlitePool,
 ) -> Result<sqlx::Transaction<'static, sqlx::Sqlite>, Response> {
     // IMMEDIATE: the write lock is taken before the checks read.
-    pool.begin_with("BEGIN IMMEDIATE").await.map_err(db_error)
+    crate::db::begin_immediate(pool).await.map_err(db_error)
 }
 
 // ── shared flow ─────────────────────────────────────────────────────────────

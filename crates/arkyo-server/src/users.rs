@@ -311,14 +311,10 @@ pub async fn delete(pool: &SqlitePool, id: &str) -> Result<(), UserError> {
     Ok(())
 }
 
-/// Starts a transaction and takes the write lock right away (a no-op write
-/// upgrades the deferred transaction before the guard reads anything).
+/// Starts a transaction and takes the write lock right away (`BEGIN
+/// IMMEDIATE`, before the guard reads anything).
 async fn begin_write(pool: &SqlitePool) -> Result<Transaction<'static, Sqlite>, UserError> {
-    let mut tx = pool.begin().await?;
-    sqlx::query(r#"UPDATE "User" SET "id" = "id" WHERE 0"#)
-        .execute(&mut *tx)
-        .await?;
-    Ok(tx)
+    Ok(crate::db::begin_immediate(pool).await?)
 }
 
 /// Records a successful login.

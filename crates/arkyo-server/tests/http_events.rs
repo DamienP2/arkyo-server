@@ -122,7 +122,7 @@ async fn publish_without_subscriber_is_harmless() {
 #[tokio::test]
 async fn audit_row_written() {
     let e = env().await;
-    let mut tx = e.pool.begin().await.unwrap();
+    let mut tx = arkyo_server::db::begin_immediate(&e.pool).await.unwrap();
     arkyo_server::audit::log(
         &mut tx,
         "u1",

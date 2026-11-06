@@ -174,3 +174,39 @@ fn only_root_in_a_directory_it_does_not_own_hands_files_back() {
     assert!(!should_chown(998, 998)); // sudo -u arkyo
     assert!(!should_chown(501, 998)); // another account: cannot chown anyway
 }
+
+/// Every write transaction goes through `db::begin_immediate` (`BEGIN
+/// IMMEDIATE`, the write lock taken before the guards read, 5 s
+/// `busy_timeout`): no `pool.begin()` (`BEGIN DEFERRED`) nor ad hoc
+/// `begin_with` anywhere else in `src/`.
+#[test]
+fn write_transactions_use_begin_immediate() {
+    fn walk(dir: &std::path::Path, out: &mut Vec<String>) {
+        for entry in std::fs::read_dir(dir).unwrap() {
+            let path = entry.unwrap().path();
+            if path.is_dir() {
+                walk(&path, out);
+            } else if path.extension().is_some_and(|e| e == "rs") {
+                let src = std::fs::read_to_string(&path).unwrap();
+                let rel = path.strip_prefix(env!("CARGO_MANIFEST_DIR")).unwrap();
+                for (n, line) in src.lines().enumerate() {
+                    let deferred = line.contains(".begin()");
+                    let ad_hoc = line.contains(".begin_with(") && !rel.ends_with("src/db.rs");
+                    if deferred || ad_hoc {
+                        out.push(format!("{}:{}: {}", rel.display(), n + 1, line.trim()));
+                    }
+                }
+            }
+        }
+    }
+    let mut found = Vec::new();
+    walk(
+        &std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src"),
+        &mut found,
+    );
+    assert!(
+        found.is_empty(),
+        "transactions hors db::begin_immediate :\n{}",
+        found.join("\n")
+    );
+}

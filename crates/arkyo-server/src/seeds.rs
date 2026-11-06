@@ -189,7 +189,7 @@ pub async fn startup_mode(pool: &SqlitePool) -> anyhow::Result<SeedMode> {
 /// opening a new base at the same time wait for each other (no duplicate,
 /// no failure on a stale read).
 pub async fn apply(pool: &SqlitePool, mode: SeedMode) -> anyhow::Result<Applied> {
-    let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
+    let mut tx = crate::db::begin_immediate(pool).await?;
     let applied = apply_in(&mut tx, mode).await?;
     tx.commit().await?;
     Ok(applied)

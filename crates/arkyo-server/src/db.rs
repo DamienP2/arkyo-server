@@ -7,7 +7,7 @@ use std::time::Duration;
 use anyhow::Context;
 use arkyo_core::permissions::BUILTIN_ROLES;
 use sqlx::sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions};
-use sqlx::SqlitePool;
+use sqlx::{Sqlite, SqlitePool, Transaction};
 
 use crate::ids::{new_id, now_iso};
 
@@ -42,6 +42,16 @@ pub async fn open(data_dir: &Path) -> anyhow::Result<SqlitePool> {
     let mode = crate::seeds::startup_mode(&pool).await.with_context(ctx)?;
     crate::seeds::apply(&pool, mode).await.with_context(ctx)?;
     Ok(pool)
+}
+
+/// Starts a write transaction: `BEGIN IMMEDIATE` takes the write lock before
+/// the guards read, and a concurrent writer waits up to the 5 s
+/// `busy_timeout` instead of failing on a stale snapshot. The only entry
+/// point for write transactions (never the `DEFERRED` `pool.begin`).
+pub async fn begin_immediate(
+    pool: &SqlitePool,
+) -> Result<Transaction<'static, Sqlite>, sqlx::Error> {
+    pool.begin_with("BEGIN IMMEDIATE").await
 }
 
 /// The base and its WAL companions.

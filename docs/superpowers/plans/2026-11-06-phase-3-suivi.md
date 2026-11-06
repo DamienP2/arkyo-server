@@ -19,7 +19,7 @@ Ce fichier liste ce que la phase 3 (tableau de bord, projets et assistant, modè
 - **Tâches et messages.** Les tables `Task` et `Message` existent, vides, pour que les compteurs (`_count`, `taskStats`) soient de vraies requêtes. arkyo n'a aucune route qui les écrit.
 - **Onglet « Dossiers »** de `/templates` : `ComingSoon` jusqu'à la phase 6 (`RigsClient` d'arkyo, code mort, n'est pas porté).
 - **Curseurs live.** `use-live-cursors.ts` est copié, sa connexion est neutralisée jusqu'à la phase 7.
-- **Transactions d'écriture.** `sqlx` ouvre en `BEGIN DEFERRED` : deux premiers `POST …/locations` simultanés sur un même projet peuvent finir en 500 (`SQLITE_BUSY`). Passer les écritures en `BEGIN IMMEDIATE`.
+- **Transactions d'écriture.** Toutes les écritures de la phase 3 passent par `parametres::begin` (`BEGIN IMMEDIATE`, `busy_timeout` 5 s) : deux premiers `POST …/locations` simultanés sont sérialisés, le second réutilise la régie créée par le premier. Seul risque restant : une écriture qui attend plus de 5 s derrière une restauration de sauvegarde ou un gros import répond 500 « database is locked ». Règle : ne jamais appeler `pool.begin()` ; le dernier appel (`users.rs`, phase 1) passe désormais par `db::begin_immediate`, et `tests/db.rs` l'interdit dans `src/`.
 
 ## À trancher par Damien
 

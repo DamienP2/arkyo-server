@@ -1049,7 +1049,7 @@ async fn restore_section(
     mode: Mode,
 ) -> Result<Option<Report>, String> {
     let run = async {
-        let mut tx = st.pool.begin_with("BEGIN IMMEDIATE").await?;
+        let mut tx = crate::db::begin_immediate(&st.pool).await?;
         let rep = if section == "settings" {
             let Some(Value::Object(s)) = data.get("settings") else {
                 return Ok(None);
