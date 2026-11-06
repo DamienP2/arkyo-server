@@ -64,3 +64,9 @@ Ce fichier liste ce que la phase 4a (éditeur projet `/project/:id` : coquille, 
 - Plafond de `quantity` (I-2), texte d'erreur sur `--danger-text` (I-3), garde d'usage de l'adaptateur (I-4), files SSE bornées (T2-1) et test du retrait de l'entrée par rack (T2-2).
 - En-têtes et commentaires : écart « échec de synchro → 500 » (`inventory.rs`, `inventory_item.rs`), renvoi à `rack_shared_outside` (`locations_item.rs`), branche « JSON en chaîne » de `hasConnectors`, `rack_events.rs`, `inventory_services.rs`, `theme-sweep.test.ts`.
 - Tests : corps de la 401 de l'inventaire, 409 « Slot occupé » du parcours, `hasConnectors` venant d'un seul slot fantôme, redirection intermédiaire `?tab=fiche` (T9-1), `strip` limité aux commentaires de début de ligne.
+
+## Après la relecture du lot de corrections
+
+- Le bouton « + » de la carte de contenant ne plafonne pas à 999 : au-delà, le serveur répond 400 et la quantité ne change pas.
+- La règle `theme-sweep` sur `--destructive` ne couvre pas toutes les syntaxes Tailwind possibles.
+- `router.test.tsx` s'abonne tard à certains évènements (sans effet aujourd'hui).
