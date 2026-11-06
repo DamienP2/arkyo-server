@@ -221,6 +221,15 @@ const COPIED_FILES = [
   "components/panels/new-panel-wizard.tsx",
   "app/(app)/rigs/[id]/page.tsx",
   "app/(app)/rigs/[id]/rig-detail-client.tsx",
+  // Phase 3 (Task 11) : dépendances de l'éditeur de panel.
+  "app/(fullscreen)/panels/[id]/page.tsx",
+  "components/editor-shell/topbar-actions-context.tsx",
+  "components/synoptique/components/synoptic-general-panel.tsx",
+  "components/synoptique/components/synoptic-help-modal.tsx",
+  "components/synoptique/components/synoptic-shortcuts-modal.tsx",
+  "components/synoptique/components/remote-cursors-overlay.tsx",
+  "components/synoptique/hooks/use-live-cursors.ts",
+  "lib/services/rack-validation.ts",
 ];
 
 /** Fichiers posés sur la topbar ou le rail : ils suivent le thème (variante « Clair A »). */
@@ -632,6 +641,29 @@ const ALLOW_HEX: AllowMap = {
   // Phase 3 (Task 10) : onglet Panels.
   "app/(app)/panels/panels-client.tsx": PANEL_SIGNAL_COLORS,
   "components/panels/new-panel-wizard.tsx": WIZARD_ART,
+  // Phase 3 (Task 11) : dépendances de l'éditeur de panel.
+  "components/editor-shell/topbar-actions-context.tsx": [
+    {
+      line: /^\s*(color|synopticLabelColor|synopticLabelPillBg|zoneColor|designGridColor|gridColor|rulerColor): "#[0-9a-f]{6}",$/,
+      reason:
+        "couleurs par défaut des étiquettes, zones, grilles et règles dessinées sur le plan (modifiables par l'utilisateur) : " +
+        "rendu des plans, couleur métier",
+    },
+  ],
+  "components/synoptique/components/synoptic-general-panel.tsx": [
+    {
+      line: /^\s*"#[0-9a-f]{6}",$|value=\{value \?\? "#6366f1"\}|setGridColor\(c \?\? "#808080"\)/,
+      reason:
+        "pastilles proposées pour la couleur de la grille et des zones (choisie par l'utilisateur), sélecteur libre et repli : " +
+        "couleur métier",
+    },
+  ],
+  "components/synoptique/components/remote-cursors-overlay.tsx": [
+    { line: /^\s*stroke="#ffffff"$/, reason: "contour de la flèche d'un curseur distant (couleur du pair) : avatar de présence" },
+  ],
+  "components/synoptique/hooks/use-live-cursors.ts": [
+    { line: /color: m(sg)?\.color \?\? "#64748b",$/, reason: "couleur de repli d'un pair (curseur, avatar) : avatar de présence" },
+  ],
 };
 
 test("aucune couleur hexadécimale ou rgb() d'interface dans les fichiers copiés (hors photo et métier)", () => {

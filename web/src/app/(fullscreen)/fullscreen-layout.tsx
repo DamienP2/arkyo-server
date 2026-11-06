@@ -9,6 +9,7 @@
 import { Navigate, Outlet } from "react-router";
 import { AppSync } from "@/components/app-sync";
 import { PresenceProvider } from "@/components/presence/presence-provider";
+import { TenantPermissionsProvider } from "@/components/tenant-permissions-context";
 import { useShellGate } from "@/app/(app)/app-layout";
 
 // Layout plein écran — sans sidebar, sans overflow qui casse position:fixed sur iOS
@@ -19,10 +20,14 @@ export default function FullscreenLayout() {
   if (gate.kind === "auth") return <Navigate to="/auth" replace />;
   if (gate.kind === "password") return <Navigate to="/auth/password" replace />;
 
+  // arkyo-server: permissions du layout pour la garde des pages plein écran
+  // (`ClientPage`, à la place de `requireTenantPermissionPage` côté serveur).
   return (
-    <PresenceProvider>
-      <Outlet />
-      <AppSync />
-    </PresenceProvider>
+    <TenantPermissionsProvider initialPermissions={gate.permissions}>
+      <PresenceProvider>
+        <Outlet />
+        <AppSync />
+      </PresenceProvider>
+    </TenantPermissionsProvider>
   );
 }

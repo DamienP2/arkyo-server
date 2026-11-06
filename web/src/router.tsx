@@ -52,6 +52,8 @@ const DashboardPage = lazy(() => import("@/app/(app)/dashboard/page"));
 const ProjectsPage = lazy(() => import("@/app/(app)/projects/page"));
 const TemplatesPage = lazy(() => import("@/app/(app)/templates/page"));
 const RigDetailPage = lazy(() => import("@/app/(app)/rigs/[id]/page"));
+// Éditeur de panel (plein écran).
+const PanelEditorPage = lazy(() => import("@/app/(fullscreen)/panels/[id]/page"));
 
 // arkyo:app/(app)/settings/page.tsx ne rend rien : `redirect()` lève toujours
 // (type `() => void`), l'`errorElement` suit la redirection.
@@ -129,8 +131,8 @@ export const routes: RouteObject[] = [
         element: <FullscreenLayout />,
         errorElement,
         // `project/:id/*` : éditeur projet (phase 4) ; `panels/:id` : éditeur
-        // de panel, réservé (phase 3).
-        children: [soon("project/:id/*"), soon("panels/:id")],
+        // de panel.
+        children: [soon("project/:id/*"), lazyPage("panels/:id", PanelEditorPage)],
       },
 
       { path: "*", element: <NotFoundPage /> },

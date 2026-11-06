@@ -68,7 +68,6 @@ describe("routeur et coquille", () => {
     for (const url of [
       "/racks/r1",
       "/rigs/g1/rack/r1",
-      "/panels/pn1",
       "/project/p1",
     ]) {
       const { router, unmount } = renderApp(url, signedInApi());
@@ -152,6 +151,18 @@ describe("routeur et coquille", () => {
   test("les éditeurs plein écran s'affichent sans sidebar ni topbar", async () => {
     renderApp("/project/p1/cartographie", signedInApi());
     expect(await screen.findByText("Bientôt disponible")).toBeInTheDocument();
+    expect(document.querySelector("aside")).toBeNull();
+    expect(document.querySelector("header")).toBeNull();
+  });
+
+  test("/panels/:id charge le panel puis reste « Bientôt disponible » jusqu'à l'éditeur (Task 12)", async () => {
+    renderApp("/panels/pn1", {
+      ...signedInApi(),
+      "GET /api/panels/pn1": { body: { id: "pn1", name: "Patch", heightU: 1, slotsPerU: 16, slots: [] } },
+      "GET /api/tenant/catalogue/connectors": { body: [] },
+      "GET /api/tenant/parametres/categories": { body: { functions: { arkyo: [], personal: [] } } },
+    });
+    expect(await screen.findByText("Bientôt disponible", {}, { timeout: 5000 })).toBeInTheDocument();
     expect(document.querySelector("aside")).toBeNull();
     expect(document.querySelector("header")).toBeNull();
   });
