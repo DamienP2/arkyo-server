@@ -23,6 +23,7 @@ import {
   useParams as useRouterParams,
   useRouteError,
   useSearchParams as useRouterSearchParams,
+  type ClientOnErrorFunction,
 } from "react-router";
 
 /** Évènement émis par `router.refresh()`. */
@@ -133,6 +134,17 @@ export function onCaughtError(error: unknown, errorInfo: { componentStack?: stri
   if (getRedirectTarget(error) || isNotFoundError(error)) return;
   console.error(error, errorInfo.componentStack ?? "");
 }
+
+/**
+ * `onError` de `<RouterProvider>` : même filtre que `onCaughtError`. Sans lui,
+ * la frontière d'erreur de react-router journalise « React Router caught the
+ * following error during render » à chaque `redirect()` / `notFound()`. Toute
+ * autre erreur est journalisée comme par défaut.
+ */
+export const onRouterError: ClientOnErrorFunction = (error) => {
+  if (getRedirectTarget(error) || isNotFoundError(error)) return;
+  console.error("React Router caught the following error during render", error);
+};
 
 /**
  * Page 404 par défaut de Next.js (arkyo n'a pas de `not-found.tsx`).

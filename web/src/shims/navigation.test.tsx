@@ -5,6 +5,7 @@ import {
   notFound,
   NavigationErrorElement,
   onCaughtError,
+  onRouterError,
   redirect,
   useParams,
   usePathname,
@@ -179,6 +180,29 @@ describe("shim next/link", () => {
     const boom = new Error("boom");
     onCaughtError(boom, { componentStack: "\n    at Page" });
     expect(spy).toHaveBeenCalledWith(boom, "\n    at Page");
+    spy.mockRestore();
+  });
+
+  it("onRouterError ne journalise ni redirect() ni notFound(), mais le reste", () => {
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const thrown = (f: () => never) => {
+      try {
+        f();
+      } catch (e) {
+        return e;
+      }
+    };
+    const info = {
+      location: { pathname: "/racks", search: "", hash: "", state: null, key: "k" },
+      params: {},
+      pattern: "/racks",
+    };
+    onRouterError(thrown(() => redirect("/dashboard")), info);
+    onRouterError(thrown(() => notFound()), info);
+    expect(spy).not.toHaveBeenCalled();
+    const boom = new Error("boom");
+    onRouterError(boom, info);
+    expect(spy).toHaveBeenCalledWith("React Router caught the following error during render", boom);
     spy.mockRestore();
   });
 });

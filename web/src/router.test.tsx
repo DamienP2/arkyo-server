@@ -25,6 +25,37 @@ describe("routeur et coquille", () => {
     ).toBeInTheDocument();
   });
 
+  test("une redirection au rendu ne journalise rien, une vraie erreur oui", async () => {
+    const spy = vi.spyOn(console, "error");
+    const { router } = renderApp("/racks", {
+      ...signedInApi(),
+      "GET /api/racks": { body: [] },
+      "GET /api/panels": { body: [] },
+    });
+    await waitFor(() => expect(router.state.location.pathname).toBe("/templates"));
+    expect(await screen.findByText("Aucun contenant")).toBeInTheDocument();
+    const logged = spy.mock.calls.map((args) => args.map(String).join(" "));
+    expect(logged.filter((l) => l.includes("React Router caught"))).toEqual([]);
+    resetApp();
+
+    // Une page qui lève une vraie erreur reste journalisée par le banc.
+    const errors = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { createMemoryRouter, RouterProvider } = await import("react-router");
+    const { onRouterError } = await import("next/navigation");
+    const { render } = await import("@testing-library/react");
+    const boom = new Error("boom");
+    const Boom = () => {
+      throw boom;
+    };
+    render(
+      <RouterProvider
+        router={createMemoryRouter([{ path: "/", element: <Boom /> }])}
+        onError={onRouterError}
+      />,
+    );
+    expect(errors).toHaveBeenCalledWith("React Router caught the following error during render", boom);
+  });
+
   test("redirects_like_arkyo", async () => {
     // arkyo:app/(app)/{projects/[id],racks,rigs,panels}/page.tsx
     for (const [from, to, shown] of [

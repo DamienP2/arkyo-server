@@ -7,7 +7,7 @@
 import { vi } from "vitest";
 import { cleanup, render } from "@testing-library/react";
 import { createMemoryRouter, RouterProvider } from "react-router";
-import { onCaughtError } from "next/navigation";
+import { onCaughtError, onRouterError } from "next/navigation";
 import { routes } from "@/router";
 
 export type Reply = { status?: number; body: unknown };
@@ -121,7 +121,7 @@ export function renderApp(url: string, api: Api) {
   const fetchSpy = mockApi(api);
   const router = createMemoryRouter(routes, { initialEntries: [url] });
   // Même racine que `main.tsx` : les `redirect()` levés au rendu ne sont pas journalisés.
-  const utils = render(<RouterProvider router={router} />, { onCaughtError });
+  const utils = render(<RouterProvider router={router} onError={onRouterError} />, { onCaughtError });
   return { router, fetchSpy, ...utils };
 }
 
