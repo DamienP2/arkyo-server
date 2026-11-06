@@ -1,5 +1,5 @@
-//! Projects: arkyo:app/api/tenant/projects/** ([`tenant`]) and
-//! arkyo:app/api/projects/route.ts ([`legacy`]).
+//! Projects: arkyo:app/api/tenant/projects/** ([`tenant`], [`locations`],
+//! [`racks`]) and arkyo:app/api/projects/route.ts ([`legacy`]).
 //!
 //! Shared here: the `Project` row as Prisma returns it, arkyo's
 //! `{ error: "Validation invalide", issues }` envelope (`zodIssuesFromError`),
@@ -9,19 +9,22 @@
 #![allow(clippy::result_large_err)]
 
 mod legacy;
+mod locations;
+mod racks;
 mod tenant;
 
 use std::collections::BTreeMap;
 
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
-use axum::routing::get;
+use axum::routing::{get, post};
 use axum::{Json, Router};
 use serde_json::{json, Value};
 use sqlx::SqliteConnection;
 
-use super::parametres::{fold, row_map, Field, Obj, Table};
+use super::parametres::{fold, row_map, str_of, Field, Obj, Table};
 use super::AppState;
+use crate::ids::{new_id, now_iso};
 
 pub fn router() -> Router<AppState> {
     Router::new()
@@ -32,6 +35,11 @@ pub fn router() -> Router<AppState> {
                 .patch(tenant::update)
                 .delete(tenant::remove),
         )
+        .route(
+            "/tenant/projects/{id}/locations",
+            get(locations::list).post(locations::create),
+        )
+        .route("/tenant/projects/{id}/racks", post(racks::create))
         .route("/projects", get(legacy::list).post(legacy::create))
 }
 
@@ -87,6 +95,78 @@ pub(crate) async fn project_row(
     .fetch_optional(conn)
     .await?;
     Ok(row.map(|r| row_map(&r, &PROJECT)))
+}
+
+/// The project's rig: its first `RigConfig` (`rigConfigs: { take: 1 }`),
+/// created when missing as `"<name> — Régie principale"`, of the project's
+/// `rigType` (or `FLIGHT_CASE`), by `user_id` (locations/route.ts:111-122,
+/// racks/route.ts:78-88).
+pub(crate) async fn project_rig(
+    conn: &mut SqliteConnection,
+    project: &Obj,
+    user_id: &str,
+) -> Result<String, sqlx::Error> {
+    let project_id = str_of(project, "id").unwrap_or_default();
+    let existing: Option<String> = sqlx::query_scalar(
+        r#"SELECT "id" FROM "RigConfig" WHERE "projectId" = ? ORDER BY "createdAt", "id" LIMIT 1"#,
+    )
+    .bind(project_id)
+    .fetch_optional(&mut *conn)
+    .await?;
+    if let Some(id) = existing {
+        return Ok(id);
+    }
+    let id = new_id();
+    let now = now_iso();
+    sqlx::query(
+        r#"INSERT INTO "RigConfig" ("id","name","type","projectId","createdById","createdAt","updatedAt")
+           VALUES (?,?,?,?,?,?,?)"#,
+    )
+    .bind(&id)
+    .bind(format!(
+        "{} — Régie principale",
+        str_of(project, "name").unwrap_or_default()
+    ))
+    .bind(str_of(project, "rigType").unwrap_or("FLIGHT_CASE"))
+    .bind(project_id)
+    .bind(user_id)
+    .bind(&now)
+    .bind(&now)
+    .execute(&mut *conn)
+    .await?;
+    Ok(id)
+}
+
+/// The position after the last `RigRack` of `rig_id` (0 for an empty rig).
+pub(crate) async fn next_position(
+    conn: &mut SqliteConnection,
+    rig_id: &str,
+) -> Result<i64, sqlx::Error> {
+    let last: Option<i64> =
+        sqlx::query_scalar(r#"SELECT MAX("position") FROM "RigRack" WHERE "rigConfigId" = ?"#)
+            .bind(rig_id)
+            .fetch_one(conn)
+            .await?;
+    Ok(last.map_or(0, |p| p + 1))
+}
+
+/// Links `rack_id` to `rig_id` at `position`.
+pub(crate) async fn link_rack(
+    conn: &mut SqliteConnection,
+    rig_id: &str,
+    rack_id: &str,
+    position: i64,
+) -> Result<(), sqlx::Error> {
+    sqlx::query(
+        r#"INSERT INTO "RigRack" ("id","rigConfigId","rackId","position") VALUES (?,?,?,?)"#,
+    )
+    .bind(new_id())
+    .bind(rig_id)
+    .bind(rack_id)
+    .bind(position)
+    .execute(conn)
+    .await?;
+    Ok(())
 }
 
 // ── validation ──────────────────────────────────────────────────────────────

@@ -39,6 +39,10 @@ pub enum Kind {
     Num,
     /// `z.number().int().min(n)`.
     IntMin(i64),
+    /// `z.number().int().min(min).max(max)`.
+    IntRange(i64, i64),
+    /// `z.number().int().positive()`.
+    IntPos,
     /// `z.array(z.string().min(1)).min(min).max(max)`.
     IdArr {
         min: usize,
@@ -159,7 +163,9 @@ fn expected(kind: &Kind) -> &'static str {
         | Kind::NumPosMsg(_)
         | Kind::Int
         | Kind::Num
-        | Kind::IntMin(_) => "number",
+        | Kind::IntMin(_)
+        | Kind::IntRange(..)
+        | Kind::IntPos => "number",
         Kind::Bool => "boolean",
         Kind::StrArr | Kind::NumArr | Kind::AnyArr | Kind::IdArr { .. } | Kind::Slots => "array",
         Kind::Enum(..) => "string",
@@ -275,6 +281,28 @@ fn check(kind: &Kind, v: &Value) -> Vec<String> {
                 errs.push("Invalid input: expected int, received number".into());
             } else if n.as_f64().is_some_and(|f| f < *min as f64) {
                 errs.push(format!("Too small: expected number to be >={min}"));
+            }
+        }
+        // Zod stops at the failed `int()` check.
+        (Kind::IntRange(min, max), Value::Number(n)) => {
+            let f = n.as_f64().unwrap_or(0.0);
+            if f.fract() != 0.0 {
+                errs.push("Invalid input: expected int, received number".into());
+            } else {
+                if f < *min as f64 {
+                    errs.push(format!("Too small: expected number to be >={min}"));
+                }
+                if f > *max as f64 {
+                    errs.push(format!("Too big: expected number to be <={max}"));
+                }
+            }
+        }
+        (Kind::IntPos, Value::Number(n)) => {
+            let f = n.as_f64().unwrap_or(0.0);
+            if f.fract() != 0.0 {
+                errs.push("Invalid input: expected int, received number".into());
+            } else if f <= 0.0 {
+                errs.push("Too small: expected number to be >0".into());
             }
         }
         (Kind::IdArr { min, max }, Value::Array(items)) => {
