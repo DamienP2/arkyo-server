@@ -6,8 +6,9 @@
  * lieu, et rafraîchissement temps réel.
  *
  * La copie d'arkyo est rendue par le chargeur réel (`/project/:id`,
- * `GET /api/tenant/projects/:id/editor`). Le catalogue, l'assistant de
- * contenant (Task 11) et les cartes de contenant (Task 12) sont des bouchons.
+ * `GET /api/tenant/projects/:id/editor`). Le catalogue et l'assistant de
+ * contenant (Task 11), les cartes de contenant (Task 12) sont des copies
+ * d'arkyo, testées dans `inventaire-catalogue` et `inventaire-proprietes`.
  */
 
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";

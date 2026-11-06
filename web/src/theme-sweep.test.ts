@@ -288,6 +288,24 @@ const COPIED_FILES = [
   "app/(fullscreen)/project/[id]/inventaire/_components/component-config-modal.tsx",
   "app/(fullscreen)/project/[id]/inventaire/_components/template-selector.tsx",
   "components/synoptique/components/accessory-face.tsx",
+  // Phase 4a (Task 12) : inventaire 3/3 et exports. Il ne reste aucun bouchon
+  // de l'inventaire.
+  "app/(fullscreen)/project/[id]/_components/export-menu.tsx",
+  "app/(fullscreen)/project/[id]/inventaire/_components/container-properties-panel.tsx",
+  "app/(fullscreen)/project/[id]/inventaire/_components/container-sheet-card.tsx",
+  "app/(fullscreen)/project/[id]/inventaire/_components/equipment-card.tsx",
+  "app/(fullscreen)/project/[id]/inventaire/_components/inventaire-export.tsx",
+  "app/(fullscreen)/project/[id]/inventaire/_components/item-properties-panel.tsx",
+  "app/(fullscreen)/project/[id]/inventaire/_components/rack-card-canvas.tsx",
+  "app/(fullscreen)/project/[id]/inventaire/_components/rack-mini-svg.tsx",
+  "app/(fullscreen)/project/[id]/inventaire/_components/slot-ruler.tsx",
+  "app/(fullscreen)/project/[id]/inventaire/_lib/bom-pdf.ts",
+  "app/(fullscreen)/project/[id]/reseau/_components/shared/export-capture.ts",
+  "app/(fullscreen)/project/[id]/reseau/_components/shared/export-pdf.ts",
+  "lib/export/download-blob.ts",
+  "lib/export/technical-table-pdf.ts",
+  "lib/print/technical-frame.ts",
+  "lib/services/export/csv.ts",
 ];
 
 /** Fichiers posés sur la topbar ou le rail : ils suivent le thème (variante « Clair A »). */
@@ -456,6 +474,33 @@ const CONTAINER_WIZARD_CARD_COLORS: Allow = {
   line: /^\s*color: "#(10b981|8b5cf6|3b82f6|06b6d4)",$/,
   reason: "teinte de l'icône des cartes de choix (modèle, nouveau, rackable, non rackable) de l'assistant contenant : " + DOUBT,
 };
+
+/** Phase 4a (Task 12) : couleurs de catégorie de repli des lignes d'inventaire (palettes statiques d'arkyo). */
+const CATEGORY_FALLBACK_PALETTE: Allow[] = [
+  {
+    line: /^\s*"#[0-9a-f]{6}", \/\/ (blue|emerald|amber|red|violet|pink|cyan|lime)$/,
+    reason: "palette stable des catégories d'équipement (`categoryColor` de la carte d'équipement) : couleur métier",
+  },
+  {
+    line: /^\s*("[^"]+"|\w+): "#[0-9a-f]{6}",$|^const DEFAULT_COLOR = "#71717a";$/,
+    reason: "couleurs de repli des catégories d'équipement, panels et accessoires (`CATEGORY_COLOR` du mini-rack) : couleur métier",
+  },
+];
+/** Phase 4a (Task 12) : rendu des captures et des PDF d'export (fond de page, encre, monogramme). */
+const EXPORT_RENDER_HEX: Allow[] = [
+  {
+    line: /^\s*(color: string = "#14181E",|background(: string)? = "#ffffff",)$/,
+    reason: "couleur du monogramme rastérisé et fond blanc des captures exportées (PNG, JPG, PDF) : rendu des exports",
+  },
+  {
+    line: /arkyoLogoPngDataUrl\("#5a74ff", 192\)/,
+    reason: "monogramme de l'en-tête des PDF de capture (bande sombre du cartouche) : rendu des PDF",
+  },
+  {
+    line: /^export const (INK|MUTED|WHITE)_HEX = "#[0-9a-f]{6}";$/,
+    reason: "encre, gris et blanc du cartouche technique imprimé (« grille allégée ») : rendu des PDF",
+  },
+];
 
 // ── Neutres et bleus Tailwind (couleurs d'interface d'arkyo) ────────────────
 
@@ -823,6 +868,12 @@ const ALLOW_HEX: AllowMap = {
     CONTAINER_WIZARD_CARD_COLORS,
   ],
   "app/(fullscreen)/project/[id]/inventaire/_components/catalog-panel.tsx": [CATALOG_DOT_HEX],
+  // Phase 4a (Task 12) : inventaire 3/3 et exports.
+  "app/(fullscreen)/project/[id]/inventaire/_components/equipment-card.tsx": CATEGORY_FALLBACK_PALETTE,
+  "app/(fullscreen)/project/[id]/inventaire/_components/rack-card-canvas.tsx": [RACK_TYPE_COLORS],
+  "app/(fullscreen)/project/[id]/inventaire/_components/rack-mini-svg.tsx": CATEGORY_FALLBACK_PALETTE,
+  "app/(fullscreen)/project/[id]/reseau/_components/shared/export-capture.ts": EXPORT_RENDER_HEX,
+  "lib/print/technical-frame.ts": EXPORT_RENDER_HEX,
 };
 
 test("aucune couleur hexadécimale ou rgb() d'interface dans les fichiers copiés (hors photo et métier)", () => {

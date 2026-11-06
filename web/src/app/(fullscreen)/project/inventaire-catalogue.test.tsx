@@ -6,9 +6,9 @@
  * contenant » (modèle cloné ou contenant neuf) et configuration des composants
  * d'un châssis modulaire.
  *
- * Les copies d'arkyo sont rendues par le chargeur réel (`/project/:id`). Les
- * cartes de contenant (Task 12) restent des bouchons : la carte réduite porte
- * `data-rack-id`, cible du dépôt, et la liste des lignes de premier niveau.
+ * Les copies d'arkyo sont rendues par le chargeur réel (`/project/:id`). La
+ * carte de contenant (`ContainerSheetCard`, Task 12) porte `data-rack-id`,
+ * cible du dépôt, et la liste des lignes.
  */
 
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
@@ -146,7 +146,7 @@ async function open(extra: Api = {}) {
   return app;
 }
 
-/** Carte réduite d'un contenant (bouchon de la Task 12, cible de dépôt). */
+/** Carte d'un contenant (`ContainerSheetCard`, cible de dépôt). */
 function card(rackId: string): HTMLElement {
   return document.querySelector(`[data-rack-id="${rackId}"]`) as HTMLElement;
 }
