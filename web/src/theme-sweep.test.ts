@@ -230,6 +230,8 @@ const COPIED_FILES = [
   "components/synoptique/components/remote-cursors-overlay.tsx",
   "components/synoptique/hooks/use-live-cursors.ts",
   "lib/services/rack-validation.ts",
+  // Phase 3 (Task 12) : éditeur de panel.
+  "app/(fullscreen)/panels/[id]/panel-editor.tsx",
 ];
 
 /** Fichiers posés sur la topbar ou le rail : ils suivent le thème (variante « Clair A »). */
@@ -663,6 +665,29 @@ const ALLOW_HEX: AllowMap = {
   ],
   "components/synoptique/hooks/use-live-cursors.ts": [
     { line: /color: m(sg)?\.color \?\? "#64748b",$/, reason: "couleur de repli d'un pair (curseur, avatar) : avatar de présence" },
+  ],
+  // Phase 3 (Task 12) : éditeur de panel.
+  "app/(fullscreen)/panels/[id]/panel-editor.tsx": [
+    {
+      line: /^const NEUTRAL_COLOR = "#888";$|^\s*color: catColorMap\[cat\] \?\? "#888",$/,
+      reason: "teinte de repli d'un connecteur ou d'une famille sans fonction : " + CONN,
+    },
+    {
+      line: /^\s*: "1px dashed rgba\(0,0,0,0\.22\)";$|^\s*border: "(1\.5px solid rgba\(0,0,0,0\.35\)|2px solid #aaa)",$|^\s*border(Right|Left): "1px solid #bbb",$|^\s*color: "rgba\(0,0,0,0\.35\)",$/,
+      reason:
+        "face du panel dessinée à l'échelle (contour, oreilles et trous de fixation, découpes vides, numéros des slots) : " +
+        "rendu des plans, couleur métier",
+    },
+    {
+      line: /^\s*<(circle|rect) [^>]*fill="#52525b" ?\/?>?$|^\s*stroke="#E8E8E8"$/,
+      reason:
+        "pictogrammes Neutrik D / générique des densités du composant `PanelConfigInline` d'arkyo (jamais rendu) : " +
+        "symboles de connecteurs, couleur métier",
+    },
+    {
+      line: /^\s*color: "#(3b82f6|22c55e|ef4444|f59e0b|8b5cf6|64748b)",$/,
+      reason: "teinte de l'icône de chaque section du guide de l'éditeur : " + DOUBT,
+    },
   ],
 };
 

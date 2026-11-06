@@ -64,10 +64,22 @@ export function signedInApi(perms: unknown = OWNER_PERMS, siteName = "Régie A")
 }
 
 class FakeEventSource {
+  static open = new Set<FakeEventSource>();
   onmessage: ((e: MessageEvent) => void) | null = null;
   onerror: (() => void) | null = null;
-  constructor(public url: string) {}
-  close() {}
+  constructor(public url: string) {
+    FakeEventSource.open.add(this);
+  }
+  close() {
+    FakeEventSource.open.delete(this);
+  }
+}
+
+/** Pousse un évènement `/api/events` (`data` JSON) à toutes les connexions ouvertes. */
+export function emitAppEvent(data: unknown) {
+  for (const es of FakeEventSource.open) {
+    es.onmessage?.(new MessageEvent("message", { data: JSON.stringify(data) }));
+  }
 }
 
 /** Installe le `fetch` simulé ; renvoie l'espion pour inspecter les appels. */
@@ -99,6 +111,7 @@ export function mockApi(api: Api) {
  */
 export function resetApp() {
   cleanup();
+  FakeEventSource.open.clear();
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
 }

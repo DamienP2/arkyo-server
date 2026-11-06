@@ -155,17 +155,19 @@ describe("routeur et coquille", () => {
     expect(document.querySelector("header")).toBeNull();
   });
 
-  test("/panels/:id charge le panel puis reste « Bientôt disponible » jusqu'à l'éditeur (Task 12)", async () => {
+  test("/panels/:id ouvre l'éditeur de panel plein écran, sans sidebar ni topbar de l'application", async () => {
     renderApp("/panels/pn1", {
       ...signedInApi(),
       "GET /api/panels/pn1": { body: { id: "pn1", name: "Patch", heightU: 1, slotsPerU: 16, slots: [] } },
       "GET /api/tenant/catalogue/connectors": { body: [] },
       "GET /api/tenant/parametres/categories": { body: { functions: { arkyo: [], personal: [] } } },
     });
-    expect(await screen.findByText("Bientôt disponible", {}, { timeout: 5000 })).toBeInTheDocument();
+    expect(await screen.findByText("Patch", {}, { timeout: 5000 })).toBeInTheDocument();
+    expect(screen.getByTitle("Fermer l'édition")).toBeInTheDocument();
+    expect(screen.queryByText("Bientôt disponible")).toBeNull();
     expect(document.querySelector("aside")).toBeNull();
     expect(document.querySelector("header")).toBeNull();
-  });
+  }, 15000);
 
   test("une URL inconnue affiche la page 404", async () => {
     renderApp("/support", signedInApi());
