@@ -1,5 +1,5 @@
 //! Projects: arkyo:app/api/tenant/projects/** ([`tenant`], [`locations`],
-//! [`racks`]) and arkyo:app/api/projects/route.ts ([`legacy`]).
+//! [`racks`], [`inventory`]) and arkyo:app/api/projects/route.ts ([`legacy`]).
 //!
 //! Shared here: the `Project` row as Prisma returns it, arkyo's
 //! `{ error: "Validation invalide", issues }` envelope (`zodIssuesFromError`),
@@ -8,6 +8,7 @@
 
 #![allow(clippy::result_large_err)]
 
+mod inventory;
 mod legacy;
 mod locations;
 mod racks;
@@ -40,6 +41,10 @@ pub fn router() -> Router<AppState> {
             get(locations::list).post(locations::create),
         )
         .route("/tenant/projects/{id}/racks", post(racks::create))
+        .route(
+            "/tenant/projects/{id}/racks/{rack_id}/inventory",
+            get(inventory::list).post(inventory::create),
+        )
         .route("/projects", get(legacy::list).post(legacy::create))
 }
 
@@ -135,6 +140,24 @@ pub(crate) async fn project_rig(
     .execute(&mut *conn)
     .await?;
     Ok(id)
+}
+
+/// `assertRackBelongsToProject(db, rackId, projectId)`: the rack is linked
+/// to a rig of the project (`rigs.some.rigConfig.projectId`).
+pub(crate) async fn rack_in_project(
+    conn: &mut SqliteConnection,
+    rack_id: &str,
+    project_id: &str,
+) -> Result<bool, sqlx::Error> {
+    let found: Option<i64> = sqlx::query_scalar(
+        r#"SELECT 1 FROM "RigRack" rr JOIN "RigConfig" rc ON rc."id" = rr."rigConfigId"
+           WHERE rr."rackId" = ? AND rc."projectId" = ? LIMIT 1"#,
+    )
+    .bind(rack_id)
+    .bind(project_id)
+    .fetch_optional(conn)
+    .await?;
+    Ok(found.is_some())
 }
 
 /// The position after the last `RigRack` of `rig_id` (0 for an empty rig).
