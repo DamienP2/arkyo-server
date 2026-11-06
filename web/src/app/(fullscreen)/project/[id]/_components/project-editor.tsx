@@ -1740,7 +1740,8 @@ function RackSelectorDropdown({
                   className={cn(
                     "cursor-pointer rounded-md px-2 py-1.5 text-[11px] outline-none transition-colors",
                     active
-                      ? "bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] text-[var(--accent)]"
+                      // arkyo-server: habillage Strata (texte d'accent sur l'accent à 10 % : --accent-strong)
+                      ? "bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] text-[var(--accent-strong)]"
                       : "data-[highlighted]:bg-secondary/60 text-foreground",
                   )}
                 >
