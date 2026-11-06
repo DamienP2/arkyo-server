@@ -280,6 +280,14 @@ const COPIED_FILES = [
   "app/(fullscreen)/project/[id]/inventaire/_components/location-properties-panel.tsx",
   "app/(fullscreen)/project/[id]/inventaire/_components/location-selector-dropdown.tsx",
   "app/(fullscreen)/project/[id]/inventaire/_components/location-sheet.tsx",
+  // Phase 4a (Task 11) : inventaire 2/3. Les bouchons de la Task 12
+  // (`rack-card-canvas`, `container-sheet-card`, panneaux de contenant et
+  // d'item, export) ne sont pas des copies (décision 1).
+  "app/(fullscreen)/project/[id]/inventaire/_components/add-container-wizard.tsx",
+  "app/(fullscreen)/project/[id]/inventaire/_components/catalog-panel.tsx",
+  "app/(fullscreen)/project/[id]/inventaire/_components/component-config-modal.tsx",
+  "app/(fullscreen)/project/[id]/inventaire/_components/template-selector.tsx",
+  "components/synoptique/components/accessory-face.tsx",
 ];
 
 /** Fichiers posés sur la topbar ou le rail : ils suivent le thème (variante « Clair A »). */
@@ -436,6 +444,19 @@ const CATEGORY_DOT_FALLBACK: Allow = {
   reason: "repli de la couleur d'une catégorie d'équipement (point coloré des filtres) : couleur métier",
 };
 
+/** Phase 4a (Task 11) : pastilles des cartes du catalogue de l'inventaire (panneau latéral). */
+const CATALOG_DOT_HEX: Allow = {
+  line: /^const (PANEL_DOT|ADAPTER_DOT|DEFAULT_CATEGORY|ACCESSORY_DOT)_HEX = "#[0-9a-f]{6}"; \/\/ /,
+  reason:
+    "pastilles des cartes du catalogue (panels cyan, adaptateurs violet, catégorie absente et accessoires gris), " +
+    "alignées sur les couleurs spéciales des baies (`SPECIAL_HEX`) : couleur métier",
+};
+/** Phase 4a (Task 11) : icônes des cartes « Choisir un template » / « Créer un nouveau » et « Rackable ». */
+const CONTAINER_WIZARD_CARD_COLORS: Allow = {
+  line: /^\s*color: "#(10b981|8b5cf6|3b82f6|06b6d4)",$/,
+  reason: "teinte de l'icône des cartes de choix (modèle, nouveau, rackable, non rackable) de l'assistant contenant : " + DOUBT,
+};
+
 // ── Neutres et bleus Tailwind (couleurs d'interface d'arkyo) ────────────────
 
 const INTERFACE = /\b(bg|text|border|ring|outline|divide|from|to)-(zinc|gray|slate|neutral|stone|blue|indigo|sky)-\d{2,3}\b/;
@@ -460,6 +481,8 @@ const ALLOW: AllowMap = {
   "components/panels/new-panel-wizard.tsx": [PANEL_MOCKUP],
   // Phase 4a (Task 9) : coquille de l'éditeur projet.
   "app/(fullscreen)/project/[id]/_editor/project-header-block.tsx": [PROJECT_STATUS_BADGE],
+  // Phase 4a (Task 11) : assistant « Ajouter un contenant » (mêmes contenants dessinés que l'assistant contenant).
+  "app/(fullscreen)/project/[id]/inventaire/_components/add-container-wizard.tsx": [RACK_MOCKUP, CONTAINER_MOCKUP],
 };
 
 test("aucune couleur d'interface Tailwind codée en dur dans les fichiers copiés (hors exceptions métier)", () => {
@@ -503,6 +526,8 @@ const ALLOW_STATUS: AllowMap = {
   "app/(fullscreen)/project/[id]/_editor/project-header-block.tsx": [PROJECT_STATUS_BADGE],
   // Phase 4a (Task 10) : inventaire 1/3.
   "app/(fullscreen)/project/[id]/inventaire/_components/location-sheet.tsx": [FREE_EQUIPMENT_GREEN],
+  // Phase 4a (Task 11) : inventaire 2/3.
+  "app/(fullscreen)/project/[id]/inventaire/_components/add-container-wizard.tsx": [...WIZARD_ART, RACK_MOCKUP, CONTAINER_MOCKUP],
 };
 
 test("erreurs, succès et alertes suivent --danger, --success et --warning", () => {
@@ -791,6 +816,13 @@ const ALLOW_HEX: AllowMap = {
   // Phase 4a (Task 10) : inventaire 1/3.
   "app/(fullscreen)/project/[id]/inventaire/_components/inventaire-contextual-topbar.tsx": [CATEGORY_DOT_FALLBACK],
   "app/(fullscreen)/project/[id]/inventaire/_components/location-sheet.tsx": [FREE_EQUIPMENT_GREEN],
+  // Phase 4a (Task 11) : inventaire 2/3.
+  "app/(fullscreen)/project/[id]/inventaire/_components/add-container-wizard.tsx": [
+    ...WIZARD_ART,
+    RACK_TYPE_COLORS,
+    CONTAINER_WIZARD_CARD_COLORS,
+  ],
+  "app/(fullscreen)/project/[id]/inventaire/_components/catalog-panel.tsx": [CATALOG_DOT_HEX],
 };
 
 test("aucune couleur hexadécimale ou rgb() d'interface dans les fichiers copiés (hors photo et métier)", () => {
