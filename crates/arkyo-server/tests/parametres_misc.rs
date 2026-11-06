@@ -154,6 +154,57 @@ async fn application_and_admin_config_share_app_config() {
     assert_ne!(marker, "[]");
 }
 
+/// Final review, Important 5: `site.name` / `site.logoUrl` are owner-only
+/// (espace route, `Kind::Asset` check). The generic config writers skip
+/// them, even for an admin; reading them still works.
+#[tokio::test]
+async fn site_keys_are_not_writable_through_generic_config() {
+    let e = env().await;
+    let tok = role_user(&e, "admin").await;
+    add_user(&e.pool, "o@b.fr", "owner", false).await;
+    let owner = login(&e.app, "o@b.fr").await;
+    let r = call(
+        &e.app,
+        "PATCH",
+        "/api/tenant/espace/informations",
+        LOCAL,
+        Some(&owner),
+        Some(json!({"name": "Régie", "logoUrl": "/uploads/logo.png"})),
+    )
+    .await;
+    assert_eq!(r.status, StatusCode::OK, "{:?}", r.body);
+    for url in [APPLICATION, "/api/admin/config"] {
+        let w = call(
+            &e.app,
+            "PATCH",
+            url,
+            LOCAL,
+            Some(&tok),
+            Some(json!({"site.name": "X", "site.logoUrl": "http://ailleurs/pixel.png", "autre": "1"})),
+        )
+        .await;
+        assert_eq!(w.status, StatusCode::OK, "{url}");
+        let w = call(
+            &e.app,
+            "PATCH",
+            url,
+            LOCAL,
+            Some(&tok),
+            Some(json!({"site.logoUrl": "__DELETE__"})),
+        )
+        .await;
+        assert_eq!(w.status, StatusCode::OK, "{url}");
+    }
+    let site = call(&e.app, "GET", "/api/site", LOCAL, Some(&tok), None).await;
+    assert_eq!(
+        site.body,
+        json!({"name": "Régie", "logoUrl": "/uploads/logo.png"})
+    );
+    let g = call(&e.app, "GET", APPLICATION, LOCAL, Some(&tok), None).await;
+    assert_eq!(g.body["site.name"], "Régie");
+    assert_eq!(g.body["autre"], "1");
+}
+
 #[tokio::test]
 async fn settings_permissions() {
     let e = env().await;

@@ -2,6 +2,9 @@
 //! arkyo:app/api/admin/config/route.ts: the `AppConfig` key/value store.
 //!
 //! `seeds.*` keys are internal (seed markers): never returned, never written.
+//! `site.*` keys (site name and logo) are returned but not written here:
+//! arkyo kept them on the tenant, edited by the owner only through
+//! `/api/tenant/espace/informations` (with its logo URL check).
 
 use arkyo_core::permissions::{Domain, Level};
 use axum::body::Bytes;
@@ -17,6 +20,12 @@ use crate::ids::{new_id, now_iso};
 
 fn internal(key: &str) -> bool {
     key.starts_with("seeds.")
+}
+
+/// Owner-only keys of the espace route (arkyo-server: arkyo stored them
+/// outside `AppConfig`).
+fn owner_only(key: &str) -> bool {
+    key.starts_with("site.")
 }
 
 /// JavaScript `String(value)` of a JSON value.
@@ -78,7 +87,10 @@ pub async fn patch_map(
         };
         let mut tx = begin(&st.pool).await?;
         for (key, value) in &map {
-            if internal(key) || allowed.is_some_and(|a| !a.contains(&key.as_str())) {
+            if internal(key)
+                || owner_only(key)
+                || allowed.is_some_and(|a| !a.contains(&key.as_str()))
+            {
                 continue;
             }
             if value.as_str() == Some("__DELETE__") {
