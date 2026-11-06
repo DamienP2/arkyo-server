@@ -513,22 +513,42 @@ async fn adapter_inputs_outputs_roundtrip() {
     assert_eq!(audit_count(&c.e.pool, "DELETE", &id).await, 1);
 }
 
-/// Stand-ins for the phase-3 project tables arkyo checks before a delete.
-async fn use_in(pool: &SqlitePool, table: &str, col: &str, id: &str) {
-    sqlx::query(&format!(
-        r#"CREATE TABLE IF NOT EXISTS "{table}" ("id" TEXT PRIMARY KEY, "{col}" TEXT)"#
-    ))
-    .execute(pool)
-    .await
-    .unwrap();
-    sqlx::query(&format!(
-        r#"INSERT INTO "{table}" ("id","{col}") VALUES (?, ?)"#
-    ))
-    .bind(arkyo_server::ids::new_id())
-    .bind(id)
-    .execute(pool)
-    .await
-    .unwrap();
+/// A row of an editor table (migration 0004) whose catalogue soft FK
+/// (`catalogCableModelId` or `catalogAdapterId`) is `id`, in a project `p`
+/// and a rack `r` created on first use.
+async fn use_in(pool: &SqlitePool, table: &str, id: &str) {
+    const NOW: &str = "2026-11-06T10:00:00.000Z";
+    for sql in [
+        r#"INSERT OR IGNORE INTO "Project" ("id","name","createdById","createdAt","updatedAt") VALUES ('p','Match','u',?,?)"#,
+        r#"INSERT OR IGNORE INTO "Rack" ("id","name","createdAt","updatedAt") VALUES ('r','Baie',?,?)"#,
+    ] {
+        sqlx::query(sql)
+            .bind(NOW)
+            .bind(NOW)
+            .execute(pool)
+            .await
+            .unwrap();
+    }
+    let sql = match table {
+        "RackConnection" => {
+            r#"INSERT INTO "RackConnection" ("id","rackId","catalogCableModelId","createdAt") VALUES (?,'r',?,?)"#
+        }
+        "ProjectConnection" => {
+            r#"INSERT INTO "ProjectConnection" ("id","projectId","fromRackId","toRackId","catalogCableModelId","createdAt") VALUES (?,'p','r','r',?,?)"#
+        }
+        "SynopticAdapter" => {
+            r#"INSERT INTO "SynopticAdapter" ("id","rackId","catalogAdapterId","x","y","createdAt","updatedAt") VALUES (?,'r',?,0,0,?,?)"#
+        }
+        "ProjectSynopticAdapter" => {
+            r#"INSERT INTO "ProjectSynopticAdapter" ("id","projectId","catalogAdapterId","x","y","createdAt","updatedAt") VALUES (?,'p',?,0,0,?,?)"#
+        }
+        _ => panic!("no catalogue reference in {table}"),
+    };
+    let mut q = sqlx::query(sql).bind(arkyo_server::ids::new_id()).bind(id);
+    for _ in 2..sql.matches('?').count() {
+        q = q.bind(NOW);
+    }
+    q.execute(pool).await.unwrap();
 }
 
 #[tokio::test]
@@ -538,14 +558,8 @@ async fn delete_in_use_409() {
         .as_str()
         .unwrap()
         .to_string();
-    use_in(
-        &c.e.pool,
-        "ProjectConnection",
-        "catalogCableModelId",
-        &cable,
-    )
-    .await;
-    use_in(&c.e.pool, "RackConnection", "catalogCableModelId", &cable).await;
+    use_in(&c.e.pool, "ProjectConnection", &cable).await;
+    use_in(&c.e.pool, "RackConnection", &cable).await;
     let d = c.req("DELETE", &format!("/cables/{cable}"), None).await;
     assert_eq!(d.status, StatusCode::CONFLICT);
     assert_eq!(
@@ -557,7 +571,7 @@ async fn delete_in_use_409() {
         .as_str()
         .unwrap()
         .to_string();
-    use_in(&c.e.pool, "SynopticAdapter", "catalogAdapterId", &ad).await;
+    use_in(&c.e.pool, "SynopticAdapter", &ad).await;
     let d = c.req("DELETE", &format!("/adapters/{ad}"), None).await;
     assert_eq!(d.status, StatusCode::CONFLICT);
     assert_eq!(
@@ -661,7 +675,7 @@ async fn duplicate_and_bulk_delete() {
         .as_str()
         .unwrap()
         .to_string();
-    use_in(&c.e.pool, "ProjectConnection", "catalogCableModelId", &used).await;
+    use_in(&c.e.pool, "ProjectConnection", &used).await;
     let r = c
         .req(
             "POST",
