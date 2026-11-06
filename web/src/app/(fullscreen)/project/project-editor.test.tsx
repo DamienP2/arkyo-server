@@ -158,7 +158,9 @@ describe("éditeur projet : coquille", () => {
     act(() => {
       fireEvent.keyDown(window, { key: "p" });
     });
-    expect(await screen.findByText("Panels")).toBeInTheDocument();
+    // Panneau latéral de l'outil (titre et consigne), en plus de la sous-topbar.
+    expect(await screen.findByText("Glissez un panel vers un contenant.")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Panels" })).toBeInTheDocument();
     expect(window.localStorage.getItem("inventaire-active-tool:p1")).toBe('"panel"');
     unmount();
     vi.restoreAllMocks();

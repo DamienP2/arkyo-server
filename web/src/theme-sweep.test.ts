@@ -264,6 +264,22 @@ const COPIED_FILES = [
   "app/(fullscreen)/project/[id]/_editor/ui.tsx",
   "app/(fullscreen)/project/[id]/fiche/fiche-client.tsx",
   "app/(fullscreen)/project/[id]/inventaire/_lib/bom-table.ts",
+  // Phase 4a (Task 10) : inventaire 1/3. Les bouchons des Tasks 11 et 12
+  // (`catalog-panel`, `add-container-wizard`, `rack-card-canvas`,
+  // `container-sheet-card`, panneaux de contenant et d'item, export) ne sont
+  // pas des copies (décision 1).
+  "app/(fullscreen)/project/[id]/_hooks/use-project-sync.ts",
+  "app/(fullscreen)/project/[id]/inventaire/inventaire-client.tsx",
+  "app/(fullscreen)/project/[id]/inventaire/_components/inventaire-contextual-topbar.tsx",
+  "app/(fullscreen)/project/[id]/inventaire/_components/inventaire-help-modal.tsx",
+  "app/(fullscreen)/project/[id]/inventaire/_components/inventaire-info-panel.tsx",
+  "app/(fullscreen)/project/[id]/inventaire/_components/inventaire-left-toolbar.tsx",
+  "app/(fullscreen)/project/[id]/inventaire/_components/inventaire-scope.tsx",
+  "app/(fullscreen)/project/[id]/inventaire/_components/inventaire-shortcuts-modal.tsx",
+  "app/(fullscreen)/project/[id]/inventaire/_components/inventaire-side-panel.tsx",
+  "app/(fullscreen)/project/[id]/inventaire/_components/location-properties-panel.tsx",
+  "app/(fullscreen)/project/[id]/inventaire/_components/location-selector-dropdown.tsx",
+  "app/(fullscreen)/project/[id]/inventaire/_components/location-sheet.tsx",
 ];
 
 /** Fichiers posés sur la topbar ou le rail : ils suivent le thème (variante « Clair A »). */
@@ -407,6 +423,19 @@ const PROJECT_STATUS_HEX: Allow = {
   reason: "couleurs des statuts de projet (badge plein et pastilles du menu de statut de la topbar, en-tête) : statut métier",
 };
 
+/** Phase 4a (Task 10) : section « Équipements libres » de la fiche de lieu (liseré vert). */
+const FREE_EQUIPMENT_GREEN: Allow = {
+  line: /^\s*(\? "border-emerald-500\/60 bg-emerald-500\/5"|<Boxes className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-500" \/>|style=\{\{ borderLeftWidth: 3, borderLeftColor: "#2f9e44" \}\})$/,
+  reason:
+    "vert d'identité des équipements libres d'un lieu (liseré, pictogramme et survol de dépôt), " +
+    "pendant de la couleur du type de contenant sur les cartes (RACK_TYPE_COLOR) : couleur métier, " + DOUBT,
+};
+/** Phase 4a (Task 10) : point de catégorie sans couleur des filtres du catalogue. */
+const CATEGORY_DOT_FALLBACK: Allow = {
+  line: /^const CATEGORY_DOT_FALLBACK = "#94a3b8"; \/\/ slate-400$/,
+  reason: "repli de la couleur d'une catégorie d'équipement (point coloré des filtres) : couleur métier",
+};
+
 // ── Neutres et bleus Tailwind (couleurs d'interface d'arkyo) ────────────────
 
 const INTERFACE = /\b(bg|text|border|ring|outline|divide|from|to)-(zinc|gray|slate|neutral|stone|blue|indigo|sky)-\d{2,3}\b/;
@@ -472,6 +501,8 @@ const ALLOW_STATUS: AllowMap = {
   "components/panels/new-panel-wizard.tsx": [...WIZARD_ART, PANEL_MOCKUP],
   // Phase 4a (Task 9) : coquille de l'éditeur projet.
   "app/(fullscreen)/project/[id]/_editor/project-header-block.tsx": [PROJECT_STATUS_BADGE],
+  // Phase 4a (Task 10) : inventaire 1/3.
+  "app/(fullscreen)/project/[id]/inventaire/_components/location-sheet.tsx": [FREE_EQUIPMENT_GREEN],
 };
 
 test("erreurs, succès et alertes suivent --danger, --success et --warning", () => {
@@ -757,6 +788,9 @@ const ALLOW_HEX: AllowMap = {
   // Phase 4a (Task 9) : coquille de l'éditeur projet.
   "app/(fullscreen)/project/[id]/_editor/project-global-topbar.tsx": [PROJECT_STATUS_HEX],
   "app/(fullscreen)/project/[id]/_editor/project-header-block.tsx": [PROJECT_STATUS_HEX],
+  // Phase 4a (Task 10) : inventaire 1/3.
+  "app/(fullscreen)/project/[id]/inventaire/_components/inventaire-contextual-topbar.tsx": [CATEGORY_DOT_FALLBACK],
+  "app/(fullscreen)/project/[id]/inventaire/_components/location-sheet.tsx": [FREE_EQUIPMENT_GREEN],
 };
 
 test("aucune couleur hexadécimale ou rgb() d'interface dans les fichiers copiés (hors photo et métier)", () => {
