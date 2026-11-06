@@ -596,6 +596,39 @@ async fn purge_single_target_deletes_only() {
     assert_eq!(count(&c.e.pool, "TenantEquipment").await, 0);
 }
 
+/// Final review, Important 4: the "symbols" target empties the custom
+/// symbols only, like `all`; the built-in ones (no restore) stay.
+#[tokio::test]
+async fn purge_symbols_keeps_builtin_symbols() {
+    let c = ctx().await;
+    let builtin = || {
+        let pool = c.e.pool.clone();
+        async move {
+            sqlx::query_scalar::<_, i64>(
+                r#"SELECT COUNT(*) FROM "CatalogSymbol" WHERE "isBuiltin" = 1"#,
+            )
+            .fetch_one(&pool)
+            .await
+            .unwrap()
+        }
+    };
+    let before = builtin().await;
+    assert!(before > 0);
+    sqlx::query(
+        r#"INSERT INTO "CatalogSymbol" ("id","key","label","isBuiltin","svgUrl","sortOrder","createdAt","updatedAt")
+           VALUES ('s1','perso','Perso',0,'/uploads/symbols/perso.svg',0,'2026-01-01T00:00:00.000Z','2026-01-01T00:00:00.000Z')"#,
+    )
+    .execute(&c.e.pool)
+    .await
+    .unwrap();
+    let r = c
+        .req("POST", PURGE, Some(json!({"target": "symbols"})))
+        .await;
+    assert_eq!(r.body, json!({"ok": true}));
+    assert_eq!(builtin().await, before);
+    assert_eq!(count(&c.e.pool, "CatalogSymbol").await, before);
+}
+
 #[tokio::test]
 async fn purge_all_resets_listed_families_and_keeps_print_and_taxonomy() {
     let c = ctx().await;

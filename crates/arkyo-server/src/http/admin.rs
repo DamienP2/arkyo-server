@@ -116,7 +116,7 @@ const ALL_EVENTS: [&str; 6] = [
 /// `POST /api/admin/purge` `{ target }` (settings:admin).
 ///
 /// arkyo's version deleted from removed models. A single target only
-/// deletes its tables, like arkyo. `all` empties the families the front
+/// deletes its tables, like arkyo (`symbols`: custom symbols only). `all` empties the families the front
 /// lists (see [`ALL_TABLES`]; custom symbols only, built-in ones stay), then
 /// reinstalls their starting rows, in one transaction. Print settings,
 /// functions/phases/types, dimensions, cable models, `ExportTemplate`,
@@ -136,7 +136,13 @@ async fn purge(State(st): State<AppState>, CurrentUser(u): CurrentUser, body: By
         let tables: &[&str] = plan.map_or(&ALL_TABLES, |p| p.0);
         let mut tx = begin(&st.pool).await?;
         for t in tables {
-            sqlx::query(&format!(r#"DELETE FROM "{t}""#))
+            // custom symbols only: the built-in ones have no restore
+            let only = if *t == "CatalogSymbol" {
+                r#" WHERE "isBuiltin" = 0"#
+            } else {
+                ""
+            };
+            sqlx::query(&format!(r#"DELETE FROM "{t}"{only}"#))
                 .execute(&mut *tx)
                 .await
                 .map_err(db_error)?;
