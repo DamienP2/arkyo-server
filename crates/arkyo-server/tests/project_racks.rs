@@ -721,3 +721,32 @@ async fn consultation_role_cannot_write_locations_or_racks() {
     let r = call(&c.e.app, "GET", &locs, LOCAL, Some(&ro), None).await;
     assert_eq!(r.status, StatusCode::OK);
 }
+
+#[tokio::test]
+async fn unsafe_integer_is_400() {
+    let c = ctx().await;
+    let id = c.project("Match", None).await;
+    let loc = c.location(&id, "Plateau").await;
+    let r = c
+        .req(
+            "POST",
+            &format!("{LIST}/{id}/racks"),
+            Some(json!({"racks": [{"name": "A", "locationId": loc["id"], "depthMm": 1e20}]})),
+        )
+        .await;
+    assert_eq!(r.status, StatusCode::BAD_REQUEST, "{:?}", r.body);
+    assert_eq!(
+        r.body,
+        json!({"error": "Validation invalide", "issues": [
+            {"path": ["racks", 0, "depthMm"], "message": "Too big: expected int to be <=9007199254740991"}
+        ]})
+    );
+    assert_eq!(
+        int(
+            &c.e.pool,
+            r#"SELECT COUNT(*) FROM "Rack" WHERE "isVirtual" = 0"#
+        )
+        .await,
+        0
+    );
+}

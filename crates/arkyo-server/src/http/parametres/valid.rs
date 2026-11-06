@@ -237,6 +237,26 @@ fn check_slot(it: &Value, errs: &mut Vec<String>) {
     }
 }
 
+/// `Number.MAX_SAFE_INTEGER`.
+const MAX_SAFE_INT: f64 = 9_007_199_254_740_991.0;
+
+/// Zod 4's `int()` check (`$ZodCheckNumberFormat`, format `safeint`): a
+/// non-integer fails and stops the chain; an integer outside the safe range
+/// gets `too_big` / `too_small` on the `int` origin and lets the next checks
+/// run. Returns whether the next checks run.
+fn int_check(f: f64, errs: &mut Vec<String>) -> bool {
+    if f.fract() != 0.0 {
+        errs.push("Invalid input: expected int, received number".into());
+        return false;
+    }
+    if f > MAX_SAFE_INT {
+        errs.push("Too big: expected int to be <=9007199254740991".into());
+    } else if f < -MAX_SAFE_INT {
+        errs.push("Too small: expected int to be >=-9007199254740991".into());
+    }
+    true
+}
+
 /// The messages of every check `v` fails (empty = valid).
 fn check(kind: &Kind, v: &Value) -> Vec<String> {
     let mut errs = Vec::new();
@@ -276,19 +296,17 @@ fn check(kind: &Kind, v: &Value) -> Vec<String> {
             }
         }
         (Kind::Num, Value::Number(_)) => {}
+        // Zod stops at the failed `int()` check; the safe-integer issue
+        // lets the next checks run.
         (Kind::IntMin(min), Value::Number(n)) => {
-            if n.as_f64().is_some_and(|f| f.fract() != 0.0) {
-                errs.push("Invalid input: expected int, received number".into());
-            } else if n.as_f64().is_some_and(|f| f < *min as f64) {
+            let f = n.as_f64().unwrap_or(0.0);
+            if int_check(f, &mut errs) && f < *min as f64 {
                 errs.push(format!("Too small: expected number to be >={min}"));
             }
         }
-        // Zod stops at the failed `int()` check.
         (Kind::IntRange(min, max), Value::Number(n)) => {
             let f = n.as_f64().unwrap_or(0.0);
-            if f.fract() != 0.0 {
-                errs.push("Invalid input: expected int, received number".into());
-            } else {
+            if int_check(f, &mut errs) {
                 if f < *min as f64 {
                     errs.push(format!("Too small: expected number to be >={min}"));
                 }
@@ -299,9 +317,7 @@ fn check(kind: &Kind, v: &Value) -> Vec<String> {
         }
         (Kind::IntPos, Value::Number(n)) => {
             let f = n.as_f64().unwrap_or(0.0);
-            if f.fract() != 0.0 {
-                errs.push("Invalid input: expected int, received number".into());
-            } else if f <= 0.0 {
+            if int_check(f, &mut errs) && f <= 0.0 {
                 errs.push("Too small: expected number to be >0".into());
             }
         }
@@ -369,9 +385,7 @@ fn check(kind: &Kind, v: &Value) -> Vec<String> {
             }
         }
         (Kind::Int, Value::Number(n)) => {
-            if n.as_f64().is_some_and(|f| f.fract() != 0.0) {
-                errs.push("Invalid input: expected int, received number".into());
-            }
+            int_check(n.as_f64().unwrap_or(0.0), &mut errs);
         }
         (Kind::StrArr, Value::Array(items)) => {
             for it in items {
@@ -525,3 +539,43 @@ pub const LABEL: Kind = Kind::Bounded {
     max_msg: "Le libellé ne doit pas dépasser 100 caractères",
     upper: false,
 };
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn errs(kind: Kind, v: Value) -> Vec<String> {
+        check(&kind, &v)
+    }
+
+    #[test]
+    fn ints_stay_in_the_safe_range_like_zod() {
+        let big = "Too big: expected int to be <=9007199254740991";
+        let small = "Too small: expected int to be >=-9007199254740991";
+        assert_eq!(errs(Kind::IntPos, json!(1e20)), vec![big]);
+        assert_eq!(
+            errs(Kind::IntPos, json!(-1e20)),
+            vec![small, "Too small: expected number to be >0"]
+        );
+        assert_eq!(
+            errs(Kind::IntRange(1, 56), json!(1e20)),
+            vec![big, "Too big: expected number to be <=56"]
+        );
+        assert_eq!(errs(Kind::IntMin(0), json!(1e20)), vec![big]);
+        assert_eq!(
+            errs(Kind::IntMin(0), json!(-1e20)),
+            vec![small, "Too small: expected number to be >=0"]
+        );
+        assert_eq!(errs(Kind::Int, json!(-1e20)), vec![small]);
+        // 2^53 is not a safe integer (9007199254740993 reads as 2^53 too).
+        assert_eq!(errs(Kind::Int, json!(9_007_199_254_740_992_u64)), vec![big]);
+        assert!(errs(Kind::Int, json!(9_007_199_254_740_991_u64)).is_empty());
+        assert!(errs(Kind::IntPos, json!(9_007_199_254_740_991_i64)).is_empty());
+        assert!(errs(Kind::Int, json!(-9_007_199_254_740_991_i64)).is_empty());
+        // A fraction stops the chain, as before.
+        assert_eq!(
+            errs(Kind::IntRange(1, 56), json!(99.5)),
+            vec!["Invalid input: expected int, received number"]
+        );
+    }
+}
