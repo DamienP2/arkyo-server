@@ -35,6 +35,10 @@ import {
   Search,
 } from "@/components/ui/icons";
 import Link from "next/link";
+// arkyo-server: garde d'interface alignée sur la garde serveur (décision 6)
+import { IfTenantPerm } from "@/components/ui/tenant-perm-button";
+// arkyo-server: garde d'interface alignée sur la garde serveur (décision 6)
+import { useTenantPermissions } from "@/components/tenant-permissions-context";
 // Type local — Equipment n'existe plus dans le schéma multi-tenant ; seuls les
 // champs effectivement consommés par ce composant sont listés ici.
 type Equipment = {
@@ -100,10 +104,12 @@ function getRackStats(rack: Rack) {
 
 // ── DraggableRack (sidebar) ──────────────────────────────────────────────────
 
-function DraggableRack({ rack, dragging }: { rack: AvailableRack; dragging: boolean }) {
+// arkyo-server: garde d'interface alignée sur la garde serveur (décision 6) : `disabled` sans `design:write`
+function DraggableRack({ rack, dragging, disabled }: { rack: AvailableRack; dragging: boolean; disabled: boolean }) {
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: `available-${rack.id}`,
     data: { type: "available-rack", rack },
+    disabled, // arkyo-server: garde d'interface alignée sur la garde serveur (décision 6)
   });
 
   return (
@@ -260,6 +266,8 @@ function RigRackCard({
         >
           <Layers className="h-3.5 w-3.5" />
         </Link>
+        {/* arkyo-server: garde d'interface alignée sur la garde serveur (décision 6) */}
+        <IfTenantPerm domain="design" level="write">
         <button
           onClick={handleUnlink}
           // arkyo-server: habillage Strata
@@ -268,6 +276,7 @@ function RigRackCard({
         >
           <Trash2 className="h-3.5 w-3.5" />
         </button>
+        </IfTenantPerm>
       </div>
     </div>
   );
@@ -284,6 +293,8 @@ export function RigDetailClient({
   availableRacks?: AvailableRack[];
 }) {
   const router = useRouter();
+  // arkyo-server: garde d'interface alignée sur la garde serveur (décision 6)
+  const canWrite = useTenantPermissions().has("design", "write");
   const [rig, setRig] = useState(initialRig);
   // Sync SSE — mise à jour temps réel depuis une autre session
   useEffect(() => {
@@ -397,7 +408,7 @@ export function RigDetailClient({
               </div>
             ) : (
               filtered.map((rack) => (
-                <DraggableRack key={rack.id} rack={rack} dragging={activeDrag?.id === rack.id} />
+                <DraggableRack key={rack.id} rack={rack} dragging={activeDrag?.id === rack.id} disabled={!canWrite} /* arkyo-server: garde d'interface alignée sur la garde serveur (décision 6) */ />
               ))
             )}
           </div>

@@ -270,6 +270,33 @@ describe("/rigs/:id", () => {
     await waitFor(() => expect(within(sidebar()).getByText("Tous les racks sont assignés")).toBeInTheDocument());
   });
 
+  test("rig_detail_read_only_hides_unlink_and_drag", async () => {
+    // `design:read` : la page s'affiche, mais ni corbeille ni glisser-déposer
+    // (le serveur exige `design:write` pour lier et retirer).
+    const { api, links } = rigServer(TECH_PERMS);
+    const { fetchSpy } = renderApp("/rigs/g1", api);
+    await screen.findByRole("heading", { level: 1, name: "Régie Nord" }, { timeout: 5000 });
+    expect(cardNames()).toEqual(["Baie Vidéo", "Rack Lumière"]);
+    expect(screen.getAllByTitle("Ouvrir l'éditeur")).toHaveLength(2);
+    expect(screen.queryByTitle("Retirer de la régie")).toBeNull();
+
+    // Glisser « Flight Son » : aucune zone de dépôt, aucun POST.
+    const handle = within(sidebar()).getByText("Flight Son").closest("div.cursor-grab") as HTMLElement;
+    fireEvent.pointerDown(handle, { clientX: 10, clientY: 10, isPrimary: true, button: 0, pointerId: 1 });
+    await act(async () => {
+      fireEvent.pointerMove(document, { clientX: 40, clientY: 40, isPrimary: true, pointerId: 1 });
+    });
+    await act(async () => {
+      fireEvent.pointerMove(document, { clientX: 45, clientY: 45, isPrimary: true, pointerId: 1 });
+    });
+    expect(screen.queryByText(/Déposer un rack ici|Relâcher pour ajouter/)).toBeNull();
+    await act(async () => {
+      fireEvent.pointerUp(document, { isPrimary: true, pointerId: 1 });
+    });
+    expect(fetchSpy.mock.calls.some(([u, init]) => String(u) === "/api/rigs/g1/racks" && init?.method === "POST")).toBe(false);
+    expect(links.map((l) => l.rackId)).toEqual(["r1", "r3"]);
+  });
+
   test("rig_detail_requires_design_read", async () => {
     const none = { ...TECH_PERMS, permissions: { ...TECH_PERMS.permissions, design: "none" } };
     const { api } = rigServer(none);
