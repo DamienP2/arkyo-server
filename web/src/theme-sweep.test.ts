@@ -336,6 +336,11 @@ const COPIED_FILES = [
   "app/(fullscreen)/project/[id]/rack/_components/rack-location-selector-dropdown.tsx",
   "app/(fullscreen)/project/[id]/rack/_components/rack-tab-left-toolbar.tsx",
   "app/(fullscreen)/project/[id]/rack/_components/rack-tab-side-panel.tsx",
+  // Phase 4b (Task 5) : canvas de placement du rack et ses dépendances
+  // restantes (dialogue de confirmation, menu contextuel du canvas).
+  "app/(app)/rigs/[id]/rack/[rackId]/_components/rack-editor-confirm-dialog.tsx",
+  "components/editor-shell/canvas-context-menu.tsx",
+  "components/synoptique/components/rack-editor-confirm-dialog.tsx",
 ];
 
 /** Fichiers posés sur la topbar ou le rail : ils suivent le thème (variante « Clair A »). */
