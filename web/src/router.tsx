@@ -74,9 +74,9 @@ function lazyPage(path: string, Page: React.ComponentType): RouteObject {
   };
 }
 
-/** Page pas encore portée. */
-function soon(path: string): RouteObject {
-  return { path, element: <ComingSoon />, errorElement };
+/** Page pas encore portée (`back` : plein écran, avec « Retour »). */
+function soon(path: string, back = false): RouteObject {
+  return { path, element: <ComingSoon back={back} />, errorElement };
 }
 
 export const routes: RouteObject[] = [
@@ -132,7 +132,7 @@ export const routes: RouteObject[] = [
         errorElement,
         // `project/:id/*` : éditeur projet (phase 4) ; `panels/:id` : éditeur
         // de panel.
-        children: [soon("project/:id/*"), lazyPage("panels/:id", PanelEditorPage)],
+        children: [soon("project/:id/*", true), lazyPage("panels/:id", PanelEditorPage)],
       },
 
       { path: "*", element: <NotFoundPage /> },

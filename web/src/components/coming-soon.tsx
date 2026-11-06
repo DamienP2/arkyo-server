@@ -4,14 +4,48 @@
  */
 
 import { useEffect } from "react";
+import { Link, useLocation, useNavigate } from "react-router";
 import { Button } from "@/components/ui/button";
-import { X } from "@/components/ui/icons";
+import { ArrowLeft, X } from "@/components/ui/icons";
 import { EmptyState } from "@/components/ui/empty-state";
 import { usePageTitle } from "@/lib/hooks/use-page-title";
 
-export function ComingSoon() {
+/**
+ * `back` : page plein écran (sans coquille, donc sans barre latérale), avec un
+ * lien « Retour » discret : page précédente de l'historique, ou tableau de
+ * bord quand l'onglet s'ouvre directement sur cette URL.
+ */
+export function ComingSoon({ back = false }: { back?: boolean }) {
   usePageTitle();
-  return <EmptyState title="Bientôt disponible" />;
+  if (!back) return <EmptyState title="Bientôt disponible" />;
+  return (
+    <div className="min-h-screen bg-[var(--background)]">
+      <div className="p-4">
+        <BackLink />
+      </div>
+      <EmptyState title="Bientôt disponible" />
+    </div>
+  );
+}
+
+function BackLink() {
+  const navigate = useNavigate();
+  // `key` vaut "default" pour la première entrée de l'onglet : rien derrière.
+  const hasHistory = useLocation().key !== "default";
+  return (
+    <Link
+      to="/dashboard"
+      onClick={(e) => {
+        if (!hasHistory) return;
+        e.preventDefault();
+        void navigate(-1);
+      }}
+      className="inline-flex items-center gap-1.5 rounded-md text-sm text-[var(--muted-foreground)] transition-colors hover:text-[var(--foreground)] focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:outline-none"
+    >
+      <ArrowLeft className="h-3.5 w-3.5" />
+      Retour
+    </Link>
+  );
 }
 
 /**
