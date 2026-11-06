@@ -599,7 +599,8 @@ export function AdapterEditor({
       {/* ── Contenu scrollable plein largeur ───────────────────────────── */}
       <div className="min-h-0 flex-1 overflow-y-auto px-6 py-6">
         {submitError && (
-          <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-2.5 text-xs text-destructive">
+          // arkyo-server: habillage Strata
+          <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-2.5 text-xs text-[var(--danger-text)]">
             {submitError}
           </div>
         )}
@@ -627,7 +628,8 @@ export function AdapterEditor({
                   className="flex h-11 w-full rounded-lg border border-[var(--border)] bg-transparent px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
                 />
                 {!isReadOnly && form.formState.errors.name && (
-                  <p className="text-xs text-[var(--destructive)]">
+                  // arkyo-server: habillage Strata
+                  <p className="text-xs text-[var(--danger-text)]">
                     {form.formState.errors.name.message}
                   </p>
                 )}
@@ -655,7 +657,8 @@ export function AdapterEditor({
                     readOnly={isReadOnly}
                   />
                   {!isReadOnly && saveAttempted && !functionId && (
-                    <p className="text-[11px] text-[var(--destructive)]">
+                    // arkyo-server: habillage Strata
+                    <p className="text-[11px] text-[var(--danger-text)]">
                       Sélectionnez une catégorie.
                     </p>
                   )}
@@ -730,7 +733,8 @@ export function AdapterEditor({
               )}
             </div>
             {!isReadOnly && saveAttempted && validOutputCount === 0 && (
-              <p className="mt-2 text-[11px] text-[var(--destructive)]">
+              // arkyo-server: habillage Strata
+              <p className="mt-2 text-[11px] text-[var(--danger-text)]">
                 Au moins un groupe de sortie est requis.
               </p>
             )}
@@ -810,7 +814,8 @@ function FieldBlock({
     <div className="space-y-1.5">
       <p className="text-[10px] font-semibold tracking-wider uppercase text-[var(--muted-foreground)]">
         {label}
-        {required && <span className="ml-1 text-[var(--destructive)]">*</span>}
+        {/* arkyo-server: habillage Strata */}
+        {required && <span className="ml-1 text-[var(--danger-text)]">*</span>}
       </p>
       {children}
     </div>

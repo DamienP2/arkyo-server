@@ -355,7 +355,8 @@ function CablingFormBody({
                 )}
               />
               {nameErrorMessage && (
-                <p className="mt-1 text-[11px] text-[var(--destructive)]">
+                // arkyo-server: habillage Strata
+                <p className="mt-1 text-[11px] text-[var(--danger-text)]">
                   {nameErrorMessage}
                 </p>
               )}
@@ -372,7 +373,8 @@ function CablingFormBody({
                 )}
               />
               {referenceErrorMessage && (
-                <p className="mt-1 text-[11px] text-[var(--destructive)]">
+                // arkyo-server: habillage Strata
+                <p className="mt-1 text-[11px] text-[var(--danger-text)]">
                   {referenceErrorMessage}
                 </p>
               )}

@@ -57,7 +57,8 @@ export function ReportStep({
       {report.failed.length > 0 && (
         <div className="rounded-lg border border-[var(--destructive)]/30 bg-[var(--destructive)]/5 p-3">
           <div className="mb-2 flex items-center justify-between gap-2">
-            <span className="text-xs font-semibold text-[var(--destructive)]">
+            {/* arkyo-server: habillage Strata */}
+            <span className="text-xs font-semibold text-[var(--danger-text)]">
               {report.failed.length} ligne(s) en erreur
             </span>
             <div className="flex items-center gap-3">
@@ -125,7 +126,7 @@ export function Stat({
         className={cn(
           "text-lg font-bold",
           tone === "accent" && "text-[var(--accent)]",
-          tone === "destructive" && "text-[var(--destructive)]",
+          tone === "destructive" && "text-[var(--danger-text)]", // arkyo-server: habillage Strata
           !tone && "text-[var(--foreground)]",
         )}
       >

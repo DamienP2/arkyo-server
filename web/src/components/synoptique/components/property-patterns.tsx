@@ -105,12 +105,13 @@ export function ActionButton({
       className={cn(
         "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[11px] transition-colors",
         danger
-          ? "text-destructive hover:bg-[color-mix(in_srgb,var(--destructive)_14%,transparent)]"
+          ? "text-[var(--danger-text)] hover:bg-[color-mix(in_srgb,var(--destructive)_14%,transparent)]" // arkyo-server: habillage Strata
           : "text-foreground hover:bg-muted",
         className,
       )}
     >
-      <span className={cn("shrink-0", danger ? "text-destructive" : "text-muted-foreground")}>
+      {/* arkyo-server: habillage Strata */}
+      <span className={cn("shrink-0", danger ? "text-[var(--danger-text)]" : "text-muted-foreground")}>
         {icon}
       </span>
       {label}

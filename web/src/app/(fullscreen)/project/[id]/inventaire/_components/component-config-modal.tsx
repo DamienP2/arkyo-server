@@ -185,7 +185,8 @@ export function ComponentConfigModal({
         {error && (
           <p
             role="alert"
-            className="mb-3 rounded-lg border border-[var(--destructive)]/30 bg-[var(--destructive)]/10 px-3 py-2 text-xs text-[var(--destructive)]"
+            // arkyo-server: habillage Strata
+            className="mb-3 rounded-lg border border-[var(--destructive)]/30 bg-[var(--destructive)]/10 px-3 py-2 text-xs text-[var(--danger-text)]"
           >
             {error}
           </p>
@@ -387,7 +388,8 @@ function ComponentPicker({
       {loadError && (
         <p
           role="alert"
-          className="rounded-lg border border-[var(--destructive)]/30 bg-[var(--destructive)]/10 px-3 py-2 text-xs text-[var(--destructive)]"
+          // arkyo-server: habillage Strata
+          className="rounded-lg border border-[var(--destructive)]/30 bg-[var(--destructive)]/10 px-3 py-2 text-xs text-[var(--danger-text)]"
         >
           {loadError}
         </p>

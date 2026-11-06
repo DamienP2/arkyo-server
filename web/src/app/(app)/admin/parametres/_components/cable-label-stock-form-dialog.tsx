@@ -312,7 +312,8 @@ export function CableLabelStockFormDialog({
                     className={fieldClass}
                   />
                   {form.formState.errors.name && (
-                    <p className="mt-1 text-xs text-[var(--destructive)]">
+                    // arkyo-server: habillage Strata
+                    <p className="mt-1 text-xs text-[var(--danger-text)]">
                       {form.formState.errors.name.message}
                     </p>
                   )}

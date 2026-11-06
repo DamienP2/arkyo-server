@@ -122,7 +122,7 @@ export function RestoreVerify({
                       "rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors",
                       mode === m
                         ? m === "replace"
-                          ? "border-[var(--destructive)] bg-[var(--destructive)]/10 text-[var(--destructive)]"
+                          ? "border-[var(--destructive)] bg-[var(--destructive)]/10 text-[var(--danger-text)]" // arkyo-server: habillage Strata
                           : "border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--accent)]"
                         : "border-[var(--border)] text-[var(--muted-foreground)] hover:bg-[var(--secondary)]",
                     )}

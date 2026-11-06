@@ -85,6 +85,12 @@ test("contrastes ≥ 4,5:1 pour tout texte d'interface, dans les deux thèmes", 
       ["--success-text", "--surface"],
       ["--warning-text", "--surface"],
       ["--destructive-foreground", "--destructive"],
+      // Texte d'erreur : `--danger-text` sur tous les fonds d'interface.
+      ["--danger-text", "--background"],
+      ["--danger-text", "--surface"],
+      ["--danger-text", "--card"],
+      ["--danger-text", "--popover"],
+      ["--danger-text", "--muted"],
     ]) {
       expect(t[fg], fg).toBeDefined();
       expect(t[bg], bg).toBeDefined();

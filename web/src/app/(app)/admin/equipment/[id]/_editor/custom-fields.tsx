@@ -273,7 +273,8 @@ function AddCustomFieldDialog({
                 autoFocus
               />
               {form.formState.errors.label && (
-                <p className="text-xs text-[var(--destructive)]">
+                // arkyo-server: habillage Strata
+                <p className="text-xs text-[var(--danger-text)]">
                   {form.formState.errors.label.message}
                 </p>
               )}
@@ -332,7 +333,8 @@ function AddCustomFieldDialog({
                       className="flex h-9 w-full rounded-lg border border-[var(--border)] bg-transparent px-3 text-sm focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:outline-none"
                     />
                     {form.formState.errors.max && (
-                      <p className="text-xs text-[var(--destructive)]">
+                      // arkyo-server: habillage Strata
+                      <p className="text-xs text-[var(--danger-text)]">
                         {form.formState.errors.max.message}
                       </p>
                     )}

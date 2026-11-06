@@ -54,7 +54,8 @@ export function ImportExportPanel() {
         </div>
 
         {w.error && (
-          <div className="flex items-start gap-2 rounded-lg border border-[var(--destructive)]/30 bg-[var(--destructive)]/5 px-3 py-2 text-xs text-[var(--destructive)]">
+          // arkyo-server: habillage Strata
+          <div className="flex items-start gap-2 rounded-lg border border-[var(--destructive)]/30 bg-[var(--destructive)]/5 px-3 py-2 text-xs text-[var(--danger-text)]">
             <X className="mt-0.5 h-3.5 w-3.5 shrink-0" />
             <span>{w.error}</span>
           </div>

@@ -34,7 +34,8 @@ export function SelectionActionBar({ count, onDelete, onClear }: Props) {
         <button
           type="button"
           onClick={onDelete}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--destructive)]/40 px-3 py-1.5 text-xs font-semibold text-[var(--destructive)] transition-colors hover:bg-[var(--destructive)]/10"
+          // arkyo-server: habillage Strata
+          className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--destructive)]/40 px-3 py-1.5 text-xs font-semibold text-[var(--danger-text)] transition-colors hover:bg-[var(--destructive)]/10"
         >
           <Trash2 className="h-3.5 w-3.5" />
           Supprimer

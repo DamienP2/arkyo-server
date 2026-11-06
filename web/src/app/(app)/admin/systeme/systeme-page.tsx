@@ -136,7 +136,7 @@ export default function SystemePage() {
   if (failed) {
     return (
       <AdminTabLayout>
-        <p className="text-destructive text-sm">
+        <p className="text-[var(--danger-text)] text-sm">
           Impossible de charger l&apos;état du serveur.
         </p>
       </AdminTabLayout>
@@ -276,7 +276,7 @@ export default function SystemePage() {
             </div>
           )}
           {update.status.phase === "error" && (
-            <p className="text-destructive text-sm">{update.status.message}</p>
+            <p className="text-[var(--danger-text)] text-sm">{update.status.message}</p>
           )}
 
           {available && (

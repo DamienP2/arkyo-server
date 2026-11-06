@@ -1374,7 +1374,8 @@ function ConnectorGroupDialog({
               )}
             />
             {form.formState.errors.label && (
-              <p className="text-[11px] text-[var(--destructive)]">
+              // arkyo-server: habillage Strata
+              <p className="text-[11px] text-[var(--danger-text)]">
                 {form.formState.errors.label.message}
               </p>
             )}
@@ -1538,7 +1539,8 @@ function SignalDropdown({
           )}
         />
       </button>
-      {error && <p className="mt-1 text-[11px] text-[var(--destructive)]">{error}</p>}
+      {/* arkyo-server: habillage Strata */}
+      {error && <p className="mt-1 text-[11px] text-[var(--danger-text)]">{error}</p>}
 
       {open && (
         <div className="absolute left-0 right-0 z-50 mt-1 max-h-72 overflow-y-auto rounded-lg border border-[var(--border)] bg-[var(--card)] py-1 shadow-lg">

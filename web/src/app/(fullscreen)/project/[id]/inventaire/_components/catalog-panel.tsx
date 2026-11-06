@@ -666,7 +666,8 @@ export function CatalogPanel({
         {error && (
           <p
             role="alert"
-            className="mb-2 rounded-lg border border-[var(--destructive)]/30 bg-[var(--destructive)]/10 px-2 py-1.5 text-xs text-[var(--destructive)]"
+            // arkyo-server: habillage Strata
+            className="mb-2 rounded-lg border border-[var(--destructive)]/30 bg-[var(--destructive)]/10 px-2 py-1.5 text-xs text-[var(--danger-text)]"
           >
             {error}
           </p>

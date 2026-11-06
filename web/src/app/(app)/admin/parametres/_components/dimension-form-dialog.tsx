@@ -152,7 +152,8 @@ export function DimensionFormDialog({
                 className="flex h-10 w-full rounded-lg border border-[var(--border)] bg-transparent px-3 text-sm focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:outline-none"
               />
               {form.formState.errors.value && (
-                <p className="mt-1 text-xs text-[var(--destructive)]">
+                // arkyo-server: habillage Strata
+                <p className="mt-1 text-xs text-[var(--danger-text)]">
                   {form.formState.errors.value.message}
                 </p>
               )}

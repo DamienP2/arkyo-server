@@ -256,7 +256,8 @@ export function VerifyStep({ w }: { w: ImportWizard }) {
         <div className="text-[11px] text-[var(--muted-foreground)]">
           {counts.created} seront créées, {counts.updated} mises à jour, {counts.excluded} exclues
           {counts.errored > 0 && (
-            <span className="text-[var(--destructive)]"> · {counts.errored} en erreur</span>
+            // arkyo-server: habillage Strata
+            <span className="text-[var(--danger-text)]"> · {counts.errored} en erreur</span>
           )}
         </div>
         <div className="flex gap-2">
@@ -389,7 +390,7 @@ function ProblemRow({
                 <span
                   className={cn(
                     "text-[10px]",
-                    err ? "text-[var(--destructive)]" : "text-[var(--muted-foreground)]/70",
+                    err ? "text-[var(--danger-text)]" : "text-[var(--muted-foreground)]/70", // arkyo-server: habillage Strata
                   )}
                 >
                   {err ?? message}
@@ -408,7 +409,7 @@ function StatusBadge({ r }: { r: RowPreview }) {
     r.status === "invalid" ? "Erreur" : r.status === "duplicate" ? "Doublon" : "À corriger";
   const tone =
     r.status === "invalid"
-      ? "border-[var(--destructive)]/30 bg-[var(--destructive)]/10 text-[var(--destructive)]"
+      ? "border-[var(--destructive)]/30 bg-[var(--destructive)]/10 text-[var(--danger-text)]" // arkyo-server: habillage Strata
       : r.status === "duplicate"
         // arkyo-server: habillage Strata
         ? "border-[var(--warning)]/30 bg-[var(--warning)]/10 text-[var(--warning-text)]"

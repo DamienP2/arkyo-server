@@ -497,7 +497,8 @@ export function UsersListTab({ view, users, setUsers, roles }: Props) {
               />
               {editId && <p className="text-[11px] text-[var(--muted-foreground)]">{editEmail}</p>}
               {errors.email && (
-                <p className="text-[11px] text-[var(--destructive)]">
+                // arkyo-server: habillage Strata
+                <p className="text-[11px] text-[var(--danger-text)]">
                   {errors.email.message as string}
                 </p>
               )}
@@ -526,7 +527,8 @@ export function UsersListTab({ view, users, setUsers, roles }: Props) {
                 ))}
               </select>
               {errors.roleKey && (
-                <p className="text-[11px] text-[var(--destructive)]">
+                // arkyo-server: habillage Strata
+                <p className="text-[11px] text-[var(--danger-text)]">
                   {errors.roleKey.message as string}
                 </p>
               )}

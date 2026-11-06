@@ -199,7 +199,8 @@ function PhaseFormBody({
           className="flex h-10 w-full rounded-lg border border-[var(--border)] bg-transparent px-3 text-sm focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:outline-none"
         />
         {labelErrorMessage && (
-          <p className="text-xs text-[var(--destructive)]">{labelErrorMessage}</p>
+          // arkyo-server: habillage Strata
+          <p className="text-xs text-[var(--danger-text)]">{labelErrorMessage}</p>
         )}
       </FormSection>
 
@@ -210,7 +211,8 @@ function PhaseFormBody({
           className="flex h-10 w-full rounded-lg border border-[var(--border)] bg-transparent px-3 font-mono text-sm uppercase focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:outline-none"
         />
         {keyErrorMessage && (
-          <p className="text-xs text-[var(--destructive)]">{keyErrorMessage}</p>
+          // arkyo-server: habillage Strata
+          <p className="text-xs text-[var(--danger-text)]">{keyErrorMessage}</p>
         )}
       </FormSection>
 

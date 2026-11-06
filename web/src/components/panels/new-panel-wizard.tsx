@@ -261,7 +261,8 @@ export function NewPanelWizard({
         </div>
 
         {error && (
-          <div className="relative z-10 mx-8 mb-4 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-2.5 text-xs text-destructive">
+          // arkyo-server: habillage Strata
+          <div className="relative z-10 mx-8 mb-4 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-2.5 text-xs text-[var(--danger-text)]">
             {error}
           </div>
         )}

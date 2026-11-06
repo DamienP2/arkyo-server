@@ -116,7 +116,8 @@ export function InlineTypeCreator({
         </button>
       </span>
       {err && (
-        <span className="text-[10px] leading-tight text-[var(--destructive)]">
+        // arkyo-server: habillage Strata
+        <span className="text-[10px] leading-tight text-[var(--danger-text)]">
           {err}
         </span>
       )}

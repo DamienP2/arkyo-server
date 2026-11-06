@@ -339,7 +339,8 @@ export function ConnectorMultiPickerTrigger({
         </span>
       </div>
       {error && (
-        <p className="text-[11px] text-[var(--destructive)]">{error}</p>
+        // arkyo-server: habillage Strata
+        <p className="text-[11px] text-[var(--danger-text)]">{error}</p>
       )}
     </div>
   );

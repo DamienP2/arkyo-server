@@ -324,7 +324,8 @@ export function CableEditorDialog({
                     )}
                   </div>
                   {form.formState.errors.name && (
-                    <p className="text-xs text-[var(--destructive)]">
+                    // arkyo-server: habillage Strata
+                    <p className="text-xs text-[var(--danger-text)]">
                       {form.formState.errors.name.message}
                     </p>
                   )}
@@ -828,7 +829,8 @@ function ConnectorEnd({
       </div>
 
       {error && (
-        <p className="text-[11px] text-[var(--destructive)]">{error}</p>
+        // arkyo-server: habillage Strata
+        <p className="text-[11px] text-[var(--danger-text)]">{error}</p>
       )}
 
       {/* Genre — chips Mâle / Femelle / I/O */}

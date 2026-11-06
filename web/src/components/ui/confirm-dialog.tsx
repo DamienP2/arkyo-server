@@ -122,7 +122,7 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
               className={cn(
                 "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg",
                 variant === "destructive"
-                  ? "bg-[var(--destructive)]/10 text-[var(--destructive)]"
+                  ? "bg-[var(--destructive)]/10 text-[var(--danger-text)]" // arkyo-server: habillage Strata
                   : "bg-[var(--accent-soft)] text-[var(--accent)]",
               )}
             >

@@ -146,7 +146,8 @@ export function ProjectCharacteristicsDialog({
                 )}
               />
               {nameError && (
-                <p className="mt-1 text-[11px] text-[var(--destructive)]">
+                // arkyo-server: habillage Strata
+                <p className="mt-1 text-[11px] text-[var(--danger-text)]">
                   {nameError}
                 </p>
               )}

@@ -1016,7 +1016,8 @@ function ConnectorPortFormBody({
               </div>
             )}
             {form.formState.errors.connectorTypeId && (
-              <p className="text-xs text-[var(--destructive)]">
+              // arkyo-server: habillage Strata
+              <p className="text-xs text-[var(--danger-text)]">
                 {form.formState.errors.connectorTypeId.message}
               </p>
             )}
@@ -1085,7 +1086,8 @@ function ConnectorPortFormBody({
               ))}
             </select>
             {form.formState.errors.signalName && (
-              <p className="text-xs text-[var(--destructive)]">
+              // arkyo-server: habillage Strata
+              <p className="text-xs text-[var(--danger-text)]">
                 {form.formState.errors.signalName.message}
               </p>
             )}

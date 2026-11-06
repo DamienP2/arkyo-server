@@ -162,7 +162,8 @@ export function MapStep({ w }: { w: ImportWizard }) {
             </table>
           </div>
           {!hasName && (
-            <p className="mt-2 text-[11px] text-[var(--destructive)]">
+            // arkyo-server: habillage Strata
+            <p className="mt-2 text-[11px] text-[var(--danger-text)]">
               Associez une colonne au champ « Nom » pour pouvoir continuer.
             </p>
           )}

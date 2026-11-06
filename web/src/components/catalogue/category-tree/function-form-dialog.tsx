@@ -263,7 +263,8 @@ function FunctionFormBody({
             className="flex h-9 w-full rounded-lg border border-[var(--border)] bg-transparent px-3 text-sm focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:outline-none"
           />
           {labelErrorMessage && (
-            <p className="text-xs text-[var(--destructive)]">{labelErrorMessage}</p>
+            // arkyo-server: habillage Strata
+            <p className="text-xs text-[var(--danger-text)]">{labelErrorMessage}</p>
           )}
         </FormSection>
 
@@ -274,7 +275,8 @@ function FunctionFormBody({
             className="flex h-9 w-full rounded-lg border border-[var(--border)] bg-transparent px-3 font-mono text-sm focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:outline-none"
           />
           {keyErrorMessage && (
-            <p className="text-xs text-[var(--destructive)]">{keyErrorMessage}</p>
+            // arkyo-server: habillage Strata
+            <p className="text-xs text-[var(--danger-text)]">{keyErrorMessage}</p>
           )}
         </FormSection>
       </div>
@@ -294,7 +296,8 @@ function FunctionFormBody({
           />
         </div>
         {form.formState.errors.color && (
-          <p className="text-xs text-[var(--destructive)]">
+          // arkyo-server: habillage Strata
+          <p className="text-xs text-[var(--danger-text)]">
             {form.formState.errors.color.message}
           </p>
         )}

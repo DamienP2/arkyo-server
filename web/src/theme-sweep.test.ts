@@ -1,8 +1,8 @@
 // arkyo-server: habillage Strata — balayage des couleurs codées en dur dans les
 // fichiers copiés d'arkyo (spec §7 et §9.2-§9.3). Couleur d'interface → variable
 // du thème ; couleur métier → inchangée, listée ci-dessous avec sa raison.
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { readdirSync, readFileSync } from "node:fs";
+import { join, relative, resolve } from "node:path";
 
 const read = (p: string) => readFileSync(resolve(__dirname, p), "utf8");
 
@@ -575,6 +575,34 @@ const ALLOW_STATUS: AllowMap = {
 
 test("erreurs, succès et alertes suivent --danger, --success et --warning", () => {
   expect(COPIED_FILES.flatMap((f) => offending(f, STATUS, ALLOW_STATUS[f]))).toEqual([]);
+});
+
+// Texte d'erreur : `--destructive` (#e11d48) est un fond plein (boutons de
+// danger, blanc dessus) ; en texte il descend sous 4,5:1 (3,3 à 4,3 selon le
+// fond). Le texte passe par `--danger-text`. Seules les icônes au survol
+// (`hover:` / `group-hover:`, 3:1 suffit) gardent `--destructive`.
+const DESTRUCTIVE_TEXT = /(?<=^|[\s"'`{(])((?:[\w\-[\]&=.]+:)*)text-(?:destructive|\[var\(--destructive\)\])(?![\w-])/g;
+
+function sourceFiles(dir: string): string[] {
+  return readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+    const p = join(dir, e.name);
+    if (e.isDirectory()) return sourceFiles(p);
+    return /\.(ts|tsx)$/.test(e.name) && !/\.test\.tsx?$/.test(e.name) ? [p] : [];
+  });
+}
+
+test("le texte d'erreur utilise --danger-text, jamais --destructive (hors icônes au survol)", () => {
+  const offenders: string[] = [];
+  for (const file of sourceFiles(__dirname)) {
+    readFileSync(file, "utf8")
+      .split("\n")
+      .forEach((text, i) => {
+        for (const m of text.matchAll(DESTRUCTIVE_TEXT)) {
+          if (!/(^|-)hover:$/.test(m[1])) offenders.push(`${relative(__dirname, file)}:${i + 1}: ${m[0]}`);
+        }
+      });
+  }
+  expect(offenders).toEqual([]);
 });
 
 // ── Hexadécimal et rgb() ────────────────────────────────────────────────────

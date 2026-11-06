@@ -245,7 +245,8 @@ export function EquipmentIconPicker({
                 {uploading ? "Envoi…" : "Téléverser un fichier"}
               </button>
               {uploadError && (
-                <p className="text-destructive mt-1.5 text-[11px]">{uploadError}</p>
+                // arkyo-server: habillage Strata
+                <p className="text-[var(--danger-text)] mt-1.5 text-[11px]">{uploadError}</p>
               )}
             </div>
 

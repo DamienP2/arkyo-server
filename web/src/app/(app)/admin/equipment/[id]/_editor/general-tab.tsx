@@ -1480,7 +1480,8 @@ function DocumentUploadModal({
           {/* Titre */}
           <div className="space-y-1.5">
             <p className="text-[10px] font-semibold tracking-wider uppercase text-[var(--muted-foreground)]">
-              Titre <span className="text-[var(--destructive)]">*</span>
+              {/* arkyo-server: habillage Strata */}
+              Titre <span className="text-[var(--danger-text)]">*</span>
             </p>
             <input
               autoFocus
@@ -1818,7 +1819,8 @@ function FieldBlock({
     <div className="space-y-1.5">
       <p className="text-[10px] font-semibold tracking-wider uppercase text-[var(--muted-foreground)]">
         {label}
-        {required && <span className="ml-1 text-[var(--destructive)]">*</span>}
+        {/* arkyo-server: habillage Strata */}
+        {required && <span className="ml-1 text-[var(--danger-text)]">*</span>}
       </p>
       {children}
     </div>

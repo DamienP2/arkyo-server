@@ -203,7 +203,8 @@ export function RolesPanel({ roles, setRoles }: Props) {
                   className="flex h-9 w-full rounded-lg border border-[var(--border)] bg-transparent px-3 text-sm focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:outline-none"
                 />
                 {form.formState.errors.label && (
-                  <p className="text-[11px] text-[var(--destructive)]">
+                  // arkyo-server: habillage Strata
+                  <p className="text-[11px] text-[var(--danger-text)]">
                     {form.formState.errors.label.message as string}
                   </p>
                 )}

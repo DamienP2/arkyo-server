@@ -79,7 +79,7 @@ function Panel({
           className={cn(
             "flex h-7 w-7 shrink-0 items-center justify-center rounded-lg",
             danger
-              ? "bg-[var(--destructive)]/10 text-[var(--destructive)]"
+              ? "bg-[var(--destructive)]/10 text-[var(--danger-text)]" // arkyo-server: habillage Strata
               : "bg-[var(--accent)]/10 text-[var(--accent)]",
           )}
         >
@@ -88,7 +88,7 @@ function Panel({
         <h3
           className={cn(
             "text-sm font-semibold leading-tight",
-            danger && "text-[var(--destructive)]",
+            danger && "text-[var(--danger-text)]", // arkyo-server: habillage Strata
           )}
         >
           {title}
@@ -232,7 +232,8 @@ export function InformationsTab({ tenant, isOwner }: Props) {
                     placeholder="Acme Broadcast"
                   />
                   {errors.name?.message && (
-                    <p className="text-[11px] text-[var(--destructive)]">
+                    // arkyo-server: habillage Strata
+                    <p className="text-[11px] text-[var(--danger-text)]">
                       {errors.name.message}
                     </p>
                   )}
@@ -288,8 +289,10 @@ export function InformationsTab({ tenant, isOwner }: Props) {
         {/* ── Zone dangereuse ── */}
         <div>
           <div className="mb-4 flex items-center gap-2.5">
-            <AlertTriangle className="h-4 w-4 shrink-0 text-[var(--destructive)]" />
-            <h3 className="text-xs font-bold tracking-widest text-[var(--destructive)] uppercase">
+            {/* arkyo-server: habillage Strata */}
+            <AlertTriangle className="h-4 w-4 shrink-0 text-[var(--danger-text)]" />
+            {/* arkyo-server: habillage Strata */}
+            <h3 className="text-xs font-bold tracking-widest text-[var(--danger-text)] uppercase">
               Zone dangereuse
             </h3>
             <div className="h-px flex-1 bg-[var(--destructive)]/20" />

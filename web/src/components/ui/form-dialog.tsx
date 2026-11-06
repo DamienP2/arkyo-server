@@ -338,7 +338,8 @@ export function FormDialog<TValues extends FieldValues>({
             {rootError ? (
               <p
                 role="alert"
-                className="rounded-lg border border-[var(--destructive)]/30 bg-[var(--destructive)]/10 px-3 py-2 text-sm text-[var(--destructive)]"
+                // arkyo-server: habillage Strata
+                className="rounded-lg border border-[var(--destructive)]/30 bg-[var(--destructive)]/10 px-3 py-2 text-sm text-[var(--danger-text)]"
               >
                 {rootError}
               </p>

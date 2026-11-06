@@ -352,7 +352,8 @@ function ConnectorFormBody({
             )}
           />
           {nameErrorMessage && (
-            <p className="text-[11px] text-[var(--destructive)]">
+            // arkyo-server: habillage Strata
+            <p className="text-[11px] text-[var(--danger-text)]">
               {nameErrorMessage}
             </p>
           )}

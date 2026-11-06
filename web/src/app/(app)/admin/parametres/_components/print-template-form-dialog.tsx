@@ -232,12 +232,14 @@ export function PrintTemplateFormDialog({
                 className="flex h-10 w-full rounded-lg border border-[var(--border)] bg-transparent px-3 text-sm focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:outline-none"
               />
               {form.formState.errors.name && (
-                <p className="mt-1 text-xs text-[var(--destructive)]">
+                // arkyo-server: habillage Strata
+                <p className="mt-1 text-xs text-[var(--danger-text)]">
                   {form.formState.errors.name.message}
                 </p>
               )}
               {!form.formState.errors.name && nameTaken && (
-                <p className="mt-1 text-xs text-[var(--destructive)]">
+                // arkyo-server: habillage Strata
+                <p className="mt-1 text-xs text-[var(--danger-text)]">
                   Un cartouche porte déjà ce nom.
                 </p>
               )}
@@ -264,12 +266,14 @@ export function PrintTemplateFormDialog({
                 )}
               />
               {form.formState.errors.key && (
-                <p className="mt-1 text-xs text-[var(--destructive)]">
+                // arkyo-server: habillage Strata
+                <p className="mt-1 text-xs text-[var(--danger-text)]">
                   {form.formState.errors.key.message}
                 </p>
               )}
               {!form.formState.errors.key && !editing && keyTaken && (
-                <p className="mt-1 text-xs text-[var(--destructive)]">
+                // arkyo-server: habillage Strata
+                <p className="mt-1 text-xs text-[var(--danger-text)]">
                   Cette clé est déjà utilisée.
                 </p>
               )}

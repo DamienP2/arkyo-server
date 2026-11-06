@@ -126,7 +126,8 @@ export function FormField({
         <p
           id={errorId}
           role="alert"
-          className="mt-1 flex items-center gap-1 text-[11px] leading-snug text-destructive"
+          // arkyo-server: habillage Strata
+          className="mt-1 flex items-center gap-1 text-[11px] leading-snug text-[var(--danger-text)]"
         >
           <XCircle className="h-3 w-3 shrink-0" aria-hidden="true" />
           <span>{error}</span>
@@ -232,7 +233,8 @@ export function FormErrorSummary({
         className,
       )}
     >
-      <p className="flex items-center gap-1.5 text-xs font-semibold text-destructive">
+      {/* arkyo-server: habillage Strata */}
+      <p className="flex items-center gap-1.5 text-xs font-semibold text-[var(--danger-text)]">
         <XCircle className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
         Corrigez les champs ci-dessous
       </p>
@@ -244,10 +246,12 @@ export function FormErrorSummary({
               <button
                 type="button"
                 onClick={() => handleClick(path)}
-                className="text-left text-[11px] leading-snug text-destructive underline decoration-destructive/40 underline-offset-2 hover:decoration-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/40 rounded"
+                // arkyo-server: habillage Strata
+                className="text-left text-[11px] leading-snug text-[var(--danger-text)] underline decoration-destructive/40 underline-offset-2 hover:decoration-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/40 rounded"
               >
                 <span className="font-medium">{label}</span>
-                <span className="text-destructive/80"> — {message}</span>
+                {/* arkyo-server: habillage Strata (sans l'opacité 80 % d'arkyo) */}
+                <span className="text-[var(--danger-text)]"> — {message}</span>
               </button>
             </li>
           );

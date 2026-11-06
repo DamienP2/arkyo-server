@@ -610,7 +610,8 @@ export function CableEditor({
       {/* ── Contenu scrollable plein largeur ───────────────────────────── */}
       <div className="min-h-0 flex-1 overflow-y-auto px-6 py-6">
         {submitError && (
-          <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-2.5 text-xs text-destructive">
+          // arkyo-server: habillage Strata
+          <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-2.5 text-xs text-[var(--danger-text)]">
             {submitError}
           </div>
         )}
@@ -654,7 +655,8 @@ export function CableEditor({
                   )}
                 </div>
                 {!isReadOnly && form.formState.errors.name && (
-                  <p className="text-xs text-[var(--destructive)]">
+                  // arkyo-server: habillage Strata
+                  <p className="text-xs text-[var(--danger-text)]">
                     {form.formState.errors.name.message}
                   </p>
                 )}
@@ -969,7 +971,8 @@ function FieldBlock({
     <div className="space-y-1.5">
       <p className="text-[10px] font-semibold tracking-wider uppercase text-[var(--muted-foreground)]">
         {label}
-        {required && <span className="ml-1 text-[var(--destructive)]">*</span>}
+        {/* arkyo-server: habillage Strata */}
+        {required && <span className="ml-1 text-[var(--danger-text)]">*</span>}
       </p>
       {children}
     </div>
@@ -1010,7 +1013,8 @@ function ConnectorEnd({
           {!readOnly && (
             <>
               {" "}
-              <span className="text-[var(--destructive)]">*</span>
+              {/* arkyo-server: habillage Strata */}
+              <span className="text-[var(--danger-text)]">*</span>
             </>
           )}
         </p>
