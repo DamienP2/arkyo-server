@@ -611,7 +611,7 @@ const ALLOW_HEX: AllowMap = {
       reason: "couleurs des statuts de projet (pastilles, badges, répartition) : statut métier",
     },
     {
-      line: /^\s*color="#[0-9a-f]{6}"$|^\s*(\{ href: "\/projects", label: "Projets", icon: FolderOpen, )?color: "#[0-9a-f]{6}"( \})?,$/,
+      line: /^\s*color="#(3b82f6|10b981|8b5cf6|f59e0b)"$|^\s*(\{ href: "\/projects", label: "Projets", icon: FolderOpen, )?color: "#(3b82f6|10b981|8b5cf6|f59e0b)"( \})?,$/,
       reason: "teinte de l'icône de chaque carte de statistiques et de chaque accès rapide : " + DOUBT,
     },
   ],
