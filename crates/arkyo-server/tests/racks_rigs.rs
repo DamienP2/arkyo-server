@@ -442,6 +442,15 @@ async fn patch_rack_normalizes_cable_code_and_publishes_client_id() {
     let id = rack["id"].as_str().unwrap().to_string();
     let path = format!("{RACKS}/{id}");
     let mut rx = c.e.events.subscribe();
+    // An old `updatedAt`: the POST and the PATCH may fall in the same
+    // millisecond, so the bump is checked against a known earlier date.
+    const OLD: &str = "2000-01-01T00:00:00.000Z";
+    sqlx::query(r#"UPDATE "Rack" SET "updatedAt" = ? WHERE "id" = ?"#)
+        .bind(OLD)
+        .bind(&id)
+        .execute(&c.e.pool)
+        .await
+        .unwrap();
 
     let r = c
         .req_client(
@@ -471,7 +480,7 @@ async fn patch_rack_normalizes_cable_code_and_publishes_client_id() {
     assert_eq!(r.body["slots"], json!([]));
     assert_eq!(r.body["rigs"], json!([]));
     assert!(r.body.get("x").is_none());
-    assert_ne!(r.body["updatedAt"], rack["updatedAt"]);
+    assert!(r.body["updatedAt"].as_str().unwrap() > OLD);
     assert_eq!(
         next_event(&mut rx).await,
         json!({"type": "update", "entity": "rack", "action": "updated", "id": id,
