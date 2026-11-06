@@ -11,10 +11,10 @@
 use std::collections::HashMap;
 
 use serde_json::Value;
-use sqlx::SqlitePool;
+use sqlx::{SqliteConnection, SqlitePool};
 
 use crate::http::parametres::{
-    brands, cabling, categories, connectors, list_rows, signals, str_of, Obj, Table,
+    brands, cabling, categories, connectors, list_rows, row_map, signals, str_of, Obj, Table,
 };
 
 // One definition per table: the ones of the settings routes.
@@ -181,4 +181,41 @@ fn editor_payload(item: &mut Obj, refs: &Refs) {
     item.insert("functions".into(), Value::Array(fns));
     item.insert("phases".into(), Value::Array(phs));
     item.insert("category".into(), cat);
+}
+
+/// arkyo:lib/services/catalog-enrich.ts `fetchCatalogAdapterMap(ids, db)`
+/// (:225-270): `CatalogAdapterLite` by id, `{id, name, reference, imageUrl,
+/// inputs, outputs, notes, source}`. Null, empty and duplicate ids are
+/// dropped, unknown ids are absent, inactive adapters are kept (an item may
+/// still reference one). Single catalogue: arkyo's tenant fallback only, so
+/// `source` is always `PERSONAL`.
+pub async fn fetch_catalog_adapter_map<'a>(
+    conn: &mut SqliteConnection,
+    ids: impl IntoIterator<Item = Option<&'a str>>,
+) -> Result<HashMap<String, Value>, sqlx::Error> {
+    let ids = crate::inventory::distinct(ids);
+    if ids.is_empty() {
+        return Ok(HashMap::new());
+    }
+    let sql = format!(
+        r#"SELECT "id", "name", "reference", "imageUrl", "inputs", "outputs", "notes"
+           FROM "TenantAdapter" WHERE "id" IN ({})"#,
+        crate::inventory::marks(ids.len())
+    );
+    let mut q = sqlx::query(&sql);
+    for id in &ids {
+        q = q.bind(id);
+    }
+    Ok(q.fetch_all(conn)
+        .await?
+        .iter()
+        .map(|row| {
+            let mut a = row_map(row, &ADAPTER);
+            a.insert("source".into(), "PERSONAL".into());
+            (
+                str_of(&a, "id").unwrap_or_default().to_string(),
+                Value::Object(a),
+            )
+        })
+        .collect())
 }
