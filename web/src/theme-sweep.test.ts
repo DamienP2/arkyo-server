@@ -325,6 +325,17 @@ const COPIED_FILES = [
   "components/synoptique/lib/panel-labels.ts",
   "lib/hooks/use-catalog-lookup.ts",
   "lib/services/rack-inventory.ts",
+  // Phase 4b (Task 4) : onglet Rack. Restent des bouchons (décision 1) :
+  // `rack-placement-canvas` (Task 5), `location-placement-canvas` (Task 6)
+  // et `rack-export` (Task 7).
+  "app/(fullscreen)/project/[id]/rack/rack-tab-client.tsx",
+  "app/(fullscreen)/project/[id]/rack/_components/category-legend.tsx",
+  "app/(fullscreen)/project/[id]/rack/_components/rack-drag-eligibility.tsx",
+  "app/(fullscreen)/project/[id]/rack/_components/rack-info-panel.tsx",
+  "app/(fullscreen)/project/[id]/rack/_components/rack-location-info-panel.tsx",
+  "app/(fullscreen)/project/[id]/rack/_components/rack-location-selector-dropdown.tsx",
+  "app/(fullscreen)/project/[id]/rack/_components/rack-tab-left-toolbar.tsx",
+  "app/(fullscreen)/project/[id]/rack/_components/rack-tab-side-panel.tsx",
 ];
 
 /** Fichiers posés sur la topbar ou le rail : ils suivent le thème (variante « Clair A »). */
@@ -987,6 +998,9 @@ const ALLOW_HEX: AllowMap = {
   "components/synoptique/components/slot-properties-panel.tsx": [
     { line: /const color = ct\?\.color \?\? "#71717a";/, reason: CONN },
   ],
+  // Phase 4b (Task 4) : onglet Rack (pastille et badge du type de contenant).
+  "app/(fullscreen)/project/[id]/rack/_components/rack-info-panel.tsx": [RACK_TYPE_COLORS],
+  "app/(fullscreen)/project/[id]/rack/_components/rack-tab-side-panel.tsx": [RACK_TYPE_COLORS],
 };
 
 test("aucune couleur hexadécimale ou rgb() d'interface dans les fichiers copiés (hors photo et métier)", () => {

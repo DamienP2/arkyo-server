@@ -1,4 +1,4 @@
-// arkyo-server: bouchon phase 4b, remplacé par la copie d'arkyo
+// arkyo-server: bouchon phase 4b (Task 7), remplacé par la copie d'arkyo
 // (arkyo:app/(fullscreen)/project/[id]/rack/_components/rack-export.tsx).
 // Mêmes props ; ouvert par le bouton « Exporter » du panneau droit, il
 // affiche « Bientôt disponible ».

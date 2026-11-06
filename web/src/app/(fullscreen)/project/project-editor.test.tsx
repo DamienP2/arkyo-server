@@ -2,7 +2,7 @@
  * Coquille de l'éditeur projet (arkyo:app/(fullscreen)/project/[id]/
  * _components/project-editor.tsx, `_editor/*`) : onglets (`?tab=` et
  * `localStorage`), dialogue « Caractéristiques », statut, topbar en habillage
- * Strata, et onglets des phases 4b à 6 en bouchon « Bientôt disponible ».
+ * Strata, et onglets des phases 4c à 6 en bouchon « Bientôt disponible ».
  *
  * La copie d'arkyo est rendue telle quelle par le chargeur réel
  * (`/project/:id`, `GET /api/tenant/projects/:id/editor`).
@@ -139,7 +139,8 @@ describe("éditeur projet : coquille", () => {
     await waitFor(() => expect(here(router)).toBe("/project/p1?tab=rack"));
     expect(window.localStorage.getItem("project-editor-tab")).toBe('"rack"');
     // Onglet Rack : premier contenant rackable sélectionné dans la sous-topbar.
-    expect(await screen.findByText("Baie 1")).toBeInTheDocument();
+    // (Le nom figure aussi dans le panneau droit, `RackInfoPanel`.)
+    expect(await screen.findByRole("button", { name: /Baie 1/ })).toBeInTheDocument();
 
     // Groupe « Livraison » : ses items sont de vrais onglets.
     fireEvent.click(topbarButton("Livraison"));
@@ -279,7 +280,8 @@ describe("éditeur projet : coquille", () => {
   });
 
   test("phase5_6_tabs_show_coming_soon", async () => {
-    // Phases 5-6 aux chemins d'arkyo, plus Rack (4b) et Synoptique (4c).
+    // Phases 5-6 aux chemins d'arkyo, plus Synoptique (4c). L'onglet Rack
+    // (4b) est la copie d'arkyo (`rack-tab.test.tsx`).
     for (const tab of [
       "schema",
       "video",
@@ -289,7 +291,6 @@ describe("éditeur projet : coquille", () => {
       "reseau",
       "preparation",
       "recette",
-      "rack",
       "synoptique",
     ]) {
       const { router, fetchSpy, unmount } = await open(`/project/p1?tab=${tab}`);
