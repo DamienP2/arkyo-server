@@ -67,7 +67,7 @@ cd web && npm test && npx tsc --noEmit && npm run build
 
 ## État actuel
 
-Les **phases 1 (socle)** et **2 (catalogue, paramètres, utilisateurs, espace et profil)** sont livrées. Les pages d'arkyo non encore reprises affichent le composant `ComingSoon` (`web/src/components/coming-soon.tsx`, branché dans `web/src/router.tsx`), de même que les éditeurs visuels d'impression jusqu'à la phase 6. Une phase qui porte une page remplace son `ComingSoon` par la page reprise. Phases suivantes : voir le §9 de la spec.
+Les **phases 1 (socle)**, **2 (catalogue, paramètres, utilisateurs, espace et profil)** et **3 (tableau de bord, projets et assistant, modèles de contenants et de panels, détail de régie, éditeur de panel)** sont livrées. Les pages d'arkyo non encore reprises affichent le composant `ComingSoon` (`web/src/components/coming-soon.tsx`, branché dans `web/src/router.tsx`) : l'éditeur de rack (`/racks/:rackId`, `/rigs/:id/rack/:rackId`) et l'éditeur projet (`/project/:id/*`) jusqu'à la phase 4, l'onglet « Dossiers » de `/templates` et les éditeurs visuels d'impression jusqu'à la phase 6. Une phase qui porte une page remplace son `ComingSoon` par la page reprise. Points reportés de la phase 3 : `docs/superpowers/plans/2026-11-06-phase-3-suivi.md`. Phases suivantes : voir le §9 de la spec.
 
 ## Git
 
