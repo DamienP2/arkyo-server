@@ -452,6 +452,11 @@ async fn delete_project_leaves_no_template_ghosts() {
         r#"INSERT INTO "Rack" ("id","name","locationId","isVirtual","createdAt","updatedAt") VALUES ('rv','Plateau','l1',1,?,?)"#.into(),
         r#"INSERT INTO "Rack" ("id","name","locationId","createdAt","updatedAt") VALUES ('ro','Baie A','l1',?,?)"#.into(),
         r#"INSERT INTO "RackSlot" ("id","rackId","createdAt","updatedAt") VALUES ('s1','ro',?,?)"#.into(),
+        // a virtual rack of the location that no rig links: only the
+        // location rule of the DELETE removes it
+        r#"INSERT INTO "Rack" ("id","name","locationId","isVirtual","createdAt","updatedAt") VALUES ('rl','Plateau bis','l1',1,?,?)"#.into(),
+        // a location rack also used by the template: kept, locationId NULL
+        r#"INSERT INTO "Rack" ("id","name","locationId","createdAt","updatedAt") VALUES ('rlt','Baie partagée','l1',?,?)"#.into(),
         // a template rig sharing one rack with the project
         r#"INSERT INTO "RigConfig" ("id","name","isTemplate","createdById","createdAt","updatedAt") VALUES ('gt','Modèle',1,'u',?,?)"#.into(),
         r#"INSERT INTO "Rack" ("id","name","createdAt","updatedAt") VALUES ('rs','Baie modèle',?,?)"#.into(),
@@ -466,7 +471,8 @@ async fn delete_project_leaves_no_template_ghosts() {
     }
     sqlx::query(
         r#"INSERT INTO "RigRack" ("id","rigConfigId","rackId","position") VALUES
-           ('a','gp','rv',0), ('b','gp','ro',1), ('c','gp','rs',2), ('d','gt','rs',0), ('e','gk','rk',0)"#,
+           ('a','gp','rv',0), ('b','gp','ro',1), ('c','gp','rs',2), ('d','gt','rs',0), ('e','gk','rk',0),
+           ('f','gt','rlt',1)"#,
     )
     .execute(&c.e.pool)
     .await
@@ -481,7 +487,13 @@ async fn delete_project_leaves_no_template_ghosts() {
         .fetch_all(&c.e.pool)
         .await
         .unwrap();
-    assert_eq!(racks, ["rf", "rk", "rs"]);
+    assert_eq!(racks, ["rf", "rk", "rlt", "rs"]);
+    let kept_location: Option<String> =
+        sqlx::query_scalar(r#"SELECT "locationId" FROM "Rack" WHERE "id" = 'rlt'"#)
+            .fetch_one(&c.e.pool)
+            .await
+            .unwrap();
+    assert_eq!(kept_location, None);
     let rigs: Vec<String> = sqlx::query_scalar(r#"SELECT "id" FROM "RigConfig" ORDER BY "id""#)
         .fetch_all(&c.e.pool)
         .await
@@ -491,7 +503,7 @@ async fn delete_project_leaves_no_template_ghosts() {
         .fetch_all(&c.e.pool)
         .await
         .unwrap();
-    assert_eq!(links, ["d", "e"]);
+    assert_eq!(links, ["d", "e", "f"]);
     for t in ["Location", "RackSlot"] {
         assert_eq!(
             int(&c.e.pool, &format!(r#"SELECT COUNT(*) FROM "{t}""#)).await,

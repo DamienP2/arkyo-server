@@ -11,7 +11,6 @@ use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use axum::Json;
 use serde_json::{json, Value};
-use sqlx::Row;
 
 use super::super::parametres::{
     begin, db_error, failure, get_row, parse_body, row_map, validate_flat, Field, Kind,
@@ -81,11 +80,12 @@ pub async fn list(
         .iter()
         .map(|r| {
             let mut m = row_map(r, &PROJECT);
+            // The value row_map already decoded (no panicking accessor).
+            let completion = m.remove("sheetCompletion").unwrap_or(Value::Null);
             let sheet = m
                 .remove("sheetId")
                 .filter(|v| !v.is_null())
-                .map(|_| json!({ "completionPercent": r.get::<f64, _>("sheetCompletion") }));
-            m.remove("sheetCompletion");
+                .map(|_| json!({ "completionPercent": completion }));
             let tasks = m.remove("taskCount").unwrap_or(Value::from(0));
             m.insert("technicalSheet".into(), sheet.unwrap_or(Value::Null));
             m.insert("_count".into(), json!({ "tasks": tasks }));
