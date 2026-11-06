@@ -33,8 +33,8 @@ describe("routeur et coquille", () => {
       // `/templates` : onglet Contenants (`?tab=rigs` inconnu → Contenants, comme arkyo).
       ["/racks", "/templates?tab=racks", "Aucun contenant"],
       ["/rigs", "/templates?tab=rigs", "Aucun contenant"],
-      // Onglet Panels : provisoire jusqu'à la Task 10.
-      ["/panels", "/templates?tab=panels", "Bientôt disponible"],
+      // Onglet Panels.
+      ["/panels", "/templates?tab=panels", "Aucun panel de patch"],
     ]) {
       const { router, unmount } = renderApp(from, {
         ...signedInApi(TECH_PERMS),
@@ -66,7 +66,6 @@ describe("routeur et coquille", () => {
 
   test("les routes réservées et celles de la phase 4 restent « Bientôt disponible »", async () => {
     for (const url of [
-      "/rigs/g1",
       "/racks/r1",
       "/rigs/g1/rack/r1",
       "/panels/pn1",

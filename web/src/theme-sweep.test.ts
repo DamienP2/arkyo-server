@@ -216,6 +216,11 @@ const COPIED_FILES = [
   "app/(app)/templates/templates-client.tsx",
   "app/(app)/racks/racks-client.tsx",
   "components/racks/new-rack-wizard.tsx",
+  // Phase 3 (Task 10) : onglet Panels et détail de régie.
+  "app/(app)/panels/panels-client.tsx",
+  "components/panels/new-panel-wizard.tsx",
+  "app/(app)/rigs/[id]/page.tsx",
+  "app/(app)/rigs/[id]/rig-detail-client.tsx",
 ];
 
 /** Fichiers posés sur la topbar ou le rail : ils suivent le thème (variante « Clair A »). */
@@ -325,6 +330,26 @@ const RACK_TYPE_COLORS: Allow = {
   reason: "couleurs des types de contenant (baie, flight case, SKB, Pelicase, mobilier) : couleur métier",
 };
 
+/** Phase 3 (Task 10) : panels dessinés de l'écran d'accueil de l'assistant « Nouveau panel ». */
+const PANEL_MOCKUP: Allow = {
+  line: /^\s*(border|bg|text|dot): "(border|bg|text)-(blue|pink|emerald|cyan)-[4-6]00\/\d+( dark:text-\3-400\/\d+)?",$/,
+  reason:
+    "teintes des quatre panels dessinés de l'écran d'accueil de l'assistant panel (XLR, BNC, RJ45, fibre) : " +
+    "couleurs des connecteurs, comme les SVG de WIZARD_ART, " + DOUBT,
+};
+/** Couleurs des catégories de signal des panels (`CATEGORY_COLORS`) et leur repli. */
+const PANEL_SIGNAL_COLORS: Allow[] = [
+  {
+    line: /^\s*(AUDIO|VIDEO|DATA|NETWORK|POWER|FIBER|LIGHT): "#[0-9a-f]{6}",$/,
+    reason: "couleurs des catégories de signal (pastilles des slots, filtres) : couleur métier",
+  },
+  { line: /CATEGORY_COLORS\[(cat|c)\] \?\? "#888"/, reason: CONN },
+  {
+    line: /^\s*background: color \?\? "rgba\(128,128,128,0\.18\)",$/,
+    reason: "slot vide de la grille dessinée d'un panel (rendu du plan) : " + DOUBT,
+  },
+];
+
 // ── Neutres et bleus Tailwind (couleurs d'interface d'arkyo) ────────────────
 
 const INTERFACE = /\b(bg|text|border|ring|outline|divide|from|to)-(zinc|gray|slate|neutral|stone|blue|indigo|sky)-\d{2,3}\b/;
@@ -345,6 +370,8 @@ const ALLOW: AllowMap = {
   "components/projects/new-project-dialog.tsx": [RACK_MOCKUP],
   // Phase 3 (Task 9) : assistant « Nouveau contenant ».
   "components/racks/new-rack-wizard.tsx": [RACK_MOCKUP, CONTAINER_MOCKUP],
+  // Phase 3 (Task 10) : assistant « Nouveau panel ».
+  "components/panels/new-panel-wizard.tsx": [PANEL_MOCKUP],
 };
 
 test("aucune couleur d'interface Tailwind codée en dur dans les fichiers copiés (hors exceptions métier)", () => {
@@ -382,6 +409,8 @@ const ALLOW_STATUS: AllowMap = {
   "components/projects/new-project-dialog.tsx": [...WIZARD_ART, RACK_MOCKUP, RACK_MOCKUP_2110],
   // Phase 3 (Task 9) : assistant « Nouveau contenant ».
   "components/racks/new-rack-wizard.tsx": [...WIZARD_ART, RACK_MOCKUP, CONTAINER_MOCKUP],
+  // Phase 3 (Task 10) : assistant « Nouveau panel ».
+  "components/panels/new-panel-wizard.tsx": [...WIZARD_ART, PANEL_MOCKUP],
 };
 
 test("erreurs, succès et alertes suivent --danger, --success et --warning", () => {
@@ -600,6 +629,9 @@ const ALLOW_HEX: AllowMap = {
   // Phase 3 (Task 9) : `/templates`, onglet Contenants.
   "app/(app)/racks/racks-client.tsx": [RACK_TYPE_COLORS],
   "components/racks/new-rack-wizard.tsx": WIZARD_ART,
+  // Phase 3 (Task 10) : onglet Panels.
+  "app/(app)/panels/panels-client.tsx": PANEL_SIGNAL_COLORS,
+  "components/panels/new-panel-wizard.tsx": WIZARD_ART,
 };
 
 test("aucune couleur hexadécimale ou rgb() d'interface dans les fichiers copiés (hors photo et métier)", () => {
