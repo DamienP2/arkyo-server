@@ -19,7 +19,61 @@ describe("routeur et coquille", () => {
   test("/ redirige vers /dashboard", async () => {
     const { router } = renderApp("/", signedInApi());
     await waitFor(() => expect(router.state.location.pathname).toBe("/dashboard"));
-    expect(await screen.findByText("Bientôt disponible")).toBeInTheDocument();
+    // Page chargée à la demande : premier import plus long.
+    expect(
+      await screen.findByText("Tous les projets actifs", {}, { timeout: 5000 }),
+    ).toBeInTheDocument();
+  });
+
+  test("redirects_like_arkyo", async () => {
+    // arkyo:app/(app)/{projects/[id],racks,rigs,panels}/page.tsx
+    for (const [from, to] of [
+      ["/projects/p1", "/project/p1?tab=fiche"],
+      ["/racks", "/templates?tab=racks"],
+      ["/rigs", "/templates?tab=rigs"],
+      ["/panels", "/templates?tab=panels"],
+    ]) {
+      const { router, unmount } = renderApp(from, signedInApi(TECH_PERMS));
+      await waitFor(() =>
+        expect(router.state.location.pathname + router.state.location.search).toBe(to),
+      );
+      // Cibles encore à venir (éditeur projet en phase 4, /templates réservée).
+      expect(await screen.findByText("Bientôt disponible")).toBeInTheDocument();
+      unmount();
+      vi.restoreAllMocks();
+    }
+  });
+
+  test("les redirections gardent la garde d'arkyo (projects:read, design:read)", async () => {
+    const none = {
+      ...TECH_PERMS,
+      roleKey: "aucun",
+      permissions: { ...TECH_PERMS.permissions, projects: "none", design: "none" },
+    };
+    for (const from of ["/projects/p1", "/racks", "/rigs", "/panels"]) {
+      const { router, unmount } = renderApp(from, signedInApi(none));
+      await waitFor(() => expect(router.state.location.pathname).toBe("/dashboard"));
+      unmount();
+      vi.restoreAllMocks();
+    }
+  });
+
+  test("les routes réservées et celles de la phase 4 restent « Bientôt disponible »", async () => {
+    for (const url of [
+      "/projects",
+      "/templates",
+      "/rigs/g1",
+      "/racks/r1",
+      "/rigs/g1/rack/r1",
+      "/panels/pn1",
+      "/project/p1",
+    ]) {
+      const { router, unmount } = renderApp(url, signedInApi());
+      expect(await screen.findByText("Bientôt disponible")).toBeInTheDocument();
+      expect(router.state.location.pathname).toBe(url);
+      unmount();
+      vi.restoreAllMocks();
+    }
   });
 
   test("sans session, la coquille renvoie vers /auth", async () => {
@@ -87,7 +141,7 @@ describe("routeur et coquille", () => {
 
   test("le site sans nom n'affiche que le lockup Strata Arkyo", async () => {
     renderApp("/dashboard", signedInApi(undefined, ""));
-    await screen.findByText("Bientôt disponible");
+    await screen.findByText("Tous les projets actifs", {}, { timeout: 5000 });
     const header = document.querySelector("header")!;
     expect(header.querySelector('a[href="/dashboard"]')!.textContent).toBe("StrataArkyo");
   });

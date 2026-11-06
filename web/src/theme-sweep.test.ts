@@ -199,6 +199,12 @@ const COPIED_FILES = [
   "app/supervisor/users/[id]/_editor/types.ts",
   "app/supervisor/users/[id]/_editor/ui.tsx",
   "lib/tenant-membership-context.tsx",
+  // Phase 3 (Task 6) : tableau de bord et redirections.
+  "app/(app)/dashboard/page.tsx",
+  "app/(app)/projects/[id]/page.tsx",
+  "app/(app)/racks/page.tsx",
+  "app/(app)/rigs/page.tsx",
+  "app/(app)/panels/page.tsx",
 ];
 
 /** Fichiers posés sur la topbar ou le rail : ils suivent le thème (variante « Clair A »). */
@@ -512,6 +518,17 @@ const ALLOW_HEX: AllowMap = {
     {
       line: /^\s*(read|write|admin): \{ bg: "#[0-9a-f]{8}", color: "#[0-9a-f]{6}", label: "[^"]+" \},$/,
       reason: "niveaux de permission (Lecture gris, Écriture vert, Admin rouge) : statut métier, " + DOUBT,
+    },
+  ],
+  // Phase 3 (Task 6) : tableau de bord.
+  "app/(app)/dashboard/page.tsx": [
+    {
+      line: /^\s*(EN_PREPARATION|PRET|EN_COURS|TERMINE|ANNULE): "#[0-9a-f]{6}",$/,
+      reason: "couleurs des statuts de projet (pastilles, badges, répartition) : statut métier",
+    },
+    {
+      line: /^\s*color="#[0-9a-f]{6}"$|^\s*(\{ href: "\/projects", label: "Projets", icon: FolderOpen, )?color: "#[0-9a-f]{6}"( \})?,$/,
+      reason: "teinte de l'icône de chaque carte de statistiques et de chaque accès rapide : " + DOUBT,
     },
   ],
   "app/(app)/admin/equipment/[id]/_editor/distribution-tab.tsx": [

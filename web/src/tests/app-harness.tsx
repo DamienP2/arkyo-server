@@ -1,12 +1,13 @@
 /**
  * Banc de test de la SPA : routeur en mémoire sur l'arbre réel (`routes`),
- * `fetch` simulé par une table « MÉTHODE /chemin » → réponse, et `EventSource`
- * factice (happy-dom n'en fournit pas).
+ * `fetch` simulé par une table « MÉTHODE /chemin » (ou « MÉTHODE /chemin?requête »)
+ * → réponse, et `EventSource` factice (happy-dom n'en fournit pas).
  */
 
 import { vi } from "vitest";
 import { cleanup, render } from "@testing-library/react";
 import { createMemoryRouter, RouterProvider } from "react-router";
+import { onCaughtError } from "next/navigation";
 import { routes } from "@/router";
 
 export type Reply = { status?: number; body: unknown };
@@ -54,6 +55,8 @@ export function signedInApi(perms: unknown = OWNER_PERMS, siteName = "Régie A")
     "GET /api/auth/session": { body: OWNER_SESSION },
     "GET /api/tenant/me/permissions": { body: perms },
     "GET /api/site": { body: { name: siteName } },
+    // Tableau de bord (`/dashboard`, cible des redirections) : aucun projet, aucune tâche.
+    "GET /api/projects": { body: [] },
     "GET /api/notifications/count": { body: { count: 0 } },
     "GET /api/presence": { body: { members: [] } },
     "POST /api/presence": { body: { ok: true } },
@@ -74,9 +77,10 @@ export function mockApi(api: Api) {
   vi.spyOn(navigator, "sendBeacon").mockReturnValue(true);
   return vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
     const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
-    const path = new URL(url, "http://localhost").pathname;
+    const { pathname: path, search } = new URL(url, "http://localhost");
     const method = (init?.method ?? "GET").toUpperCase();
-    const entry = api[`${method} ${path}`];
+    // Clé avec la requête (`GET /api/projects?stats=tasks`) d'abord, puis le chemin seul.
+    const entry = (search && api[`${method} ${path}${search}`]) || api[`${method} ${path}`];
     const reply: Reply = entry
       ? typeof entry === "function"
         ? entry(init)
@@ -103,7 +107,8 @@ export function resetApp() {
 export function renderApp(url: string, api: Api) {
   const fetchSpy = mockApi(api);
   const router = createMemoryRouter(routes, { initialEntries: [url] });
-  const utils = render(<RouterProvider router={router} />);
+  // Même racine que `main.tsx` : les `redirect()` levés au rendu ne sont pas journalisés.
+  const utils = render(<RouterProvider router={router} />, { onCaughtError });
   return { router, fetchSpy, ...utils };
 }
 

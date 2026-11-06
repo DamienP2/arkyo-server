@@ -6,13 +6,15 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { RouterProvider } from "react-router";
+import { onCaughtError } from "next/navigation";
 import { createAppRouter } from "./router";
 import "./app/globals.css";
 import "./fonts.css";
 
 const router = createAppRouter();
 
-createRoot(document.getElementById("root")!).render(
+// `redirect()` / `notFound()` levés au rendu : navigations, pas des erreurs.
+createRoot(document.getElementById("root")!, { onCaughtError }).render(
   <StrictMode>
     <RouterProvider router={router} />
   </StrictMode>,

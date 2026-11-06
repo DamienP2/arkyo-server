@@ -124,6 +124,17 @@ export function isNotFoundError(error: unknown): boolean {
 }
 
 /**
+ * `onCaughtError` de la racine React : une redirection ou un 404 levés pendant
+ * le rendu sont des navigations, suivies par `<NavigationErrorElement />`, pas
+ * des erreurs (le `console.error` par défaut de React en afficherait une à
+ * chaque `redirect()`). Toute autre erreur est journalisée comme par défaut.
+ */
+export function onCaughtError(error: unknown, errorInfo: { componentStack?: string }): void {
+  if (getRedirectTarget(error) || isNotFoundError(error)) return;
+  console.error(error, errorInfo.componentStack ?? "");
+}
+
+/**
  * Page 404 par défaut de Next.js (arkyo n'a pas de `not-found.tsx`).
  */
 export function NotFoundPage() {

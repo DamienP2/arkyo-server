@@ -27,6 +27,10 @@ import SetupPage from "@/app/auth/setup-page";
 import PasswordPage from "@/app/auth/password-page";
 import SystemePage from "@/app/(app)/admin/systeme/systeme-page";
 import SettingsPage from "@/app/(app)/settings/page";
+import LegacyProjectRedirect from "@/app/(app)/projects/[id]/page";
+import RacksRedirect from "@/app/(app)/racks/page";
+import RigsRedirect from "@/app/(app)/rigs/page";
+import PanelsRedirect from "@/app/(app)/panels/page";
 import { ComingSoon } from "@/components/coming-soon";
 import { LoadingState } from "@/components/ui/loading-state";
 
@@ -42,6 +46,8 @@ const AdapterPage = lazy(() => import("@/app/(app)/admin/catalogue/adapters/[id]
 const UsersPage = lazy(() => import("@/app/(app)/admin/users/page"));
 const EspacePage = lazy(() => import("@/app/(app)/admin/espace/page"));
 const ProfilePage = lazy(() => import("@/app/(app)/profile/page"));
+// Phase 3 : tableau de bord.
+const DashboardPage = lazy(() => import("@/app/(app)/dashboard/page"));
 
 // arkyo:app/(app)/settings/page.tsx ne rend rien : `redirect()` lève toujours
 // (type `() => void`), l'`errorElement` suit la redirection.
@@ -82,12 +88,20 @@ export const routes: RouteObject[] = [
         element: <AppLayout />,
         errorElement,
         children: [
-          soon("dashboard"),
-          soon("projects/*"),
-          soon("racks/*"),
-          soon("rigs/*"),
-          soon("panels"),
+          lazyPage("dashboard", DashboardPage),
+          // Phase 3 : `/projects`, `/templates` et `/rigs/:id` sont réservées
+          // (branchées par leurs tâches). Les redirections d'arkyo (garde, puis
+          // `redirect()`) sont chargées d'emblée, comme `/settings`.
+          soon("projects"),
+          { path: "projects/:id", element: <LegacyProjectRedirect />, errorElement },
           soon("templates"),
+          { path: "racks", element: <RacksRedirect />, errorElement },
+          { path: "rigs", element: <RigsRedirect />, errorElement },
+          soon("rigs/:id"),
+          { path: "panels", element: <PanelsRedirect />, errorElement },
+          // Éditeur de rack : phase 4.
+          soon("racks/:rackId"),
+          soon("rigs/:id/rack/:rackId"),
           { path: "admin/systeme", element: <SystemePage />, errorElement },
           lazyPage("admin/parametres", ParametresPage),
           lazyPage("admin/catalogue", CataloguePage),
@@ -111,6 +125,8 @@ export const routes: RouteObject[] = [
       {
         element: <FullscreenLayout />,
         errorElement,
+        // `project/:id/*` : éditeur projet (phase 4) ; `panels/:id` : éditeur
+        // de panel, réservé (phase 3).
         children: [soon("project/:id/*"), soon("panels/:id")],
       },
 

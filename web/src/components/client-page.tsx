@@ -159,3 +159,15 @@ export function useCatalogAdminGuard(): "loading" | "denied" | "allowed" {
   if (loading) return "loading";
   return has("catalog", "admin") ? "allowed" : "denied";
 }
+
+/**
+ * Garde seule `requireTenantPermissionPage(domain, level)` (pages d'arkyo sans
+ * données, comme les redirections) : `<LoadingState>` tant que les permissions
+ * ne sont pas connues, `<Navigate to="/dashboard">` si refus, `null` si accordé.
+ */
+export function useTenantPermissionPage(domain: TenantDomain, level: TenantLevel): ReactNode {
+  const { has, loading } = useTenantPermissions();
+  if (loading) return <LoadingState className="px-8 pt-10" />;
+  if (!has(domain, level)) return <Navigate to="/dashboard" replace />;
+  return null;
+}

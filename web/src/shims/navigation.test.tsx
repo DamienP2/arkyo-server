@@ -4,6 +4,7 @@ import { createMemoryRouter, RouterProvider, type RouteObject } from "react-rout
 import {
   notFound,
   NavigationErrorElement,
+  onCaughtError,
   redirect,
   useParams,
   usePathname,
@@ -161,5 +162,23 @@ describe("shim next/link", () => {
 
     await act(async () => fireEvent.click(screen.getByText("Projets")));
     expect(router.state.location.search).toBe("?tab=2");
+  });
+
+  it("onCaughtError ne journalise ni redirect() ni notFound(), mais le reste", () => {
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const thrown = (f: () => never) => {
+      try {
+        f();
+      } catch (e) {
+        return e;
+      }
+    };
+    onCaughtError(thrown(() => redirect("/dashboard")), { componentStack: "" });
+    onCaughtError(thrown(() => notFound()), { componentStack: "" });
+    expect(spy).not.toHaveBeenCalled();
+    const boom = new Error("boom");
+    onCaughtError(boom, { componentStack: "\n    at Page" });
+    expect(spy).toHaveBeenCalledWith(boom, "\n    at Page");
+    spy.mockRestore();
   });
 });

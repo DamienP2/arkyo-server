@@ -66,7 +66,10 @@ describe("page de connexion", () => {
       identifier: "admin",
       password: "bon-mot-de-passe",
     });
-    expect(await screen.findByText("Bientôt disponible")).toBeInTheDocument();
+    // Tableau de bord (phase 3), chargé à la demande.
+    expect(
+      await screen.findByText("Tous les projets actifs", {}, { timeout: 5000 }),
+    ).toBeInTheDocument();
   });
 
   test("mustChangePassword renvoie vers /auth/password", async () => {
