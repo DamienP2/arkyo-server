@@ -670,9 +670,20 @@ async fn phase4a_project_editor_inventory_end_to_end() {
         .req("DELETE", &format!("{ADAPTERS}/{adapter}"), None)
         .await;
     assert_eq!(r.status, StatusCode::CONFLICT, "{:?}", r.body);
+    // arkyo-server: the inventory rows count too (arkyo: synoptics only):
+    // the synoptic, plus the 4 inventory rows of the containers, the saved
+    // template and its clone built above.
+    let inventory_rows: i64 = sqlx::query_scalar(
+        r#"SELECT COUNT(*) FROM "RackInventoryItem" WHERE "catalogAdapterId" = ?"#,
+    )
+    .bind(&adapter)
+    .fetch_one(pool)
+    .await
+    .unwrap();
+    assert_eq!(inventory_rows, 4);
     assert_eq!(
         r.body,
-        json!({ "error": "Utilisé dans 1 synoptique(s) — suppression impossible", "usageCount": 1 })
+        json!({ "error": "Utilisé dans 5 synoptique(s) ou inventaire(s) — suppression impossible", "usageCount": 5 })
     );
     o.ok("GET", &format!("{CABLES}/{cable}"), None, StatusCode::OK)
         .await;

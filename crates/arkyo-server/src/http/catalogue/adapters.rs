@@ -56,7 +56,8 @@ static SPEC: Spec = Spec {
     audit_type: "TenantAdapter",
     not_found: "Adaptateur personnel introuvable",
     missing: "Adaptateur introuvable",
-    usage_unit: "synoptique(s)",
+    // arkyo-server: correction (les inventaires comptent aussi, voir `in_use::adapter`)
+    usage_unit: "synoptique(s) ou inventaire(s)",
     usage: Usage::Adapter,
     create: &CREATE,
     patch: &PATCH,

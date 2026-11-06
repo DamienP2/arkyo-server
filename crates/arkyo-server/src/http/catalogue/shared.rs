@@ -49,7 +49,7 @@ pub struct Spec {
     pub not_found: &'static str,
     /// 404 of GET and duplicate (arkyo then also looked in its Arkyo catalogue).
     pub missing: &'static str,
-    /// `connexion(s)` or `synoptique(s)`, in the 409 message.
+    /// `connexion(s)` or `synoptique(s) ou inventaire(s)`, in the 409 message.
     pub usage_unit: &'static str,
     pub usage: Usage,
     pub create: &'static [Field],

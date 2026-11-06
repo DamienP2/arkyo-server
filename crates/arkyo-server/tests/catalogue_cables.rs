@@ -542,6 +542,9 @@ async fn use_in(pool: &SqlitePool, table: &str, id: &str) {
         "ProjectSynopticAdapter" => {
             r#"INSERT INTO "ProjectSynopticAdapter" ("id","projectId","catalogAdapterId","x","y","createdAt","updatedAt") VALUES (?,'p',?,0,0,?,?)"#
         }
+        "RackInventoryItem" => {
+            r#"INSERT INTO "RackInventoryItem" ("id","rackId","catalogAdapterId","createdAt","updatedAt") VALUES (?,'r',?,?,?)"#
+        }
         _ => panic!("no catalogue reference in {table}"),
     };
     let mut q = sqlx::query(sql).bind(arkyo_server::ids::new_id()).bind(id);
@@ -576,10 +579,29 @@ async fn delete_in_use_409() {
     assert_eq!(d.status, StatusCode::CONFLICT);
     assert_eq!(
         d.body,
-        json!({"error": "Utilisé dans 1 synoptique(s) — suppression impossible", "usageCount": 1})
+        json!({"error": "Utilisé dans 1 synoptique(s) ou inventaire(s) — suppression impossible", "usageCount": 1})
+    );
+    // arkyo-server: an adapter only in an inventory is in use too (arkyo
+    // only counted the synoptics; the BOM line vanished silently).
+    let inv = c.create("adapters", json!({"name": "In BOM"})).await["id"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    use_in(&c.e.pool, "RackInventoryItem", &inv).await;
+    let d = c.req("DELETE", &format!("/adapters/{inv}"), None).await;
+    assert_eq!(d.status, StatusCode::CONFLICT);
+    assert_eq!(
+        d.body,
+        json!({"error": "Utilisé dans 1 synoptique(s) ou inventaire(s) — suppression impossible", "usageCount": 1})
+    );
+    use_in(&c.e.pool, "RackInventoryItem", &ad).await;
+    let d = c.req("DELETE", &format!("/adapters/{ad}"), None).await;
+    assert_eq!(
+        (d.status, d.body["usageCount"].clone()),
+        (StatusCode::CONFLICT, json!(2))
     );
     // nothing was deleted
-    for (kind, id) in [("cables", &cable), ("adapters", &ad)] {
+    for (kind, id) in [("cables", &cable), ("adapters", &ad), ("adapters", &inv)] {
         assert_eq!(
             c.req("GET", &format!("/{kind}/{id}"), None).await.status,
             StatusCode::OK

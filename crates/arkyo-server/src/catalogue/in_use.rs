@@ -283,6 +283,11 @@ pub async fn cable(conn: &mut SqliteConnection, id: &str) -> Result<Counts, sqlx
 
 /// Adapter (arkyo `assertAdapterNotInUse`): `SynopticAdapter` and
 /// `ProjectSynopticAdapter` rows through `catalogAdapterId`.
+///
+/// arkyo-server: correction, les lignes `RackInventoryItem` comptent aussi
+/// (comme pour un équipement) : arkyo laissait supprimer un adaptateur
+/// présent dans un inventaire, et sa ligne disparaissait en silence du BOM
+/// et des exports.
 pub async fn adapter(conn: &mut SqliteConnection, id: &str) -> Result<Counts, sqlx::Error> {
     references(
         conn,
@@ -290,6 +295,7 @@ pub async fn adapter(conn: &mut SqliteConnection, id: &str) -> Result<Counts, sq
         &[
             ("synoptic", "SynopticAdapter"),
             ("projectSynoptic", "ProjectSynopticAdapter"),
+            ("inventory", "RackInventoryItem"),
         ],
         "catalogAdapterId",
     )

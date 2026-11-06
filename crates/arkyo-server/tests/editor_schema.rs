@@ -554,7 +554,7 @@ async fn cable_and_adapter_in_use_guards_active() {
 
     for (kind, id, unit) in [
         ("cables", cable, "connexion(s)"),
-        ("adapters", adapter, "synoptique(s)"),
+        ("adapters", adapter, "synoptique(s) ou inventaire(s)"),
     ] {
         let uri = format!("/api/tenant/catalogue/{kind}/{id}");
         let d = call(&e.app, "DELETE", &uri, LOCAL, Some(&tok), None).await;
