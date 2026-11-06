@@ -299,22 +299,23 @@ async fn detail(conn: &mut SqliteConnection, id: &str) -> Result<Option<Value>, 
         rig_configs.push(Value::Object(rig_obj));
     }
 
+    project.insert("documents".into(), Value::Array(documents));
+    project.insert("rigConfigs".into(), Value::Array(rig_configs));
+    project.insert("_count".into(), counts(conn, id).await?);
+    Ok(Some(Value::Object(project)))
+}
+
+/// `_count: { select: { tasks: true, messages: true, documents: true } }`.
+pub(super) async fn counts(conn: &mut SqliteConnection, id: &str) -> Result<Value, sqlx::Error> {
     let (tasks, messages, docs): (i64, i64, i64) = sqlx::query_as(
         r#"SELECT (SELECT COUNT(*) FROM "Task" WHERE "projectId" = ?1),
                   (SELECT COUNT(*) FROM "Message" WHERE "projectId" = ?1),
                   (SELECT COUNT(*) FROM "ProjectDocument" WHERE "projectId" = ?1)"#,
     )
     .bind(id)
-    .fetch_one(&mut *conn)
+    .fetch_one(conn)
     .await?;
-
-    project.insert("documents".into(), Value::Array(documents));
-    project.insert("rigConfigs".into(), Value::Array(rig_configs));
-    project.insert(
-        "_count".into(),
-        json!({ "tasks": tasks, "messages": messages, "documents": docs }),
-    );
-    Ok(Some(Value::Object(project)))
+    Ok(json!({ "tasks": tasks, "messages": messages, "documents": docs }))
 }
 
 // ── PATCH /api/tenant/projects/:id ──────────────────────────────────────────

@@ -1,6 +1,8 @@
 //! Projects: arkyo:app/api/tenant/projects/** ([`tenant`], [`locations`],
 //! [`locations_item`], [`racks`], [`racks_item`], [`racks_template`],
-//! [`inventory`], [`inventory_item`]) and arkyo:app/api/projects/route.ts ([`legacy`]).
+//! [`inventory`], [`inventory_item`]) and arkyo:app/api/projects/route.ts ([`legacy`]),
+//! plus [`editor`], the data of arkyo's Server Component
+//! `app/(fullscreen)/project/[id]/page.tsx`.
 //!
 //! Shared here: the `Project` row as Prisma returns it, arkyo's
 //! `{ error: "Validation invalide", issues }` envelope (`zodIssuesFromError`),
@@ -9,6 +11,7 @@
 
 #![allow(clippy::result_large_err)]
 
+mod editor;
 mod inventory;
 mod inventory_item;
 mod legacy;
@@ -42,6 +45,9 @@ pub fn router() -> Router<AppState> {
                 .patch(tenant::update)
                 .delete(tenant::remove),
         )
+        // arkyo-server: données de la page serveur d'arkyo
+        // (app/(fullscreen)/project/[id]/page.tsx).
+        .route("/tenant/projects/{id}/editor", get(editor::get))
         .route(
             "/tenant/projects/{id}/locations",
             get(locations::list).post(locations::create),
