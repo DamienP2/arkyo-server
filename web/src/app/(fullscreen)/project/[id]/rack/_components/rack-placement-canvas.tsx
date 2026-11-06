@@ -2413,7 +2413,8 @@ export const RackPlacementCanvas = forwardRef<
                 <div
                   data-view-id="SIDE"
                   className="ml-2 shrink-0 border-l pl-6"
-                  style={{ borderColor: "rgba(99,102,241,0.25)" }}
+                  // arkyo-server: habillage Strata (séparateur de la vue de côté : indigo d'arkyo → accent du thème)
+                  style={{ borderColor: "color-mix(in srgb, var(--accent) 25%, transparent)" }}
                 >
                   <div
                     className={cn(
@@ -2445,7 +2446,8 @@ export const RackPlacementCanvas = forwardRef<
                     <span
                       className="rounded border px-1.5 py-0.5 text-[9px] font-medium"
                       style={{
-                        color: "var(--accent)",
+                        // arkyo-server: habillage Strata (texte d'accent sur teinte d'accent : --accent-strong)
+                        color: "var(--accent-strong)",
                         borderColor:
                           "color-mix(in srgb, var(--accent) 40%, transparent)",
                         background:
