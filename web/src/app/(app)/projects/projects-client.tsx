@@ -613,7 +613,8 @@ export function ProjectsClient({
           <SheetFooter>
             <button
               onClick={clearAllFilters}
-              className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-[var(--accent)]/10 text-xs font-semibold text-[var(--accent)] transition-colors hover:bg-[var(--accent)]/20"
+              // arkyo-server: habillage Strata
+              className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-[var(--accent)]/10 text-xs font-semibold text-[var(--accent-strong)] transition-colors hover:bg-[var(--accent)]/20"
             >
               <X className="h-3.5 w-3.5" />
               Effacer les {activeFilterCount} filtre{activeFilterCount > 1 ? "s" : ""}
