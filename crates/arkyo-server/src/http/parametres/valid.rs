@@ -49,6 +49,8 @@ pub enum Kind {
         max: usize,
     },
     NumNonNeg,
+    /// `z.number().min(min).max(max)`.
+    NumRange(i64, i64),
     NumPos,
     /// `z.number().positive(msg)`.
     NumPosMsg(&'static str),
@@ -159,6 +161,7 @@ fn expected(kind: &Kind) -> &'static str {
         | Kind::Asset
         | Kind::UpperKey { .. } => "string",
         Kind::NumNonNeg
+        | Kind::NumRange(..)
         | Kind::NumPos
         | Kind::NumPosMsg(_)
         | Kind::Int
@@ -372,6 +375,15 @@ fn check(kind: &Kind, v: &Value) -> Vec<String> {
         (Kind::NumNonNeg, Value::Number(n)) => {
             if n.as_f64().is_some_and(|f| f < 0.0) {
                 errs.push("Too small: expected number to be >=0".into());
+            }
+        }
+        (Kind::NumRange(min, max), Value::Number(n)) => {
+            let f = n.as_f64().unwrap_or(0.0);
+            if f < *min as f64 {
+                errs.push(format!("Too small: expected number to be >={min}"));
+            }
+            if f > *max as f64 {
+                errs.push(format!("Too big: expected number to be <={max}"));
             }
         }
         (Kind::NumPos, Value::Number(n)) => {

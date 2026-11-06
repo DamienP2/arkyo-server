@@ -19,6 +19,7 @@ mod racks;
 mod rigs;
 mod roles;
 mod system;
+mod tenant_racks;
 mod upload;
 
 use std::path::PathBuf;
@@ -227,6 +228,7 @@ pub fn router(state: AppState) -> Router {
         .merge(racks::router())
         .merge(rigs::router())
         .merge(panels::router())
+        .merge(tenant_racks::router())
         .fallback(api_not_found)
         .layer(middleware::from_fn_with_state(state.clone(), session_layer));
     let web = crate::web::routes(&state.data_dir);

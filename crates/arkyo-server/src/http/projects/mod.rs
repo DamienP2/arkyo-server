@@ -1,5 +1,6 @@
 //! Projects: arkyo:app/api/tenant/projects/** ([`tenant`], [`locations`],
-//! [`racks`], [`inventory`]) and arkyo:app/api/projects/route.ts ([`legacy`]).
+//! [`locations_item`], [`racks`], [`racks_item`], [`inventory`],
+//! [`inventory_item`]) and arkyo:app/api/projects/route.ts ([`legacy`]).
 //!
 //! Shared here: the `Project` row as Prisma returns it, arkyo's
 //! `{ error: "Validation invalide", issues }` envelope (`zodIssuesFromError`),
@@ -9,16 +10,20 @@
 #![allow(clippy::result_large_err)]
 
 mod inventory;
+mod inventory_item;
 mod legacy;
 mod locations;
+mod locations_item;
 mod racks;
+mod racks_item;
 mod tenant;
 
 use std::collections::BTreeMap;
 
+use axum::body::Bytes;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
-use axum::routing::{get, post};
+use axum::routing::{get, patch, post};
 use axum::{Json, Router};
 use serde_json::{json, Value};
 use sqlx::SqliteConnection;
@@ -40,10 +45,30 @@ pub fn router() -> Router<AppState> {
             "/tenant/projects/{id}/locations",
             get(locations::list).post(locations::create),
         )
+        .route(
+            "/tenant/projects/{id}/locations/{location_id}",
+            patch(locations_item::update).delete(locations_item::remove),
+        )
         .route("/tenant/projects/{id}/racks", post(racks::create))
+        .route(
+            "/tenant/projects/{id}/racks/reorder",
+            post(racks_item::reorder),
+        )
+        .route(
+            "/tenant/projects/{id}/racks/{rack_id}",
+            patch(racks_item::update).delete(racks_item::remove),
+        )
         .route(
             "/tenant/projects/{id}/racks/{rack_id}/inventory",
             get(inventory::list).post(inventory::create),
+        )
+        .route(
+            "/tenant/projects/{id}/racks/{rack_id}/inventory/{item_id}",
+            patch(inventory_item::update).delete(inventory_item::remove),
+        )
+        .route(
+            "/tenant/projects/{id}/racks/{rack_id}/inventory/{item_id}/transfer",
+            post(inventory_item::transfer),
         )
         .route("/projects", get(legacy::list).post(legacy::create))
 }
@@ -158,6 +183,31 @@ pub(crate) async fn rack_in_project(
     .fetch_optional(conn)
     .await?;
     Ok(found.is_some())
+}
+
+/// Whether a rig outside the project (a template rig, or another
+/// project's) also uses `rack_id`: such a shared rack is unlinked from the
+/// project, never deleted (phase-3 project `DELETE`, review focus 1).
+pub(crate) async fn rack_shared_outside(
+    conn: &mut SqliteConnection,
+    rack_id: &str,
+    project_id: &str,
+) -> Result<bool, sqlx::Error> {
+    let found: Option<i64> = sqlx::query_scalar(
+        r#"SELECT 1 FROM "RigRack" rr JOIN "RigConfig" g ON g."id" = rr."rigConfigId"
+           WHERE rr."rackId" = ? AND (g."projectId" IS NULL OR g."projectId" <> ?) LIMIT 1"#,
+    )
+    .bind(rack_id)
+    .bind(project_id)
+    .fetch_optional(conn)
+    .await?;
+    Ok(found.is_some())
+}
+
+/// `req.json().catch(() => ({}))`: an unreadable (or missing) body
+/// validates as `{}`.
+pub(crate) fn lenient_body(body: &Bytes) -> Value {
+    serde_json::from_slice(body).unwrap_or_else(|_| json!({}))
 }
 
 /// The position after the last `RigRack` of `rig_id` (0 for an empty rig).
