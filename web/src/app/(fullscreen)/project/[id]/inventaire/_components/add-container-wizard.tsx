@@ -821,7 +821,8 @@ function IntroStep({ onStart }: { onStart: () => void }) {
 
       {/* Contenu central */}
       <div className="relative z-10 mx-auto flex h-full max-w-lg flex-col items-center justify-center px-8 py-16 text-center">
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-white/40 bg-white/60 px-3 py-1 text-[10px] font-semibold tracking-wider text-[var(--accent)] uppercase shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-white/10">
+        {/* arkyo-server: habillage Strata (texte d'accent sur fond teinté : --accent-strong) */}
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--surface)]/40 bg-[var(--surface)]/60 px-3 py-1 text-[10px] font-semibold tracking-wider text-[var(--accent-strong)] uppercase shadow-sm backdrop-blur-md dark:border-[var(--foreground)]/10 dark:bg-[var(--foreground)]/10">
           <Sparkles
             className="h-3 w-3"
             style={{ animation: "sparkle-twinkle 2s ease-in-out infinite" }}
@@ -2608,7 +2609,8 @@ function PillButton({
       className={cn(
         "h-9 rounded-lg border-2 px-2 text-[11px] font-bold transition-all",
         active
-          ? "border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--accent)]"
+          // arkyo-server: habillage Strata (texte d'accent sur l'accent à 10 % : --accent-strong)
+          ? "border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--accent-strong)]"
           : "border-[var(--border)] text-[var(--muted-foreground)] hover:bg-[var(--secondary)]",
       )}
     >
