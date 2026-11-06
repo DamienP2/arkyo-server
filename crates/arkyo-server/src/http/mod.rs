@@ -14,6 +14,7 @@ pub(crate) mod parametres;
 mod presence;
 mod profile;
 pub(crate) mod projects;
+mod rack_events;
 mod racks;
 mod rigs;
 mod roles;
@@ -160,7 +161,8 @@ async fn api_not_found() -> Response {
     error(StatusCode::NOT_FOUND, "Not found")
 }
 
-/// Ends the open `/api/events` streams so graceful shutdown can complete.
+/// Ends the open `/api/events` and `/api/racks/:id/events` streams so
+/// graceful shutdown can complete.
 pub fn close_event_streams() {
     events::close_all();
 }
@@ -202,6 +204,7 @@ pub fn router(state: AppState) -> Router {
         )
         .route("/presence", get(presence::get).post(presence::post))
         .route("/events", get(events::stream))
+        .route("/racks/{id}/events", get(rack_events::stream))
         .route(
             "/upload",
             post(upload::upload).layer(DefaultBodyLimit::max(upload::MAX_BODY)),

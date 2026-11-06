@@ -4,7 +4,8 @@
 //! as they are published, and a `ping` every 25 s.
 //!
 //! Streams end on [`close_all`] (server shutdown): graceful shutdown waits for
-//! open connections, and an endless stream would hold it forever.
+//! open connections, and an endless stream would hold it forever. The per-rack
+//! streams (`rack_events.rs`) end on it too.
 
 use std::convert::Infallible;
 use std::sync::LazyLock;
@@ -30,7 +31,8 @@ pub fn close_all() {
     SHUTDOWN.send_replace(true);
 }
 
-async fn closed() {
+/// Resolves once [`close_all`] has been called.
+pub(super) async fn closed() {
     let mut rx = SHUTDOWN.subscribe();
     let _ = rx.wait_for(|closed| *closed).await;
 }
