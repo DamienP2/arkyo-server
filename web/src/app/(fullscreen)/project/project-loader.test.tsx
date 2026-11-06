@@ -14,6 +14,13 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { OWNER_PERMS, TECH_PERMS, renderApp, resetApp, signedInApi, type Api } from "@/tests/app-harness";
 
+/**
+ * Attente du premier montage : l'éditeur projet et l'inventaire (≈ 8 000 l.)
+ * sont transformés à la demande par Vite ; sous charge CPU (cargo en
+ * parallèle, runner de CI), cela dépasse 5 s.
+ */
+const FIRST_LOAD = { timeout: 15000 };
+
 const editor = vi.hoisted(() => ({ props: null as null | Record<string, unknown>, renders: 0 }));
 
 vi.mock("@/app/(fullscreen)/project/[id]/_components/project-editor", async (importOriginal) => {
@@ -107,7 +114,7 @@ const NO_PROJECTS = {
 describe("/project/:id", () => {
   test("editor_loader_renders_shell", async () => {
     const { fetchSpy } = renderApp("/project/p1", projectApi());
-    expect(await screen.findByText("Finale Coupe de France", {}, { timeout: 5000 })).toBeInTheDocument();
+    expect(await screen.findByText("Finale Coupe de France", {}, FIRST_LOAD)).toBeInTheDocument();
 
     // Props d'arkyo : `project` = la route `editor` telle quelle, nom du site
     // à la place du nom du tenant.
@@ -132,7 +139,7 @@ describe("/project/:id", () => {
 
   test("site sans nom : tenantName null, comme un tenant introuvable", async () => {
     renderApp("/project/p1", projectApi(OWNER_PERMS, { "GET /api/site": { body: { name: "" } } }));
-    await screen.findByText("Finale Coupe de France", {}, { timeout: 5000 });
+    await screen.findByText("Finale Coupe de France", {}, FIRST_LOAD);
     expect(editor.props!.tenantName).toBeNull();
   });
 
@@ -145,11 +152,11 @@ describe("/project/:id", () => {
           fail ? { status: 500, body: { error: "Erreur serveur" } } : { body: EDITOR },
       }),
     );
-    expect(await screen.findByText("Erreur serveur", {}, { timeout: 5000 })).toBeInTheDocument();
+    expect(await screen.findByText("Erreur serveur", {}, FIRST_LOAD)).toBeInTheDocument();
     expect(editor.renders).toBe(0);
     fail = false;
     fireEvent.click(screen.getByRole("button", { name: "Réessayer" }));
-    expect(await screen.findByText("Finale Coupe de France", {}, { timeout: 5000 })).toBeInTheDocument();
+    expect(await screen.findByText("Finale Coupe de France", {}, FIRST_LOAD)).toBeInTheDocument();
     expect(editor.props!.project).toEqual(EDITOR);
   });
 
@@ -158,13 +165,13 @@ describe("/project/:id", () => {
       "/project/p1",
       projectApi(OWNER_PERMS, { "GET /api/tenant/projects/p1/editor": { status: 404, body: { error: "Not found" } } }),
     );
-    expect(await screen.findByText("This page could not be found.", {}, { timeout: 5000 })).toBeInTheDocument();
+    expect(await screen.findByText("This page could not be found.", {}, FIRST_LOAD)).toBeInTheDocument();
   });
 
   test("sans projects:read, le layout renvoie vers /dashboard, sous-routes comprises", async () => {
     for (const url of ["/project/p1", "/project/p1/inventaire/synoptique"]) {
       const { router, fetchSpy, unmount } = renderApp(url, projectApi(NO_PROJECTS));
-      await waitFor(() => expect(router.state.location.pathname).toBe("/dashboard"), { timeout: 5000 });
+      await waitFor(() => expect(router.state.location.pathname).toBe("/dashboard"), FIRST_LOAD);
       expect(editor.renders).toBe(0);
       expect(fetchSpy.mock.calls.some(([u]) => String(u).includes("/editor"))).toBe(false);
       unmount();
@@ -175,7 +182,7 @@ describe("/project/:id", () => {
   test("les sous-routes pas encore portées restent « Bientôt disponible » avec « Retour »", async () => {
     for (const url of ["/project/p1/inventaire/rack/r1", "/project/p1/inventaire/synoptique", "/project/p1/cartographie"]) {
       const { router, fetchSpy, unmount } = renderApp(url, projectApi(TECH_PERMS));
-      expect(await screen.findByText("Bientôt disponible", {}, { timeout: 5000 })).toBeInTheDocument();
+      expect(await screen.findByText("Bientôt disponible", {}, FIRST_LOAD)).toBeInTheDocument();
       expect(screen.getByRole("link", { name: "Retour" })).toBeInTheDocument();
       expect(router.state.location.pathname).toBe(url);
       expect(fetchSpy.mock.calls.some(([u]) => String(u).includes("/editor"))).toBe(false);

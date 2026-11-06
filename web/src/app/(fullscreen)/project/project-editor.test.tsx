@@ -12,6 +12,13 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { OWNER_PERMS, renderApp, resetApp, sentBody, signedInApi, type Api } from "@/tests/app-harness";
 
+/**
+ * Attente du premier montage : l'éditeur projet et l'inventaire (≈ 8 000 l.)
+ * sont transformés à la demande par Vite ; sous charge CPU (cargo en
+ * parallèle, runner de CI), cela dépasse 5 s.
+ */
+const FIRST_LOAD = { timeout: 15000 };
+
 const HEADER = {
   id: "p1",
   name: "Finale Coupe de France",
@@ -79,7 +86,7 @@ function editorApi(extra: Api = {}): Api {
 /** Ouvre l'éditeur à `url` et attend la coquille. */
 async function open(url: string, extra: Api = {}) {
   const app = renderApp(url, editorApi(extra));
-  await screen.findByText("Finale Coupe de France", {}, { timeout: 5000 });
+  await screen.findByText("Finale Coupe de France", {}, FIRST_LOAD);
   return app;
 }
 

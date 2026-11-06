@@ -26,6 +26,13 @@ import {
 import { REFRESH_EVENT } from "next/navigation";
 import { useProjectSync, type ProjectSyncEvent } from "./[id]/_hooks/use-project-sync";
 
+/**
+ * Attente du premier montage : l'éditeur projet et l'inventaire (≈ 8 000 l.)
+ * sont transformés à la demande par Vite ; sous charge CPU (cargo en
+ * parallèle, runner de CI), cela dépasse 5 s.
+ */
+const FIRST_LOAD = { timeout: 15000 };
+
 const HEADER = {
   id: "p1",
   name: "Finale Coupe de France",
@@ -131,7 +138,7 @@ function editorApi(extra: Api = {}): Api {
 /** Ouvre l'onglet Inventaire et attend la fiche du lieu courant. */
 async function open(extra: Api = {}) {
   const app = renderApp("/project/p1?tab=inventaire", editorApi(extra));
-  await screen.findByText("Finale Coupe de France", {}, { timeout: 5000 });
+  await screen.findByText("Finale Coupe de France", {}, FIRST_LOAD);
   await screen.findByText("Équipements libres");
   return app;
 }

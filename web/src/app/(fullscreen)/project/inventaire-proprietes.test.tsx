@@ -31,6 +31,13 @@ import { buildBomPdf } from "./[id]/inventaire/_lib/bom-pdf";
 import { buildBomTable, DEFAULT_BOM_TABLE_OPTIONS } from "./[id]/inventaire/_lib/bom-table";
 import type { InventaireRack } from "./[id]/inventaire/inventaire-client";
 
+/**
+ * Attente du premier montage : l'éditeur projet et l'inventaire (≈ 8 000 l.)
+ * sont transformés à la demande par Vite ; sous charge CPU (cargo en
+ * parallèle, runner de CI), cela dépasse 5 s.
+ */
+const FIRST_LOAD = { timeout: 15000 };
+
 const HEADER = {
   id: "p1",
   name: "Finale Coupe de France",
@@ -133,7 +140,7 @@ function editorApi(qty: number, extra: Api = {}): Api {
 /** Ouvre l'onglet Inventaire et attend la carte de la première baie. */
 async function open(qty: number, extra: Api = {}) {
   const app = renderApp("/project/p1?tab=inventaire", editorApi(qty, extra));
-  await screen.findByText("Finale Coupe de France", {}, { timeout: 5000 });
+  await screen.findByText("Finale Coupe de France", {}, FIRST_LOAD);
   await screen.findByText("Équipements libres");
   return app;
 }

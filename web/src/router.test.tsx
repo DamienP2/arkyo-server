@@ -1,6 +1,25 @@
-import { afterEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeAll, describe, expect, test, vi } from "vitest";
 import { screen, waitFor, within } from "@testing-library/react";
 import { renderApp, signedInApi, TECH_PERMS, resetApp } from "@/tests/app-harness";
+
+/**
+ * Attente du premier montage : l'éditeur projet et l'inventaire (≈ 8 000 l.)
+ * sont transformés à la demande par Vite ; sous charge CPU (cargo en
+ * parallèle, runner de CI), cela dépasse 5 s.
+ */
+const FIRST_LOAD = { timeout: 15000 };
+
+// Pages chargées à la demande (`lazy()`) que ces tests ouvrent : importées
+// d'avance, une fois, pour que les attentes courtes ne mesurent pas la
+// transformation par Vite (instable sous charge CPU).
+beforeAll(async () => {
+  await Promise.all([
+    import("@/app/(app)/dashboard/page"),
+    import("@/app/(app)/templates/page"),
+    import("@/app/(fullscreen)/project/[id]/page"),
+    import("@/app/(fullscreen)/panels/[id]/page"),
+  ]);
+}, 60000);
 
 afterEach(resetApp);
 
@@ -116,7 +135,7 @@ describe("routeur et coquille", () => {
       await waitFor(() =>
         expect(router.state.location.pathname + router.state.location.search).toBe(to),
       );
-      expect(await screen.findByText(shown, {}, { timeout: 5000 })).toBeInTheDocument();
+      expect(await screen.findByText(shown, {}, FIRST_LOAD)).toBeInTheDocument();
       stop();
       // `/projects/:id` passe d'abord par `?tab=fiche` (arkyo), remappé ensuite.
       if (from === "/projects/p1") expect(visited).toContain("/project/p1?tab=fiche");
