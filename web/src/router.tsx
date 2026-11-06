@@ -46,9 +46,10 @@ const AdapterPage = lazy(() => import("@/app/(app)/admin/catalogue/adapters/[id]
 const UsersPage = lazy(() => import("@/app/(app)/admin/users/page"));
 const EspacePage = lazy(() => import("@/app/(app)/admin/espace/page"));
 const ProfilePage = lazy(() => import("@/app/(app)/profile/page"));
-// Phase 3 : tableau de bord et liste des projets.
+// Phase 3 : tableau de bord, liste des projets et modèles (`/templates`).
 const DashboardPage = lazy(() => import("@/app/(app)/dashboard/page"));
 const ProjectsPage = lazy(() => import("@/app/(app)/projects/page"));
+const TemplatesPage = lazy(() => import("@/app/(app)/templates/page"));
 
 // arkyo:app/(app)/settings/page.tsx ne rend rien : `redirect()` lève toujours
 // (type `() => void`), l'`errorElement` suit la redirection.
@@ -91,11 +92,11 @@ export const routes: RouteObject[] = [
         children: [
           lazyPage("dashboard", DashboardPage),
           lazyPage("projects", ProjectsPage),
-          // Phase 3 : `/templates` et `/rigs/:id` sont réservées (branchées par
-          // leurs tâches). Les redirections d'arkyo (garde, puis `redirect()`)
-          // sont chargées d'emblée, comme `/settings`.
+          // Phase 3 : `/rigs/:id` est réservée (branchée par sa tâche). Les
+          // redirections d'arkyo (garde, puis `redirect()`) sont chargées
+          // d'emblée, comme `/settings`.
           { path: "projects/:id", element: <LegacyProjectRedirect />, errorElement },
-          soon("templates"),
+          lazyPage("templates", TemplatesPage),
           { path: "racks", element: <RacksRedirect />, errorElement },
           { path: "rigs", element: <RigsRedirect />, errorElement },
           soon("rigs/:id"),

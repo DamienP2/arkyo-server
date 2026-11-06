@@ -27,18 +27,24 @@ describe("routeur et coquille", () => {
 
   test("redirects_like_arkyo", async () => {
     // arkyo:app/(app)/{projects/[id],racks,rigs,panels}/page.tsx
-    for (const [from, to] of [
-      ["/projects/p1", "/project/p1?tab=fiche"],
-      ["/racks", "/templates?tab=racks"],
-      ["/rigs", "/templates?tab=rigs"],
-      ["/panels", "/templates?tab=panels"],
+    for (const [from, to, shown] of [
+      // Éditeur projet : phase 4.
+      ["/projects/p1", "/project/p1?tab=fiche", "Bientôt disponible"],
+      // `/templates` : onglet Contenants (`?tab=rigs` inconnu → Contenants, comme arkyo).
+      ["/racks", "/templates?tab=racks", "Aucun contenant"],
+      ["/rigs", "/templates?tab=rigs", "Aucun contenant"],
+      // Onglet Panels : provisoire jusqu'à la Task 10.
+      ["/panels", "/templates?tab=panels", "Bientôt disponible"],
     ]) {
-      const { router, unmount } = renderApp(from, signedInApi(TECH_PERMS));
+      const { router, unmount } = renderApp(from, {
+        ...signedInApi(TECH_PERMS),
+        "GET /api/racks": { body: [] },
+        "GET /api/panels": { body: [] },
+      });
       await waitFor(() =>
         expect(router.state.location.pathname + router.state.location.search).toBe(to),
       );
-      // Cibles encore à venir (éditeur projet en phase 4, /templates réservée).
-      expect(await screen.findByText("Bientôt disponible")).toBeInTheDocument();
+      expect(await screen.findByText(shown, {}, { timeout: 5000 })).toBeInTheDocument();
       unmount();
       vi.restoreAllMocks();
     }
@@ -60,7 +66,6 @@ describe("routeur et coquille", () => {
 
   test("les routes réservées et celles de la phase 4 restent « Bientôt disponible »", async () => {
     for (const url of [
-      "/templates",
       "/rigs/g1",
       "/racks/r1",
       "/rigs/g1/rack/r1",

@@ -211,6 +211,11 @@ const COPIED_FILES = [
   // Phase 3 (Task 8) : assistant « Nouveau projet ».
   "components/projects/new-project-dialog.tsx",
   "components/racks/rack-wizard-steps.tsx",
+  // Phase 3 (Task 9) : `/templates`, onglet Contenants.
+  "app/(app)/templates/page.tsx",
+  "app/(app)/templates/templates-client.tsx",
+  "app/(app)/racks/racks-client.tsx",
+  "components/racks/new-rack-wizard.tsx",
 ];
 
 /** Fichiers posés sur la topbar ou le rail : ils suivent le thème (variante « Clair A »). */
@@ -307,6 +312,19 @@ const RACK_MOCKUP_2110: Allow = {
   reason: "étiquette « 2110 » (SMPTE ST 2110) du réseau dessiné de l'écran d'accueil : marqueur métier, comme TAG_2110, " + DOUBT,
 };
 
+/** Phase 3 (Task 9) : contenants dessinés de l'écran d'accueil de l'assistant « Nouveau contenant ». */
+const CONTAINER_MOCKUP: Allow = {
+  line: /^\s*(border|bg|text|dot): "(border|bg|text)-(blue|amber|cyan|violet)-[4-6]00\/\d+( dark:text-\3-400\/\d+)?",$/,
+  reason:
+    "teintes des quatre contenants dessinés de l'écran d'accueil de l'assistant contenant (baie, flight case, Pelicase, rack) : " +
+    "rendu des plans, comme RACK_MOCKUP, " + DOUBT,
+};
+/** Couleurs des types de contenant (`RACK_TYPE_COLOR` des étapes, `RACK_TYPE_COLORS` de la liste). */
+const RACK_TYPE_COLORS: Allow = {
+  line: /^\s*(STANDARD|FLIGHT_CASE_CLASSIC|FLIGHT_CASE_SKB|PELICAN|CAP): "#[0-9a-f]{6}",$/,
+  reason: "couleurs des types de contenant (baie, flight case, SKB, Pelicase, mobilier) : couleur métier",
+};
+
 // ── Neutres et bleus Tailwind (couleurs d'interface d'arkyo) ────────────────
 
 const INTERFACE = /\b(bg|text|border|ring|outline|divide|from|to)-(zinc|gray|slate|neutral|stone|blue|indigo|sky)-\d{2,3}\b/;
@@ -325,6 +343,8 @@ const ALLOW: AllowMap = {
   "app/(app)/profile/profile-client.tsx": [PROFILE_ROLE_BADGE],
   // Phase 3 (Task 8) : assistant « Nouveau projet ».
   "components/projects/new-project-dialog.tsx": [RACK_MOCKUP],
+  // Phase 3 (Task 9) : assistant « Nouveau contenant ».
+  "components/racks/new-rack-wizard.tsx": [RACK_MOCKUP, CONTAINER_MOCKUP],
 };
 
 test("aucune couleur d'interface Tailwind codée en dur dans les fichiers copiés (hors exceptions métier)", () => {
@@ -360,6 +380,8 @@ const ALLOW_STATUS: AllowMap = {
   ],
   // Phase 3 (Task 8) : assistant « Nouveau projet ».
   "components/projects/new-project-dialog.tsx": [...WIZARD_ART, RACK_MOCKUP, RACK_MOCKUP_2110],
+  // Phase 3 (Task 9) : assistant « Nouveau contenant ».
+  "components/racks/new-rack-wizard.tsx": [...WIZARD_ART, RACK_MOCKUP, CONTAINER_MOCKUP],
 };
 
 test("erreurs, succès et alertes suivent --danger, --success et --warning", () => {
@@ -569,15 +591,15 @@ const ALLOW_HEX: AllowMap = {
   // Phase 3 (Task 8) : assistant « Nouveau projet » et étapes de contenant.
   "components/projects/new-project-dialog.tsx": WIZARD_ART,
   "components/racks/rack-wizard-steps.tsx": [
-    {
-      line: /^\s*(STANDARD|FLIGHT_CASE_CLASSIC|FLIGHT_CASE_SKB|PELICAN|CAP): "#[0-9a-f]{6}",$/,
-      reason: "couleurs des types de contenant (baie, flight case, SKB, Pelicase, mobilier) : couleur métier",
-    },
+    RACK_TYPE_COLORS,
     {
       line: /^\s*color: "#(3b82f6|06b6d4)",$/,
       reason: "teinte de l'icône des cartes « Rackable » / « Non rackable » : " + DOUBT,
     },
   ],
+  // Phase 3 (Task 9) : `/templates`, onglet Contenants.
+  "app/(app)/racks/racks-client.tsx": [RACK_TYPE_COLORS],
+  "components/racks/new-rack-wizard.tsx": WIZARD_ART,
 };
 
 test("aucune couleur hexadécimale ou rgb() d'interface dans les fichiers copiés (hors photo et métier)", () => {
