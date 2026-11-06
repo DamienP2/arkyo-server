@@ -183,7 +183,9 @@ fn server_action(start: bool, refresh: EventLoopProxy<UserEvent>) {
         let action = if start { "start" } else { "stop" };
         if let Err(e) = service_as_admin(action) {
             let what = if start { "démarrer" } else { "arrêter" };
-            alert(&format!("Impossible de {what} le service Strata Arkyo.\n\n{e}"));
+            alert(&format!(
+                "Impossible de {what} le service Strata Arkyo.\n\n{e}"
+            ));
         }
         let _ = refresh.send_event(UserEvent::Status(is_running()));
     });
