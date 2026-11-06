@@ -46,3 +46,7 @@ Ce fichier liste ce que la phase 3 (tableau de bord, projets et assistant, modè
   - Le filtre des erreurs de navigation (`onCaughtError`, `onRouterError`) reconnaît `notFound()` à sa forme (réponse 404), comme toute 404 levée au rendu.
   - `theme-sweep.test.ts` : exemptions `RACK_MOCKUP` / `CONTAINER_MOCKUP` plus larges que nécessaire.
   - Délais de test : 20 s par test et 5 s pour `waitFor` / `findBy*` (`vitest.config.ts`, `src/tests/setup.ts`) ; les `{ timeout: 5000 }` locaux sont désormais redondants.
+  - Sous charge (deux suites lancées en même temps), 2 ou 3 tests échouent : le premier chargement paresseux de `/dashboard` dépasse 5 s. Lancée seule (et en CI), la suite est verte. Durcissement possible : précharger ces pages dans un `beforeAll`.
+  - Sur une régie vide, l'indication « Glissez un rack… » reste affichée aux utilisateurs en lecture seule.
+  - Le test qui interdit `.begin()` ne voit pas un `BEGIN` écrit à la main en SQL.
+  - Commentaire périmé dans `http/users.rs` (vers la ligne 260).
