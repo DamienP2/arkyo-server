@@ -38,13 +38,11 @@ Ce fichier liste ce que la phase 3 (tableau de bord, projets et assistant, modè
   - `GET /api/panels` lit panels puis slots sans transaction de lecture.
   - Petites duplications dans `racks.rs` / `rigs.rs` (`with_defaults`, construction des `INSERT`).
   - `projects/enrich.rs` dépend de la couche HTTP (`http::projects` en `pub(crate)`).
-  - L'en-tête de `0003_projets.sql` parle de CASCADE pour les relations obligatoires (formulation).
-- **Tests manquants.** Chemin « Référence introuvable. » (régie avec `projectId` inconnu), cascade du DELETE de rack, SET NULL de `RackSlot.panelId` à la suppression d'un panel, `rearCableDepthMm: null` sur PATCH panel, échec partiel de l'assistant. `racks_rigs.rs:474` (`updatedAt` différent) peut être instable.
+  - L'en-tête de `0003_projets.sql` parle de CASCADE pour les relations obligatoires (formulation). Ne jamais corriger le fichier : `sqlx::migrate!` vérifie la somme de contrôle des migrations appliquées, commentaires compris.
+- **Tests manquants.** Chemin « Référence introuvable. » (régie avec `projectId` inconnu), cascade du DELETE de rack, SET NULL de `RackSlot.panelId` à la suppression d'un panel, `rearCableDepthMm: null` sur PATCH panel, échec partiel de l'assistant.
 - **Front.**
-  - Détail de régie : retrait et glisser-déposer affichés aux utilisateurs `design:read`, alors que le serveur demande `design:write`.
   - Le chargeur de `rigs/[id]` lit le catalogue d'équipements sans s'en servir.
   - L'éditeur de panel ne charge que les connecteurs actifs : un slot dont le connecteur est désactivé perd sa couleur de famille.
-  - react-router journalise encore chaque redirection en console ; le filtre `onCaughtError` couvre aussi `notFound()`.
-  - `/templates` affiche le vrai taux d'occupation des panels (arkyo affichait 0/N) sans commentaire `// arkyo-server:`.
+  - Le filtre des erreurs de navigation (`onCaughtError`, `onRouterError`) reconnaît `notFound()` à sa forme (réponse 404), comme toute 404 levée au rendu.
   - `theme-sweep.test.ts` : exemptions `RACK_MOCKUP` / `CONTAINER_MOCKUP` plus larges que nécessaire.
-  - Délais de test portés à 15-20 s (`panel-editor.test.tsx`, `router.test.tsx`).
+  - Délais de test : 20 s par test et 5 s pour `waitFor` / `findBy*` (`vitest.config.ts`, `src/tests/setup.ts`) ; les `{ timeout: 5000 }` locaux sont désormais redondants.
