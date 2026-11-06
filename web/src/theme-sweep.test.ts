@@ -342,6 +342,8 @@ const COPIED_FILES = [
   "components/editor-shell/canvas-context-menu.tsx",
   "components/synoptique/components/rack-editor-confirm-dialog.tsx",
   "app/(fullscreen)/project/[id]/rack/_components/rack-placement-canvas.tsx",
+  // Phase 4b (Task 6) : vue « par emplacement » de l'onglet Rack.
+  "app/(fullscreen)/project/[id]/rack/_components/location-placement-canvas.tsx",
 ];
 
 /** Fichiers posés sur la topbar ou le rail : ils suivent le thème (variante « Clair A »). */

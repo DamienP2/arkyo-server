@@ -558,7 +558,7 @@ function BomRow({
                 void setQuantity(item.quantity + 1);
               }}
               onPointerDown={(e) => e.stopPropagation()}
-              disabled={busy}
+              disabled={busy || item.quantity >= 999} // arkyo-server: plafond de quantity (1..999), comme le serveur
               title="Augmenter"
               className="inline-flex h-5 w-5 items-center justify-center rounded text-[var(--muted-foreground)] transition-colors hover:bg-[var(--secondary)] hover:text-[var(--foreground)] disabled:opacity-50"
             >

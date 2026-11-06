@@ -369,6 +369,57 @@ describe("canvas de placement du rack", () => {
     expect(sentBody(fetchSpy, "POST", "/api/racks/r1/slots")).toMatchObject({ startU: 41, heightU: 2 });
   });
 
+  test("location_scope_shows_all_racks_of_location", async () => {
+    // Vue « par emplacement » (arkyo:…/rack/_components/location-placement-canvas.tsx) :
+    // les deux baies de la Régie côte à côte, chacune dans un vrai
+    // `RackPlacementCanvas` embarqué, avec UNE seule vue (celle du bloc VUES).
+    const r2 = {
+      ...canvasData([]),
+      rack: { ...canvasData([]).rack, id: "r2", name: "Baie 2", totalU: 12, rearInteriorGapMm: 80 },
+    };
+    const editor = {
+      ...EDITOR,
+      inventaire: {
+        ...EDITOR.inventaire,
+        racks: [
+          ...EDITOR.inventaire.racks,
+          { ...EDITOR.inventaire.racks[0], id: "r2", name: "Baie 2", totalU: 12, bom: [] },
+        ],
+      },
+    };
+    await openRack([SLOT, GHOST], {
+      "GET /api/tenant/projects/p1/editor": { body: editor },
+      "GET /api/tenant/projects/p1/racks/r2/canvas-data": { body: r2 },
+      "GET /api/tenant/projects/p1/racks/r2/inventory": { body: { items: [] } },
+    });
+
+    fireEvent.click(screen.getByTitle("Par emplacement"));
+    const columns = () => Array.from(document.querySelectorAll<HTMLElement>("[data-rack-column]"));
+    await waitFor(() => expect(columns().map((c) => c.dataset.rackId)).toEqual(["r1", "r2"]));
+    const views = () => columns().map((c) => Array.from(c.querySelectorAll("[data-view-id]")).map((v) => v.getAttribute("data-view-id")));
+
+    // Vue par défaut du mode emplacement : la face avant, seule, sur chaque colonne.
+    await waitFor(() => expect(views()).toEqual([["FRONT"], ["FRONT"]]));
+    // Entête de colonne = nom du contenant (au lieu du nom de la vue).
+    const [c1, c2] = columns();
+    expect(within(c1).getByText("Baie 1")).toBeInTheDocument();
+    expect(within(c2).getByText("Baie 2")).toBeInTheDocument();
+    expect(screen.queryByText("Face avant")).toBeNull();
+    // Le slot posé est dans la colonne de sa baie ; le fantôme n'est pas dessiné.
+    expect(c1.contains(slotNode("s1"))).toBe(true);
+    expect(slotNode("g1")).toBeNull();
+
+    // Changement de vue : appliqué à toutes les colonnes.
+    fireEvent.click(screen.getByTitle("Arrière"));
+    await waitFor(() => expect(views()).toEqual([["REAR"], ["REAR"]]));
+
+    // « Intérieur » (proposé car Baie 2 a une face arrière intérieure) :
+    // Baie 1, sans face intérieure, garde sa colonne en face arrière.
+    fireEvent.click(screen.getByTitle("Intérieur"));
+    await waitFor(() => expect(views()).toEqual([["REAR"], ["REAR_INTERIOR"]]));
+    expect(consoleError).not.toHaveBeenCalled();
+  });
+
   test("ghost_slot_drag_to_unit", async () => {
     // Le serveur réclame le fantôme g1 (même id) au lieu de créer un slot.
     const claimed = { ...GHOST, startU: 20, heightU: 2, view: "FRONT", column: 0 };

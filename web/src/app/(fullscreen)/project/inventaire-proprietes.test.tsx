@@ -227,6 +227,41 @@ describe("éditeur projet : inventaire 3/3", () => {
     expect(within(card("r1")).getByText("BAIE A")).toBeInTheDocument();
   });
 
+  test("plus_button_capped_at_999", async () => {
+    // arkyo-server: plafond de quantité (décision 5 de la 4b) : le serveur
+    // refuse `quantity` > 999 (`inventory_item.rs`) ; le « + » de la ligne
+    // d'inventaire de la carte du contenant s'arrête à 999.
+    let qty = 998;
+    const { fetchSpy } = await open(qty, {
+      "PATCH /api/tenant/projects/p1/racks/r1/inventory/i1": (init) => {
+        qty = JSON.parse(String(init?.body)).quantity;
+        return { body: { item: grille(qty) } };
+      },
+      "GET /api/tenant/projects/p1/racks/r1/inventory": () => ({ body: { items: [grille(qty)] } }),
+    });
+    const patches = () =>
+      fetchSpy.mock.calls.filter(
+        ([u, init]) =>
+          String(u) === "/api/tenant/projects/p1/racks/r1/inventory/i1" && init?.method === "PATCH",
+      ).length;
+
+    // 998 → 999 : encore permis.
+    const plus = () => within(bomRow("r1", "Grille vidéo")).getByTitle("Augmenter");
+    expect(plus()).toBeEnabled();
+    fireEvent.click(plus());
+    await waitFor(() =>
+      expect(sentBody(fetchSpy, "PATCH", "/api/tenant/projects/p1/racks/r1/inventory/i1")).toEqual({ quantity: 999 }),
+    );
+    await waitFor(() => expect(within(bomRow("r1", "Grille vidéo")).getByText("999")).toBeInTheDocument());
+
+    // À 999 : « + » désactivé, aucun PATCH à 1000 ; « − » reste disponible.
+    await waitFor(() => expect(plus()).toBeDisabled());
+    fireEvent.click(plus());
+    await new Promise((r) => setTimeout(r, 50));
+    expect(patches()).toBe(1);
+    expect(within(bomRow("r1", "Grille vidéo")).getByTitle("Diminuer")).toBeEnabled();
+  });
+
   test("transfer_and_delete_item", async () => {
     // Où se trouve la grille : r1, puis r2 après le transfert, puis nulle part.
     let where: "r1" | "r2" | null = "r1";
