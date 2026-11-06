@@ -19,7 +19,17 @@ use std::sync::{Arc, Mutex};
 use serde_json::{json, Map, Value};
 use tokio::sync::{broadcast, mpsc};
 
-const CAPACITY: usize = 256;
+/// Events an `/api/events` subscriber may fall behind before it is dropped
+/// (its stream ends and the browser's `EventSource` reconnects).
+///
+/// arkyo-server: files bornées ; arkyo empilait sans limite dans le
+/// `ReadableStream` de chaque abonné, un client lent faisait grossir la
+/// mémoire du serveur.
+pub const APP_QUEUE: usize = 4096;
+
+/// Events queued for each per-rack subscriber; a full queue drops the
+/// subscriber, like [`APP_QUEUE`].
+pub const RACK_QUEUE: usize = 4096;
 
 /// Optional metadata of an update (arkyo:lib/app-events.ts:47-60), serialized
 /// in camelCase. `None` fields are omitted; so are empty ids, like arkyo's
@@ -36,7 +46,7 @@ pub struct EventMeta {
 
 /// Listeners of each rack (arkyo:lib/event-bus.ts, `rackListeners`:
 /// `Map<rackId, Set<Listener>>`).
-type RackListeners = HashMap<String, HashMap<u64, mpsc::UnboundedSender<Arc<str>>>>;
+type RackListeners = HashMap<String, HashMap<u64, mpsc::Sender<Arc<str>>>>;
 
 #[derive(Default)]
 struct RackBus {
@@ -66,7 +76,7 @@ impl Default for EventBus {
 impl EventBus {
     pub fn new() -> Self {
         Self {
-            tx: broadcast::channel(CAPACITY).0,
+            tx: broadcast::channel(APP_QUEUE).0,
             racks: Arc::default(),
         }
     }
@@ -120,16 +130,19 @@ impl EventBus {
         };
         let data: Arc<str> = payload.to_string().into();
         // A closed stream unsubscribes (arkyo: `enqueue` failure → `unsub()`).
-        subs.retain(|_, tx| tx.send(data.clone()).is_ok());
+        // arkyo-server: une file pleine aussi : l'émetteur retiré, le flux
+        // se termine après les évènements en file et le client se reconnecte.
+        subs.retain(|_, tx| tx.try_send(data.clone()).is_ok());
         if subs.is_empty() {
             listeners.remove(rack_id);
         }
     }
 
     /// Subscribes to the events of `rack_id` (arkyo: `subscribeRack`). Every
-    /// event is delivered, in order; dropping the subscription unsubscribes.
+    /// event is delivered, in order, until [`RACK_QUEUE`] are pending (the
+    /// subscription then ends); dropping the subscription unsubscribes.
     pub fn subscribe_rack(&self, rack_id: &str) -> RackSubscription {
-        let (tx, rx) = mpsc::unbounded_channel();
+        let (tx, rx) = mpsc::channel(RACK_QUEUE);
         let id = self.racks.next_id.fetch_add(1, Ordering::Relaxed);
         self.racks
             .lock()
@@ -151,12 +164,13 @@ pub struct RackSubscription {
     bus: Arc<RackBus>,
     rack_id: String,
     id: u64,
-    rx: mpsc::UnboundedReceiver<Arc<str>>,
+    rx: mpsc::Receiver<Arc<str>>,
 }
 
 impl RackSubscription {
     /// The next payload. Pending forever when nothing is published: the
-    /// stream ends on shutdown or when the client leaves.
+    /// stream ends on shutdown, when the client leaves, or (`None`) after a
+    /// full queue dropped this subscriber.
     pub async fn recv(&mut self) -> Option<Arc<str>> {
         self.rx.recv().await
     }
@@ -171,5 +185,47 @@ impl Drop for RackSubscription {
                 listeners.remove(&self.rack_id);
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::time::Duration;
+
+    /// A subscriber that does not read is dropped once its queue is full:
+    /// it gets what was queued, then the end of the stream (the client
+    /// reconnects), and the rack has no listener left.
+    #[tokio::test]
+    async fn full_rack_queue_drops_the_subscriber() {
+        let bus = EventBus::new();
+        let mut slow = bus.subscribe_rack("r");
+        for i in 0..=RACK_QUEUE {
+            bus.publish_rack("r", json!({ "i": i }));
+        }
+        assert!(!bus.racks.lock().contains_key("r"));
+        for i in 0..RACK_QUEUE {
+            let got = slow.recv().await.expect("payload en file");
+            assert_eq!(&*got, json!({ "i": i }).to_string());
+        }
+        let end = tokio::time::timeout(Duration::from_secs(1), slow.recv()).await;
+        assert_eq!(end.expect("fin du flux attendue"), None);
+
+        // A new subscriber of the same rack is served normally.
+        let mut fresh = bus.subscribe_rack("r");
+        bus.publish_rack("r", json!({ "type": "rack_cleared" }));
+        assert_eq!(&*fresh.recv().await.unwrap(), r#"{"type":"rack_cleared"}"#);
+    }
+
+    /// The last unsubscription removes the rack's entry.
+    #[tokio::test]
+    async fn last_unsubscription_removes_the_rack_entry() {
+        let bus = EventBus::new();
+        let a = bus.subscribe_rack("r");
+        let b = bus.subscribe_rack("r");
+        drop(a);
+        assert_eq!(bus.racks.lock().get("r").map(HashMap::len), Some(1));
+        drop(b);
+        assert!(bus.racks.lock().is_empty());
     }
 }

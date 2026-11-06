@@ -113,6 +113,32 @@ async fn publish_reaches_sse_subscriber() {
     );
 }
 
+/// A client that falls `APP_QUEUE` events behind is dropped: its stream
+/// ends and the browser's `EventSource` reconnects.
+#[tokio::test]
+async fn lagging_subscriber_is_dropped() {
+    let e = env().await;
+    add_user(&e.pool, "o@b.fr", "owner", false).await;
+    let tok = login(&e.app, "o@b.fr").await;
+    let res = e
+        .app
+        .clone()
+        .oneshot(events_request(Some(&tok)))
+        .await
+        .unwrap();
+    let mut body = res.into_body();
+    let first = body.frame().await.unwrap().unwrap().into_data().unwrap();
+    assert_eq!(&first[..], b"data: {\"type\":\"connected\"}\n\n");
+
+    for i in 0..=arkyo_server::events::APP_QUEUE {
+        e.events.publish("x", "updated", Some(&i.to_string()));
+    }
+    let end = tokio::time::timeout(std::time::Duration::from_secs(2), body.frame())
+        .await
+        .expect("fin du flux attendue");
+    assert!(end.is_none(), "{end:?}");
+}
+
 #[tokio::test]
 async fn publish_without_subscriber_is_harmless() {
     let e = env().await;

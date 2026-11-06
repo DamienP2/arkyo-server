@@ -1,7 +1,8 @@
 //! `GET /api/events`: the app-wide SSE stream (arkyo:app/api/events/route.ts).
 //!
 //! Sends `connected` at once, then the events of the [`EventBus`](crate::events::EventBus)
-//! as they are published, and a `ping` every 25 s.
+//! as they are published, and a `ping` every 25 s. A client that falls
+//! [`APP_QUEUE`](crate::events::APP_QUEUE) events behind is dropped.
 //!
 //! Streams end on [`close_all`] (server shutdown): graceful shutdown waits for
 //! open connections, and an endless stream would hold it forever. The per-rack
@@ -42,17 +43,18 @@ pub async fn stream(State(st): State<AppState>, _: CurrentUser) -> Response {
     let connected = stream::once(async { Ok::<_, Infallible>(Bytes::from_static(CONNECTED)) });
     // Events and pings share one stream: a ping is due 25 s after the last frame.
     let live = stream::unfold(rx, |mut rx| async move {
-        loop {
-            match tokio::time::timeout(PING_EVERY, rx.recv()).await {
-                Ok(Ok(data)) => {
-                    let frame = format!("data: {data}\n\n");
-                    return Some((Ok::<_, Infallible>(Bytes::from(frame)), rx));
-                }
-                // A slow client missed some events: keep going with the newest.
-                Ok(Err(broadcast::error::RecvError::Lagged(_))) => continue,
-                Ok(Err(broadcast::error::RecvError::Closed)) => return None,
-                Err(_) => return Some((Ok(Bytes::from_static(PING)), rx)),
+        match tokio::time::timeout(PING_EVERY, rx.recv()).await {
+            Ok(Ok(data)) => {
+                let frame = format!("data: {data}\n\n");
+                Some((Ok::<_, Infallible>(Bytes::from(frame)), rx))
             }
+            // arkyo-server: un client en retard de `APP_QUEUE` évènements est
+            // déconnecté (file bornée) ; son `EventSource` se reconnecte.
+            // arkyo n'avait pas de limite.
+            Ok(Err(
+                broadcast::error::RecvError::Lagged(_) | broadcast::error::RecvError::Closed,
+            )) => None,
+            Err(_) => Some((Ok(Bytes::from_static(PING)), rx)),
         }
     });
     (
