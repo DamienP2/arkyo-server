@@ -46,8 +46,11 @@ jobs:
           path: web/dist
       - uses: dtolnay/rust-toolchain@stable
         with:
-          components: clippy
+          components: clippy, rustfmt
       - uses: Swatinem/rust-cache@v2
+      # Formatting does not depend on the OS: checked once.
+      - if: matrix.os == 'ubuntu-latest'
+        run: cargo fmt --all --check
       # windows-latest compiles the Windows-only code (service, tray).
       - run: cargo clippy --workspace --all-targets -- -D warnings
       - run: cargo test --workspace
