@@ -1,6 +1,7 @@
 //! Projects: arkyo:app/api/tenant/projects/** ([`tenant`], [`locations`],
 //! [`locations_item`], [`racks`], [`racks_item`], [`racks_template`],
-//! [`inventory`], [`inventory_item`]) and arkyo:app/api/projects/route.ts ([`legacy`]),
+//! [`inventory`], [`inventory_item`], [`canvas_data`]) and
+//! arkyo:app/api/projects/route.ts ([`legacy`]),
 //! plus [`editor`], the data of arkyo's Server Component
 //! `app/(fullscreen)/project/[id]/page.tsx`.
 //!
@@ -11,6 +12,7 @@
 
 #![allow(clippy::result_large_err)]
 
+mod canvas_data;
 mod editor;
 pub(crate) mod inventory;
 mod inventory_item;
@@ -72,6 +74,10 @@ pub fn router() -> Router<AppState> {
         .route(
             "/tenant/projects/{id}/racks/{rack_id}",
             patch(racks_item::update).delete(racks_item::remove),
+        )
+        .route(
+            "/tenant/projects/{id}/racks/{rack_id}/canvas-data",
+            get(canvas_data::get),
         )
         .route(
             "/tenant/projects/{id}/racks/{rack_id}/inventory",

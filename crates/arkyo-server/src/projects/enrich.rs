@@ -30,7 +30,7 @@ pub const RACK_COLS: &str = r#""id", "name", "totalU", "depthMm", "maxWeightKg",
     "locationId", "isVirtual", "createdAt", "updatedAt""#;
 
 /// The scalars of the Prisma `RackSlot` model, in the schema's order.
-const SLOT_COLS: &str = r#""id", "rackId", "catalogEquipmentId", "snapshotId", "panelId",
+pub const SLOT_COLS: &str = r#""id", "rackId", "catalogEquipmentId", "snapshotId", "panelId",
     "parentSlotId", "inventoryItemId", "view", "startU", "heightU", "widthFraction", "column",
     "label", "notes", "patchNotes", "panelLabels", "synopticX", "synopticY", "createdAt",
     "updatedAt""#;
