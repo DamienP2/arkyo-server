@@ -9,6 +9,7 @@ mod events;
 mod me;
 mod members;
 mod notifications;
+mod panels;
 pub(crate) mod parametres;
 mod presence;
 mod profile;
@@ -222,6 +223,7 @@ pub fn router(state: AppState) -> Router {
         .merge(projects::router())
         .merge(racks::router())
         .merge(rigs::router())
+        .merge(panels::router())
         .fallback(api_not_found)
         .layer(middleware::from_fn_with_state(state.clone(), session_layer));
     let web = crate::web::routes(&state.data_dir);
