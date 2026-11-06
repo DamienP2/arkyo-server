@@ -1549,8 +1549,9 @@ function AddQuantityDialog({
                   type="number"
                   inputMode="numeric"
                   min={1}
+                  max={999} // arkyo-server: plafond de quantity (1..999), comme le serveur
                   value={qty}
-                  onChange={(e) => setQty(Math.max(1, Number(e.target.value) || 1))}
+                  onChange={(e) => setQty(Math.min(999, Math.max(1, Number(e.target.value) || 1)))} // arkyo-server: plafond de quantity (1..999), comme le serveur
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       e.preventDefault();
@@ -1568,7 +1569,8 @@ function AddQuantityDialog({
                 />
                 <button
                   type="button"
-                  onClick={() => setQty((q) => q + 1)}
+                  onClick={() => setQty((q) => Math.min(999, q + 1))} // arkyo-server: plafond de quantity (1..999), comme le serveur
+                  disabled={qty >= 999} // arkyo-server: plafond de quantity (1..999), comme le serveur
                   className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-[var(--border)] text-[var(--muted-foreground)] transition-colors hover:border-[var(--accent)]/40 hover:bg-[var(--secondary)]/40 hover:text-[var(--foreground)]"
                   aria-label="Augmenter"
                 >

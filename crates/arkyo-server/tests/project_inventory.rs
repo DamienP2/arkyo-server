@@ -516,6 +516,74 @@ async fn add_component_into_host() {
 
 // ── dédoublonnage ───────────────────────────────────────────────────────────
 
+/// arkyo-server: `quantity` plafonnée à 999 (une transaction SQLite verrouille
+/// toute la base pendant la création des slots fantômes).
+#[tokio::test]
+async fn quantity_is_capped_at_999() {
+    let c = ctx().await;
+    let too_big = json!({"error": "Validation invalide", "issues": [
+        {"path": ["quantity"], "message": "Too big: expected number to be <=999"}
+    ]});
+    let audit_before = int(&c.e.pool, r#"SELECT COUNT(*) FROM "AuditLog""#).await;
+
+    // Creation over the cap: 400, nothing written.
+    for body in [
+        json!({"catalogEquipmentId": "eq1", "quantity": 1000}),
+        json!({"catalogAdapterId": "ad1", "quantity": 9007199254740991_i64}),
+    ] {
+        let r = c.post(body.clone()).await;
+        assert_eq!(
+            (r.status, r.body.clone()),
+            (StatusCode::BAD_REQUEST, too_big.clone()),
+            "{body}"
+        );
+    }
+    assert_eq!(
+        int(&c.e.pool, r#"SELECT COUNT(*) FROM "RackInventoryItem""#).await,
+        0
+    );
+    assert_eq!(
+        int(&c.e.pool, r#"SELECT COUNT(*) FROM "RackSlot""#).await,
+        0
+    );
+    assert_eq!(
+        int(&c.e.pool, r#"SELECT COUNT(*) FROM "AuditLog""#).await,
+        audit_before
+    );
+
+    // Merge: up to 999 is fine, beyond is a 400 and the row is unchanged.
+    let ad = c
+        .post_ok(
+            json!({"catalogAdapterId": "ad1", "quantity": 998}),
+            StatusCode::CREATED,
+        )
+        .await;
+    let r = c
+        .post(json!({"catalogAdapterId": "ad1", "quantity": 2}))
+        .await;
+    assert_eq!(
+        (r.status, r.body.clone()),
+        (StatusCode::BAD_REQUEST, too_big.clone())
+    );
+    let merged = c
+        .post_ok(json!({"catalogAdapterId": "ad1"}), StatusCode::OK)
+        .await;
+    assert_eq!(
+        (merged["id"].clone(), merged["quantity"].clone()),
+        (ad["id"].clone(), json!(999))
+    );
+    let r = c.post(json!({"catalogAdapterId": "ad1"})).await;
+    assert_eq!((r.status, r.body), (StatusCode::BAD_REQUEST, too_big));
+    assert_eq!(
+        int(
+            &c.e.pool,
+            r#"SELECT "quantity" FROM "RackInventoryItem" WHERE "catalogAdapterId" = 'ad1'"#
+        )
+        .await,
+        999
+    );
+}
+
 #[tokio::test]
 async fn duplicate_add_merges_quantity_like_arkyo() {
     let c = ctx().await;
@@ -839,6 +907,13 @@ async fn consultation_cannot_write() {
             Some(json!({"catalogEquipmentId": "eq1"})),
         )
         .await;
-        assert_eq!(r.status, StatusCode::UNAUTHORIZED, "{method}");
+        assert_eq!(
+            (r.status, r.body),
+            (
+                StatusCode::UNAUTHORIZED,
+                json!({"error": "Non authentifié"})
+            ),
+            "{method}"
+        );
     }
 }

@@ -460,6 +460,13 @@ async fn patch_and_delete_item_like_arkyo() {
             StatusCode::BAD_REQUEST,
             issues("quantity", "Too small: expected number to be >=1"),
         ),
+        // arkyo-server: plafond de quantité.
+        (
+            url.clone(),
+            Some(json!({"quantity": 1000})),
+            StatusCode::BAD_REQUEST,
+            issues("quantity", "Too big: expected number to be <=999"),
+        ),
         (
             url.clone(),
             Some(json!({"hostSlotIndex": 1})),

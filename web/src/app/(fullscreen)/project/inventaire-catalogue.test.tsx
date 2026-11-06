@@ -232,6 +232,14 @@ describe("éditeur projet : inventaire 2/3", () => {
     const dialog = await screen.findByRole("dialog");
     expect(within(dialog).getByText("Ajouter à l'inventaire")).toBeInTheDocument();
     expect(within(dialog).getByText("Baie 1")).toBeInTheDocument();
+    // arkyo-server: quantité plafonnée à 999, comme le serveur.
+    const qty = within(dialog).getByRole("spinbutton");
+    expect(qty).toHaveAttribute("max", "999");
+    fireEvent.change(qty, { target: { value: "5000" } });
+    expect(qty).toHaveValue(999);
+    expect(within(dialog).getByRole("button", { name: "Augmenter" })).toBeDisabled();
+    fireEvent.change(qty, { target: { value: "1" } });
+    expect(qty).toHaveValue(1);
     fireEvent.click(within(dialog).getByRole("button", { name: "Ajouter" }));
     await waitFor(() =>
       expect(sentBody(fetchSpy, "POST", "/api/tenant/projects/p1/racks/r1/inventory")).toEqual({

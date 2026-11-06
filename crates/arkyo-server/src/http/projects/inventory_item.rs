@@ -23,7 +23,8 @@
 //! - une transaction `BEGIN IMMEDIATE` par requête, audit compris ; le
 //!   `DELETE` d'arkyo n'en avait pas ;
 //! - un corps JSON illisible donne 400 au `PATCH` (arkyo : 500 implicite,
-//!   décision 5).
+//!   décision 5) ;
+//! - `quantity` plafonnée à 999 (voir `inventory.rs`).
 
 use arkyo_core::permissions::{Domain, Level};
 use axum::body::Bytes;
@@ -56,7 +57,11 @@ const ITEM_COLS: &str = r#""id", "rackId", "catalogEquipmentId", "panelId", "cat
 
 /// `patchBodySchema` (route.ts:17-25), before its `refine`.
 static PATCH: [Field; 2] = [
-    Field::new("quantity", Kind::IntMin(1)),
+    // arkyo-server: plafond (une transaction SQLite verrouille toute la base, Postgres ne verrouillait que les lignes)
+    Field::new(
+        "quantity",
+        Kind::IntRange(1, super::inventory::MAX_QUANTITY),
+    ),
     Field::new("hostSlotIndex", Kind::IntMin(0)),
 ];
 const REFINE_MSG: &str = "quantity ou hostSlotIndex requis";
@@ -308,8 +313,8 @@ async fn update_inner(
         .await
         .map_err(db_error)?;
     let item = raw_item(&mut tx, item_id).await?;
-    // Ghost slots of an equipment or a panel (route.ts:198-203). arkyo
-    // ignored a sync failure; here it rolls the request back.
+    // Ghost slots of an equipment or a panel (route.ts:198-203).
+    // arkyo-server: un échec de synchro annule la requête (500) ; arkyo l'ignorait.
     let has_slots = |k: &str| {
         item.get(k)
             .and_then(Value::as_str)

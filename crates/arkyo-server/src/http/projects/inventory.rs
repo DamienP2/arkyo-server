@@ -23,7 +23,12 @@
 //! - la référence est vérifiée avant toute écriture (`validate_inventory_ref`) :
 //!   arkyo créait la ligne puis répondait 500 « Référence catalogue
 //!   introuvable après création. », ici 404 avec ce message, rien n'est écrit ;
-//! - un corps JSON illisible donne 400 (arkyo : 500 implicite, décision 5).
+//! - un corps JSON illisible donne 400 (arkyo : 500 implicite, décision 5) ;
+//! - un échec de la synchronisation des slots fantômes donne 500 et annule
+//!   toute la requête (arkyo l'ignorait, la ligne restait écrite) ;
+//! - `quantity` plafonnée à 999, fusion comprise (arkyo : pas de maximum) :
+//!   une transaction SQLite verrouille toute la base pendant la création des
+//!   slots fantômes, Postgres ne verrouillait que les lignes.
 
 use arkyo_core::permissions::{Domain, Level};
 use axum::body::Bytes;
@@ -54,6 +59,22 @@ const ACCESSORY_TYPE_MSG: &str = r#"Invalid option: expected one of "plaque"|"et
 const ACCESSORY_VARIANT_MSG: &str =
     r#"Invalid option: expected one of "plein"|"pass-cable"|"aere""#;
 
+/// arkyo-server: plafond de `quantity` (arkyo : `int().min(1)` seul). Les
+/// slots fantômes sont créés un par un dans une transaction `BEGIN
+/// IMMEDIATE`, qui verrouille toute la base SQLite.
+pub(crate) const MAX_QUANTITY: i64 = 999;
+
+/// The Zod issue of a quantity over [`MAX_QUANTITY`] (`.max()`'s message).
+pub(crate) fn quantity_too_big() -> Response {
+    invalid(
+        StatusCode::BAD_REQUEST,
+        vec![super::issue(
+            "quantity",
+            &format!("Too big: expected number to be <={MAX_QUANTITY}"),
+        )],
+    )
+}
+
 /// `postBodySchema` (route.ts:26-48). `quantity` defaults to 1 and is not
 /// nullable.
 static BODY: [Field; 13] = [
@@ -74,7 +95,8 @@ static BODY: [Field; 13] = [
     )
     .nullable(),
     Field::new("accessoryDepthMm", Kind::IntPos).nullable(),
-    Field::new("quantity", Kind::IntMin(1)),
+    // arkyo-server: plafond (une transaction SQLite verrouille toute la base, Postgres ne verrouillait que les lignes)
+    Field::new("quantity", Kind::IntRange(1, MAX_QUANTITY)),
     Field::new("hostItemId", Kind::Str).nullable(),
     Field::new("hostSlotIndex", Kind::IntMin(0)).nullable(),
     Field::new("cloneComponentsFromItemId", Kind::Str).nullable(),
@@ -589,10 +611,15 @@ impl Ctx<'_> {
 
         let id = match &existing {
             Some((id, current)) => {
+                // arkyo-server: plafond (une transaction SQLite verrouille toute la base, Postgres ne verrouillait que les lignes)
+                let total = current
+                    .checked_add(quantity)
+                    .filter(|q| *q <= MAX_QUANTITY)
+                    .ok_or_else(quantity_too_big)?;
                 sqlx::query(
                     r#"UPDATE "RackInventoryItem" SET "quantity" = ?, "updatedAt" = ? WHERE "id" = ?"#,
                 )
-                .bind(current + quantity)
+                .bind(total)
                 .bind(now_iso())
                 .bind(id)
                 .execute(&mut *tx)
