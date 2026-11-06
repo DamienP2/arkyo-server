@@ -37,9 +37,9 @@ afterEach(() => {
 const HEADER = {
   id: "p1",
   name: "Finale Coupe de France",
-  status: "PREPARATION",
-  interventionType: "EVENEMENT",
-  rigType: "CAR_REGIE",
+  status: "EN_PREPARATION",
+  interventionType: "PRESTATION",
+  rigType: "CAR",
   clientName: "France TV",
   shootingDate: "2026-11-20T00:00:00.000Z",
   location: "Stade de France",
@@ -115,11 +115,14 @@ describe("/project/:id", () => {
     expect(editor.props!.tenantName).toBe("Régie A");
 
     // Coquille plein écran (`EditorShell` : overlay fixe, topbar globale de 44 px),
-    // sans la sidebar ni la topbar de l'application.
+    // sans la sidebar ni la topbar de l'application : la seule `aside` est le
+    // panneau droit de l'onglet Inventaire, dans la coquille.
     const shell = document.querySelector("div.fixed.z-50") as HTMLElement;
     expect(shell).not.toBeNull();
     expect((shell.firstElementChild as HTMLElement).style.height).toBe("44px");
-    expect(document.querySelector("aside")).toBeNull();
+    const asides = [...document.querySelectorAll("aside")];
+    expect(asides).toHaveLength(1);
+    expect(shell.contains(asides[0]!)).toBe(true);
     expect(document.querySelector("header")).toBeNull();
 
     // Une seule lecture de la route `editor`, par son chemin d'arkyo-server.

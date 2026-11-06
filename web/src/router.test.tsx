@@ -59,8 +59,9 @@ describe("routeur et coquille", () => {
   test("redirects_like_arkyo", async () => {
     // arkyo:app/(app)/{projects/[id],racks,rigs,panels}/page.tsx
     for (const [from, to, shown] of [
-      // Éditeur projet.
-      ["/projects/p1", "/project/p1?tab=fiche", "Projet 1"],
+      // Éditeur projet : `?tab=fiche` (onglet supprimé) est ensuite remappé
+      // sur l'Inventaire par l'éditeur, comme dans arkyo.
+      ["/projects/p1", "/project/p1?tab=inventaire", "Projet 1"],
       // `/templates` : onglet Contenants (`?tab=rigs` inconnu → Contenants, comme arkyo).
       ["/racks", "/templates?tab=racks", "Aucun contenant"],
       ["/rigs", "/templates?tab=rigs", "Aucun contenant"],
@@ -72,9 +73,37 @@ describe("routeur et coquille", () => {
         "GET /api/racks": { body: [] },
         "GET /api/panels": { body: [] },
         "GET /api/tenant/projects/p1/editor": {
+          // `ProjectEditorData` minimal : projet sans régie ni lieu.
           body: {
-            header: { id: "p1", name: "Projet 1" },
-            fiche: {},
+            header: {
+              id: "p1",
+              name: "Projet 1",
+              status: "EN_PREPARATION",
+              interventionType: "PRESTATION",
+              rigType: null,
+              clientName: null,
+              shootingDate: null,
+              location: null,
+              prestationType: null,
+            },
+            fiche: {
+              id: "p1",
+              name: "Projet 1",
+              status: "EN_PREPARATION",
+              interventionType: "PRESTATION",
+              rigType: null,
+              clientName: null,
+              shootingDate: null,
+              shootingEndDate: null,
+              planningStart: null,
+              planningEnd: null,
+              commissioningDate: null,
+              location: null,
+              description: null,
+              prestationType: null,
+              documents: [],
+              counts: { tasks: 0, messages: 0, documents: 0 },
+            },
             inventaire: { rigConfigId: null, racks: [], locations: [] },
             cartographie: { maps: [] },
           },

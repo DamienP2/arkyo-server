@@ -28,6 +28,19 @@ export function ComingSoon({ back = false }: { back?: boolean }) {
   );
 }
 
+/**
+ * Onglet ou panneau pas encore porté dans une coquille d'éditeur : `<ComingSoon />`
+ * centré dans sa zone, comme les états vides des canvas d'arkyo. Utilisé par
+ * les bouchons aux chemins d'arkyo (phase 4, décision 1).
+ */
+export function ComingSoonCanvas() {
+  return (
+    <div className="flex h-full items-center justify-center px-8">
+      <ComingSoon />
+    </div>
+  );
+}
+
 function BackLink() {
   const navigate = useNavigate();
   // Le routeur navigateur numérote ses entrées (`history.state.idx`) : 0 = rien

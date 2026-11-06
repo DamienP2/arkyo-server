@@ -249,6 +249,21 @@ const COPIED_FILES = [
   "lib/export/synoptic-capture.ts",
   "lib/pdf/load-jspdf.ts",
   "lib/pdf/synoptic-vector.ts",
+  // Phase 4a (Task 9) : coquille de l'éditeur projet. Les bouchons des phases
+  // 4a (inventaire), 4b (Rack), 4c (Synoptique), 5 et 6 ne sont pas des copies
+  // (décision 1).
+  "app/(fullscreen)/project/[id]/_components/project-editor.tsx",
+  "app/(fullscreen)/project/[id]/_components/pending-export-store.ts",
+  "app/(fullscreen)/project/[id]/_editor/project-characteristics-dialog.tsx",
+  "app/(fullscreen)/project/[id]/_editor/project-contextual-topbar.tsx",
+  "app/(fullscreen)/project/[id]/_editor/project-global-topbar.tsx",
+  "app/(fullscreen)/project/[id]/_editor/project-header-block.tsx",
+  "app/(fullscreen)/project/[id]/_editor/project-info-panel.tsx",
+  "app/(fullscreen)/project/[id]/_editor/project-tabs-pill.tsx",
+  "app/(fullscreen)/project/[id]/_editor/tab-bar.tsx",
+  "app/(fullscreen)/project/[id]/_editor/ui.tsx",
+  "app/(fullscreen)/project/[id]/fiche/fiche-client.tsx",
+  "app/(fullscreen)/project/[id]/inventaire/_lib/bom-table.ts",
 ];
 
 /** Fichiers posés sur la topbar ou le rail : ils suivent le thème (variante « Clair A »). */
@@ -258,6 +273,10 @@ const CHROME_FILES = [
   "components/notifications-panel.tsx",
   "components/locale-selector.tsx",
   "components/presence/presence-avatars.tsx",
+  // Phase 4a (Task 9) : topbar globale de l'éditeur projet et ses onglets.
+  "app/(fullscreen)/project/[id]/_editor/project-global-topbar.tsx",
+  "app/(fullscreen)/project/[id]/_editor/project-tabs-pill.tsx",
+  "app/(fullscreen)/project/[id]/_editor/project-contextual-topbar.tsx",
 ];
 
 type Allow = { line: RegExp; reason: string };
@@ -378,6 +397,16 @@ const PANEL_SIGNAL_COLORS: Allow[] = [
   },
 ];
 
+/** Phase 4a (Task 9) : statuts de projet de l'éditeur (badge et menu de la topbar, en-tête). */
+const PROJECT_STATUS_BADGE: Allow = {
+  line: /^\s*(EN_PREPARATION|PRET|EN_COURS|TERMINE|ANNULE): \{ label: "[^"]+", cls: "text-(amber|emerald|indigo|slate|red)-[56]00 bg-\2-500\/10" \},$/,
+  reason: "badges des statuts de projet (`STATUS_BADGE` de l'en-tête, non rendu par l'éditeur) : statut métier",
+};
+const PROJECT_STATUS_HEX: Allow = {
+  line: /^\s*(EN_PREPARATION|PRET|EN_COURS|TERMINE|ANNULE): (\{ label: "[^"]+", color: )?"#[0-9a-f]{6}"( \})?,$/,
+  reason: "couleurs des statuts de projet (badge plein et pastilles du menu de statut de la topbar, en-tête) : statut métier",
+};
+
 // ── Neutres et bleus Tailwind (couleurs d'interface d'arkyo) ────────────────
 
 const INTERFACE = /\b(bg|text|border|ring|outline|divide|from|to)-(zinc|gray|slate|neutral|stone|blue|indigo|sky)-\d{2,3}\b/;
@@ -400,6 +429,8 @@ const ALLOW: AllowMap = {
   "components/racks/new-rack-wizard.tsx": [RACK_MOCKUP, CONTAINER_MOCKUP],
   // Phase 3 (Task 10) : assistant « Nouveau panel ».
   "components/panels/new-panel-wizard.tsx": [PANEL_MOCKUP],
+  // Phase 4a (Task 9) : coquille de l'éditeur projet.
+  "app/(fullscreen)/project/[id]/_editor/project-header-block.tsx": [PROJECT_STATUS_BADGE],
 };
 
 test("aucune couleur d'interface Tailwind codée en dur dans les fichiers copiés (hors exceptions métier)", () => {
@@ -439,6 +470,8 @@ const ALLOW_STATUS: AllowMap = {
   "components/racks/new-rack-wizard.tsx": [...WIZARD_ART, RACK_MOCKUP, CONTAINER_MOCKUP],
   // Phase 3 (Task 10) : assistant « Nouveau panel ».
   "components/panels/new-panel-wizard.tsx": [...WIZARD_ART, PANEL_MOCKUP],
+  // Phase 4a (Task 9) : coquille de l'éditeur projet.
+  "app/(fullscreen)/project/[id]/_editor/project-header-block.tsx": [PROJECT_STATUS_BADGE],
 };
 
 test("erreurs, succès et alertes suivent --danger, --success et --warning", () => {
@@ -721,6 +754,9 @@ const ALLOW_HEX: AllowMap = {
       reason: "palette proposée pour les groupes d'étiquettes des ports d'un panel (`LABEL_COLORS`, choisie par l'utilisateur) : couleur métier",
     },
   ],
+  // Phase 4a (Task 9) : coquille de l'éditeur projet.
+  "app/(fullscreen)/project/[id]/_editor/project-global-topbar.tsx": [PROJECT_STATUS_HEX],
+  "app/(fullscreen)/project/[id]/_editor/project-header-block.tsx": [PROJECT_STATUS_HEX],
 };
 
 test("aucune couleur hexadécimale ou rgb() d'interface dans les fichiers copiés (hors photo et métier)", () => {
@@ -743,6 +779,12 @@ const ALLOW_CHROME: AllowMap = {
     {
       line: /rounded-full border-2 border-\[var\(--surface\)\] text-\[9px\] font-semibold text-white"/,
       reason: "initiales blanches sur la couleur du membre (member.color) : palette d'avatars métier",
+    },
+  ],
+  "app/(fullscreen)/project/[id]/_editor/project-global-topbar.tsx": [
+    {
+      line: /className="inline-flex shrink-0 items-center gap-1 rounded px-2 py-0\.5 text-\[10px\] font-bold tracking-wider uppercase text-white /,
+      reason: "badge de statut : texte blanc sur la couleur du statut (STATUS_META), statut métier",
     },
   ],
 };
