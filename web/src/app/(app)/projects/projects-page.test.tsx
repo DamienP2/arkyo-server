@@ -119,12 +119,14 @@ describe("/projects", () => {
     // Compteur : 3 projets en prestation.
     expect(screen.getByText("3")).toBeInTheDocument();
 
-    // « Nouveau projet » en pointillés ; l'assistant (Task 8) est réservé.
+    // « Nouveau projet » en pointillés ; il ouvre l'assistant sur l'onglet courant
+    // (parcours complet : components/projects/new-project-dialog.test.tsx).
     const add = screen.getByRole("button", { name: /Nouveau projet/ });
     expect(add.className).toContain("border-dashed");
     fireEvent.click(add);
     const dialog = await screen.findByRole("dialog");
-    expect(within(dialog).getByText("Bientôt disponible")).toBeInTheDocument();
+    expect(within(dialog).getByText("Nouveau projet · Prestation")).toBeInTheDocument();
+    expect(within(dialog).getByRole("button", { name: /Commencer/ })).toBeInTheDocument();
     unmount();
 
     // ?tab=integration : seuls les projets d'intégration, date de mise en service.

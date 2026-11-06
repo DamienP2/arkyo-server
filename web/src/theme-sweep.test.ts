@@ -208,6 +208,9 @@ const COPIED_FILES = [
   // Phase 3 (Task 7) : liste des projets.
   "app/(app)/projects/page.tsx",
   "app/(app)/projects/projects-client.tsx",
+  // Phase 3 (Task 8) : assistant « Nouveau projet ».
+  "components/projects/new-project-dialog.tsx",
+  "components/racks/rack-wizard-steps.tsx",
 ];
 
 /** Fichiers posés sur la topbar ou le rail : ils suivent le thème (variante « Clair A »). */
@@ -292,6 +295,18 @@ const WIZARD_ART: Allow[] = [
   { line: /backgroundColor: fn\.color \|\| "#6b7280"/, reason: "couleur de la fonction (catalogue) et son défaut Prisma : couleur métier" },
 ];
 
+/** Phase 3 (Task 8) : baie dessinée de l'écran d'accueil de l'assistant « Nouveau projet ». */
+const RACK_MOCKUP: Allow = {
+  line: /className="[^"]*\b(bg|border)-(zinc|blue|emerald|amber)-[4-7]00\/(15|30|40|60)\b[^"]*"/,
+  reason:
+    "baie dessinée de l'écran d'accueil de l'assistant projet (équipements colorés, U noir, U vide en pointillés) : " +
+    "rendu des plans, comme les illustrations des autres assistants, " + DOUBT,
+};
+const RACK_MOCKUP_2110: Allow = {
+  line: /<span className="rounded bg-emerald-500\/20 px-1 py-0\.5 text-\[7px\] font-bold tracking-wider text-emerald-700 uppercase dark:text-emerald-400">$/,
+  reason: "étiquette « 2110 » (SMPTE ST 2110) du réseau dessiné de l'écran d'accueil : marqueur métier, comme TAG_2110, " + DOUBT,
+};
+
 // ── Neutres et bleus Tailwind (couleurs d'interface d'arkyo) ────────────────
 
 const INTERFACE = /\b(bg|text|border|ring|outline|divide|from|to)-(zinc|gray|slate|neutral|stone|blue|indigo|sky)-\d{2,3}\b/;
@@ -308,6 +323,8 @@ const ALLOW: AllowMap = {
   "app/(app)/admin/catalogue/_components/equipment-list-panel.tsx": [TAG_2110],
   // Phase 2 (Task 12) : utilisateurs, espace et profil.
   "app/(app)/profile/profile-client.tsx": [PROFILE_ROLE_BADGE],
+  // Phase 3 (Task 8) : assistant « Nouveau projet ».
+  "components/projects/new-project-dialog.tsx": [RACK_MOCKUP],
 };
 
 test("aucune couleur d'interface Tailwind codée en dur dans les fichiers copiés (hors exceptions métier)", () => {
@@ -341,6 +358,8 @@ const ALLOW_STATUS: AllowMap = {
       reason: "étiquette « Lum » (projecteur lumière) d'un équipement : marqueur métier, comme « 2110 », " + DOUBT,
     },
   ],
+  // Phase 3 (Task 8) : assistant « Nouveau projet ».
+  "components/projects/new-project-dialog.tsx": [...WIZARD_ART, RACK_MOCKUP, RACK_MOCKUP_2110],
 };
 
 test("erreurs, succès et alertes suivent --danger, --success et --warning", () => {
@@ -545,6 +564,18 @@ const ALLOW_HEX: AllowMap = {
     {
       line: /^\s*color: "#(71717a|10b981|6366f1|8b5cf6)",$/,
       reason: "couleurs des plans de l'onglet Distribution (supervisor) : jamais rendu, l'éditeur tenant passe showDistribution={false}",
+    },
+  ],
+  // Phase 3 (Task 8) : assistant « Nouveau projet » et étapes de contenant.
+  "components/projects/new-project-dialog.tsx": WIZARD_ART,
+  "components/racks/rack-wizard-steps.tsx": [
+    {
+      line: /^\s*(STANDARD|FLIGHT_CASE_CLASSIC|FLIGHT_CASE_SKB|PELICAN|CAP): "#[0-9a-f]{6}",$/,
+      reason: "couleurs des types de contenant (baie, flight case, SKB, Pelicase, mobilier) : couleur métier",
+    },
+    {
+      line: /^\s*color: "#(3b82f6|06b6d4)",$/,
+      reason: "teinte de l'icône des cartes « Rackable » / « Non rackable » : " + DOUBT,
     },
   ],
 };
