@@ -232,6 +232,23 @@ const COPIED_FILES = [
   "lib/services/rack-validation.ts",
   // Phase 3 (Task 12) : éditeur de panel.
   "app/(fullscreen)/panels/[id]/panel-editor.tsx",
+  // Phase 4a (Task 8) : socle de l'éditeur projet. Le bouchon
+  // `project/[id]/_components/project-editor.tsx` n'est pas une copie (décision 1).
+  "app/(fullscreen)/project/[id]/layout.tsx",
+  "app/(fullscreen)/project/[id]/page.tsx",
+  "components/editor-shell/editor-shell.tsx",
+  "components/editor-shell/hooks/use-workspace.ts",
+  "components/editor-shell/tool-registry.ts",
+  "components/editor-shell/tool-topbar-ui.tsx",
+  "components/editor-shell/workspace-context.tsx",
+  "components/editor-shell/workspace-store.ts",
+  "components/synoptique/lib/colors.ts",
+  "components/synoptique/lib/constants.ts",
+  "components/synoptique/lib/types.ts",
+  "lib/client-id.ts",
+  "lib/export/synoptic-capture.ts",
+  "lib/pdf/load-jspdf.ts",
+  "lib/pdf/synoptic-vector.ts",
 ];
 
 /** Fichiers posés sur la topbar ou le rail : ils suivent le thème (variante « Clair A »). */
@@ -687,6 +704,21 @@ const ALLOW_HEX: AllowMap = {
     {
       line: /^\s*color: "#(3b82f6|22c55e|ef4444|f59e0b|8b5cf6|64748b)",$/,
       reason: "teinte de l'icône de chaque section du guide de l'éditeur : " + DOUBT,
+    },
+  ],
+  // Phase 4a (Task 8) : socle de l'éditeur projet.
+  "components/synoptique/lib/colors.ts": [
+    {
+      line: /^\s*"(Panels de patch|Accessoire rack)": "#[0-9a-f]{6}",$|^export const DEFAULT_HEX = "#71717a";$/,
+      reason:
+        "couleurs des catégories « Panels de patch » / « Accessoire rack » et repli d'une catégorie sans couleur " +
+        "(pastilles et teintes des équipements dans les baies et le synoptique) : couleur métier",
+    },
+  ],
+  "components/synoptique/lib/constants.ts": [
+    {
+      line: /^\s*"#[0-9a-f]{6}",$/,
+      reason: "palette proposée pour les groupes d'étiquettes des ports d'un panel (`LABEL_COLORS`, choisie par l'utilisateur) : couleur métier",
     },
   ],
 };

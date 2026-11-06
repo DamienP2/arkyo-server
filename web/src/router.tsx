@@ -31,6 +31,7 @@ import LegacyProjectRedirect from "@/app/(app)/projects/[id]/page";
 import RacksRedirect from "@/app/(app)/racks/page";
 import RigsRedirect from "@/app/(app)/rigs/page";
 import PanelsRedirect from "@/app/(app)/panels/page";
+import ProjectLayout from "@/app/(fullscreen)/project/[id]/layout";
 import { ComingSoon } from "@/components/coming-soon";
 import { LoadingState } from "@/components/ui/loading-state";
 
@@ -54,6 +55,8 @@ const TemplatesPage = lazy(() => import("@/app/(app)/templates/page"));
 const RigDetailPage = lazy(() => import("@/app/(app)/rigs/[id]/page"));
 // Éditeur de panel (plein écran).
 const PanelEditorPage = lazy(() => import("@/app/(fullscreen)/panels/[id]/page"));
+// Phase 4 : éditeur projet (plein écran).
+const ProjectEditorPage = lazy(() => import("@/app/(fullscreen)/project/[id]/page"));
 
 // arkyo:app/(app)/settings/page.tsx ne rend rien : `redirect()` lève toujours
 // (type `() => void`), l'`errorElement` suit la redirection.
@@ -61,17 +64,15 @@ const SettingsRedirect = SettingsPage as unknown as React.ComponentType;
 
 const errorElement = <NavigationErrorElement />;
 
-/** Page chargée à la demande (`lazy()`), avec `<LoadingState>` en attendant. */
-function lazyPage(path: string, Page: React.ComponentType): RouteObject {
-  return {
-    path,
-    element: (
-      <Suspense fallback={<LoadingState className="px-8 pt-10" />}>
-        <Page />
-      </Suspense>
-    ),
-    errorElement,
-  };
+/** Page chargée à la demande (`lazy()`), avec `<LoadingState>` en attendant.
+ *  `path` absent : page index de son parent. */
+function lazyPage(path: string | null, Page: React.ComponentType): RouteObject {
+  const element = (
+    <Suspense fallback={<LoadingState className="px-8 pt-10" />}>
+      <Page />
+    </Suspense>
+  );
+  return path === null ? { index: true, element, errorElement } : { path, element, errorElement };
 }
 
 /** Page pas encore portée (`back` : plein écran, avec « Retour »). */
@@ -130,9 +131,20 @@ export const routes: RouteObject[] = [
       {
         element: <FullscreenLayout />,
         errorElement,
-        // `project/:id/*` : éditeur projet (phase 4) ; `panels/:id` : éditeur
-        // de panel.
-        children: [soon("project/:id/*", true), lazyPage("panels/:id", PanelEditorPage)],
+        // `project/:id` : éditeur projet, sous le layout d'arkyo (garde
+        // `projects:read`, `ConfirmProvider`) ; ses sous-routes
+        // (`inventaire/rack/:rackId`, `inventaire/synoptique` : phase 4d ;
+        // `cartographie` : phase 5) restent « Bientôt disponible ».
+        // `panels/:id` : éditeur de panel.
+        children: [
+          {
+            path: "project/:id",
+            element: <ProjectLayout />,
+            errorElement,
+            children: [lazyPage(null, ProjectEditorPage), soon("*", true)],
+          },
+          lazyPage("panels/:id", PanelEditorPage),
+        ],
       },
 
       { path: "*", element: <NotFoundPage /> },

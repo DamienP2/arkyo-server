@@ -59,8 +59,8 @@ describe("routeur et coquille", () => {
   test("redirects_like_arkyo", async () => {
     // arkyo:app/(app)/{projects/[id],racks,rigs,panels}/page.tsx
     for (const [from, to, shown] of [
-      // Éditeur projet : phase 4.
-      ["/projects/p1", "/project/p1?tab=fiche", "Bientôt disponible"],
+      // Éditeur projet.
+      ["/projects/p1", "/project/p1?tab=fiche", "Projet 1"],
       // `/templates` : onglet Contenants (`?tab=rigs` inconnu → Contenants, comme arkyo).
       ["/racks", "/templates?tab=racks", "Aucun contenant"],
       ["/rigs", "/templates?tab=rigs", "Aucun contenant"],
@@ -71,6 +71,14 @@ describe("routeur et coquille", () => {
         ...signedInApi(TECH_PERMS),
         "GET /api/racks": { body: [] },
         "GET /api/panels": { body: [] },
+        "GET /api/tenant/projects/p1/editor": {
+          body: {
+            header: { id: "p1", name: "Projet 1" },
+            fiche: {},
+            inventaire: { rigConfigId: null, racks: [], locations: [] },
+            cartographie: { maps: [] },
+          },
+        },
       });
       await waitFor(() =>
         expect(router.state.location.pathname + router.state.location.search).toBe(to),
@@ -99,7 +107,7 @@ describe("routeur et coquille", () => {
     for (const url of [
       "/racks/r1",
       "/rigs/g1/rack/r1",
-      "/project/p1",
+      "/project/p1/inventaire/synoptique",
     ]) {
       const { router, unmount } = renderApp(url, signedInApi());
       expect(await screen.findByText("Bientôt disponible")).toBeInTheDocument();
