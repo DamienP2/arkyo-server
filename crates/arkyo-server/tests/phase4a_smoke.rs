@@ -445,7 +445,10 @@ async fn phase4a_project_editor_inventory_end_to_end() {
             })),
         )
         .await;
-    assert!(r.status.is_client_error(), "{:?} {:?}", r.status, r.body);
+    assert_eq!(
+        (r.status, r.body),
+        (StatusCode::CONFLICT, json!({ "error": "Slot occupé" }))
+    );
 
     // ── 5. Transfers (handleTransferItem) ───────────────────────────────
     // Whole item (quantity 1): the transfer route, to the free equipment

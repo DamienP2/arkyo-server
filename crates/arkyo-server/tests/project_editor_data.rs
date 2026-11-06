@@ -654,6 +654,28 @@ async fn editor_data_shape_matches_arkyo() {
     assert_eq!(r.body, expected_full());
 }
 
+/// `hasConnectors` looks at every slot, ghosts included (`page.tsx:310`):
+/// a rack whose only equipment with connectors is a ghost slot has some.
+#[tokio::test]
+async fn has_connectors_from_a_single_ghost_slot() {
+    let c = ctx().await;
+    full_project(&c.e.pool).await;
+    // rA keeps the ghost slot of eq1 (connectors) and the panel slot.
+    exec(&c.e.pool, r#"DELETE FROM "RackSlot" WHERE "id" = 'sA1'"#).await;
+    let r = c.get(&format!("{LIST}/p1/editor")).await;
+    assert_eq!(r.status, StatusCode::OK, "{:?}", r.body);
+    let ra = r.body["inventaire"]["racks"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|r| r["id"] == "rA")
+        .unwrap();
+    // Only the panel slot is placed.
+    assert_eq!(ra["slots"].as_array().unwrap().len(), 1, "{ra}");
+    assert_eq!(ra["slotsCount"], 2);
+    assert_eq!(ra["hasConnectors"], true);
+}
+
 #[tokio::test]
 async fn empty_project_opens() {
     let c = ctx().await;

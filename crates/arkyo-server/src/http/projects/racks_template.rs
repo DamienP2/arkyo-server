@@ -318,6 +318,9 @@ async fn card(
     let equipment = equipment_map(conn, &eq_ids).await?;
     let has_connectors = equipment.values().any(|e| match e.get("connectors") {
         Some(Value::Array(a)) => !a.is_empty(),
+        // arkyo-server: défensif, une colonne JSON relue en chaîne (TEXT)
+        // compte comme le tableau qu'elle contient ; `equipment_map` rend
+        // normalement un tableau.
         Some(Value::String(s)) => serde_json::from_str::<Vec<Value>>(s)
             .map(|a| !a.is_empty())
             .unwrap_or(false),

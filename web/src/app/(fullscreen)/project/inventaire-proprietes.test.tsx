@@ -394,7 +394,9 @@ describe("éditeur projet : inventaire 3/3", () => {
       }
     }
     expect(seen.size).toBeGreaterThan(15);
-    const strip = (s: string) => s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+    // Commentaires en début de ligne seulement : un `/*` dans une chaîne
+    // (`"https://cdn…/*"`) ne doit pas masquer une URL.
+    const strip = (s: string) => s.replace(/^\s*\/\*[\s\S]*?\*\//gm, "").replace(/^\s*\/\/.*$/gm, "");
     const offenders = [...seen].filter((f) =>
       /cdnjs\.cloudflare\.com|cdn\.jsdelivr\.net|unpkg\.com|cdn\.sheetjs\.com|createElement\(\s*["']script["']\s*\)/.test(
         strip(readFileSync(f, "utf8")),

@@ -93,7 +93,7 @@ async fn rack_stream_receives_only_its_rack() {
     e.events
         .publish_rack("rack-b", json!({"type": "zone_removed", "zoneId": "z-b"}));
     e.events.publish("rack", "updated", Some("rack-a"));
-    // No clientId filter: the payload goes out as published, clientId included.
+    // No envelope and no clientId filter: the payload goes out as published.
     e.events.publish_rack(
         "rack-a",
         json!({"type": "slot_removed", "slotId": "s1", "removedAdapterIds": ["a1"]}),

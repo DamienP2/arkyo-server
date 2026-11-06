@@ -109,10 +109,17 @@ describe("routeur et coquille", () => {
           },
         },
       });
+      // Adresses traversées (la garde attend les permissions : l'abonnement
+      // précède la redirection).
+      const visited: string[] = [];
+      const stop = router.subscribe((state) => visited.push(state.location.pathname + state.location.search));
       await waitFor(() =>
         expect(router.state.location.pathname + router.state.location.search).toBe(to),
       );
       expect(await screen.findByText(shown, {}, { timeout: 5000 })).toBeInTheDocument();
+      stop();
+      // `/projects/:id` passe d'abord par `?tab=fiche` (arkyo), remappé ensuite.
+      if (from === "/projects/p1") expect(visited).toContain("/project/p1?tab=fiche");
       unmount();
       vi.restoreAllMocks();
     }

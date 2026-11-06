@@ -300,6 +300,8 @@ async fn remove_inner(
     // RackZone, RackLabel, RackConnection… (route.ts:166-173). A rack
     // another rig shares is only unlinked from this project's rigs; the
     // location's deletion then clears its `locationId` (SET NULL).
+    // The `NOT EXISTS` is the predicate of `rack_shared_outside`
+    // (`projects/mod.rs`), inlined to delete in one statement.
     sqlx::query(
         r#"DELETE FROM "Rack" WHERE "id" IN (
                SELECT r."id" FROM "Rack" r

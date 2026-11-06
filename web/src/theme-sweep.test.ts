@@ -280,9 +280,7 @@ const COPIED_FILES = [
   "app/(fullscreen)/project/[id]/inventaire/_components/location-properties-panel.tsx",
   "app/(fullscreen)/project/[id]/inventaire/_components/location-selector-dropdown.tsx",
   "app/(fullscreen)/project/[id]/inventaire/_components/location-sheet.tsx",
-  // Phase 4a (Task 11) : inventaire 2/3. Les bouchons de la Task 12
-  // (`rack-card-canvas`, `container-sheet-card`, panneaux de contenant et
-  // d'item, export) ne sont pas des copies (décision 1).
+  // Phase 4a (Task 11) : inventaire 2/3.
   "app/(fullscreen)/project/[id]/inventaire/_components/add-container-wizard.tsx",
   "app/(fullscreen)/project/[id]/inventaire/_components/catalog-panel.tsx",
   "app/(fullscreen)/project/[id]/inventaire/_components/component-config-modal.tsx",

@@ -421,7 +421,7 @@ fn is_auto_label(l: &str) -> bool {
     l.len() == 5 && l.starts_with('#') && l[1..].chars().all(|c| CHARS.contains(c))
 }
 
-// ── validate_inventory_ref : existence et activité ──────────────────────────
+// ── validate_inventory_ref : existence (actif ou non) ───────────────────────
 
 #[tokio::test]
 async fn catalog_refs_must_exist_active_or_not() {
