@@ -205,6 +205,9 @@ const COPIED_FILES = [
   "app/(app)/racks/page.tsx",
   "app/(app)/rigs/page.tsx",
   "app/(app)/panels/page.tsx",
+  // Phase 3 (Task 7) : liste des projets.
+  "app/(app)/projects/page.tsx",
+  "app/(app)/projects/projects-client.tsx",
 ];
 
 /** Fichiers posés sur la topbar ou le rail : ils suivent le thème (variante « Clair A »). */
@@ -529,6 +532,13 @@ const ALLOW_HEX: AllowMap = {
     {
       line: /^\s*color="#[0-9a-f]{6}"$|^\s*(\{ href: "\/projects", label: "Projets", icon: FolderOpen, )?color: "#[0-9a-f]{6}"( \})?,$/,
       reason: "teinte de l'icône de chaque carte de statistiques et de chaque accès rapide : " + DOUBT,
+    },
+  ],
+  // Phase 3 (Task 7) : liste des projets.
+  "app/(app)/projects/projects-client.tsx": [
+    {
+      line: /^\s*(EN_PREPARATION|PRET|EN_COURS|TERMINE|ANNULE): "#[0-9a-f]{6}", \/\/ /,
+      reason: "couleurs des statuts de projet (bordure et en-tête des cartes, groupes, filtres) : statut métier",
     },
   ],
   "app/(app)/admin/equipment/[id]/_editor/distribution-tab.tsx": [

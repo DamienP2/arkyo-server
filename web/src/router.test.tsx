@@ -60,7 +60,6 @@ describe("routeur et coquille", () => {
 
   test("les routes réservées et celles de la phase 4 restent « Bientôt disponible »", async () => {
     for (const url of [
-      "/projects",
       "/templates",
       "/rigs/g1",
       "/racks/r1",
