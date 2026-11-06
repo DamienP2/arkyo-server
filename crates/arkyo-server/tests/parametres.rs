@@ -601,6 +601,50 @@ async fn symbols_is_a_bare_array() {
     assert!(xlr["svgUrlD"].is_null());
 }
 
+/// arkyo:app/api/symbol-overrides: `{}` without a session; with one, the
+/// built-in symbols whose drawing is replaced by an uploaded SVG, as
+/// `{ [key]: { svg, svgD } }`. Never the key placeholder of the symbols list.
+#[tokio::test]
+async fn symbol_overrides_lists_only_real_builtin_overrides() {
+    let c = ctx().await;
+    let url = "/api/symbol-overrides";
+    let anon = call(&c.e.app, "GET", url, LOCAL, None, None).await;
+    assert_eq!(anon.status, StatusCode::OK);
+    assert_eq!(anon.body, json!({}));
+    let r = call(&c.e.app, "GET", url, LOCAL, Some(&c.tok), None).await;
+    assert_eq!(r.status, StatusCode::OK, "{:?}", r.body);
+    assert_eq!(r.body, json!({}));
+    for (key, svg, svg_d) in [
+        ("xlr3", Some("/uploads/symbols/xlr.svg"), None),
+        ("bnc", None, Some("/uploads/symbols/bnc-d.svg")),
+        // the key placeholder is not an override
+        ("rj45", Some("rj45"), None),
+    ] {
+        sqlx::query(r#"UPDATE "CatalogSymbol" SET "svgUrl" = ?, "svgUrlD" = ? WHERE "key" = ?"#)
+            .bind(svg)
+            .bind(svg_d)
+            .bind(key)
+            .execute(&c.e.pool)
+            .await
+            .unwrap();
+    }
+    sqlx::query(
+        r#"INSERT INTO "CatalogSymbol" ("id","key","label","isBuiltin","svgUrl","sortOrder","createdAt","updatedAt")
+           VALUES ('s1','perso','Perso',0,'/uploads/symbols/perso.svg',0,'2026-01-01T00:00:00.000Z','2026-01-01T00:00:00.000Z')"#,
+    )
+    .execute(&c.e.pool)
+    .await
+    .unwrap();
+    let r = call(&c.e.app, "GET", url, LOCAL, Some(&c.tok), None).await;
+    assert_eq!(
+        r.body,
+        json!({
+            "xlr3": { "svg": "/uploads/symbols/xlr.svg", "svgD": null },
+            "bnc": { "svg": null, "svgD": "/uploads/symbols/bnc-d.svg" },
+        })
+    );
+}
+
 // ── categories ──────────────────────────────────────────────────────────────
 
 #[tokio::test]

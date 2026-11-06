@@ -148,6 +148,7 @@ pub fn router() -> Router<AppState> {
             get(cabling::cable_models),
         )
         .route("/tenant/parametres/symbols", get(symbols::list))
+        .route("/symbol-overrides", get(symbols::overrides))
         .route("/tenant/parametres/categories", get(categories::list))
         .route(
             "/tenant/parametres/categories/category",
