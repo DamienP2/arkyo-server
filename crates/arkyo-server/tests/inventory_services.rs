@@ -632,7 +632,8 @@ async fn ghost_slots_follow_inventory() {
 }
 
 /// arkyo's degenerate case: more placed slots than the quantity, so the
-/// sync makes no ghost. A typed error with arkyo's message, mapped to 409.
+/// sync makes no ghost. A typed error with arkyo's message and status (500,
+/// phase 4b decision 1).
 #[tokio::test]
 async fn ensure_ghost_without_ghost_is_typed() {
     let d = db().await;
@@ -664,7 +665,7 @@ async fn ensure_ghost_without_ghost_is_typed() {
         ),
         other => panic!("{other:?}"),
     }
-    assert_eq!(e.status().as_u16(), 409);
+    assert_eq!(e.status().as_u16(), 500);
     // Rolled back: the quantity is unchanged.
     let qty: i64 =
         sqlx::query_scalar(r#"SELECT "quantity" FROM "RackInventoryItem" WHERE "id" = 'it-x'"#)

@@ -80,13 +80,12 @@ pub enum GhostError {
 }
 
 impl GhostError {
-    /// arkyo let the `Error` escape (an unhandled 500). Here the caller
-    /// answers `409 {"error": message}` with arkyo's message (phase 4
-    /// decision 5: no implicit 500): the rack's slots contradict its
-    /// inventory, a state conflict rather than a server fault.
+    /// arkyo let the `Error` escape (an unhandled 500). Phase 4b decision 1:
+    /// the caller (`POST /api/racks/:id/slots`) keeps arkyo's status, 500,
+    /// and answers `{"error": message}` with arkyo's message.
     pub fn status(&self) -> StatusCode {
         match self {
-            Self::NoGhost(_) => StatusCode::CONFLICT,
+            Self::NoGhost(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Self::Db(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }

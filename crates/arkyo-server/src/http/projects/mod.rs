@@ -12,7 +12,7 @@
 #![allow(clippy::result_large_err)]
 
 mod editor;
-mod inventory;
+pub(crate) mod inventory;
 mod inventory_item;
 mod legacy;
 mod locations;
