@@ -544,21 +544,22 @@ impl Ctx<'_> {
         r: &InventoryRef,
         quantity: i64,
     ) -> Result<Response, Response> {
-        // Dedup (route.ts:1107-1137). arkyo's `findFirst` has no order and,
-        // for an equipment, no `hostItemId IS NULL` filter: an equipment
-        // already installed as a component can be the row that is raised
-        // (annex B, reproduced; decision 11).
+        // Dedup (route.ts:1107-1137). arkyo's `findFirst` has no order: the
+        // oldest row wins.
         const SELECT: &str =
             r#"SELECT "id", "quantity" FROM "RackInventoryItem" WHERE "rackId" = ?"#;
         const ORDER: &str = r#"ORDER BY "createdAt", rowid LIMIT 1"#;
         let existing: Option<(String, i64)> = match r {
             InventoryRef::Equipment(id) | InventoryRef::Panel(id) | InventoryRef::Adapter(id) => {
-                let col = match r {
-                    InventoryRef::Equipment(_) => "catalogEquipmentId",
-                    InventoryRef::Panel(_) => "panelId",
-                    _ => "catalogAdapterId",
+                let filter = match r {
+                    // arkyo-server: correction (un ajout au niveau racine ne fusionne pas avec un composant)
+                    InventoryRef::Equipment(_) => {
+                        r#""catalogEquipmentId" = ? AND "hostItemId" IS NULL"#
+                    }
+                    InventoryRef::Panel(_) => r#""panelId" = ?"#,
+                    _ => r#""catalogAdapterId" = ?"#,
                 };
-                sqlx::query_as(&format!(r#"{SELECT} AND "{col}" = ? {ORDER}"#))
+                sqlx::query_as(&format!(r#"{SELECT} AND {filter} {ORDER}"#))
                     .bind(self.rack_id)
                     .bind(id)
                     .fetch_optional(&mut *tx)

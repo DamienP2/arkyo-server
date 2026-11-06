@@ -642,19 +642,39 @@ async fn duplicate_add_merges_quantity_like_arkyo() {
         .await;
     assert_ne!(h1["id"], h2["id"]);
 
-    // arkyo's dedup does not filter `hostItemId IS NULL` (annex B): adding
-    // an equipment already installed as a component raises that row.
+    // arkyo-server: correction. arkyo's dedup did not filter `hostItemId IS
+    // NULL` (annex B): a top-level add raised the component's row. Here it
+    // gets its own row and the component stays at quantity 1.
     let comp = c
         .post_ok(
             json!({"catalogEquipmentId": "comp-eq", "hostItemId": h1["id"], "hostSlotIndex": 0}),
             StatusCode::CREATED,
         )
         .await;
-    let bumped = c
+    let top = c
+        .post_ok(
+            json!({"catalogEquipmentId": "comp-eq"}),
+            StatusCode::CREATED,
+        )
+        .await;
+    assert_ne!(top["id"], comp["id"]);
+    assert_eq!(top["quantity"], 1);
+    assert_eq!(top["hostItemId"], Value::Null);
+    let comp_qty = int(
+        &c.e.pool,
+        &format!(
+            r#"SELECT "quantity" FROM "RackInventoryItem" WHERE "id" = '{}'"#,
+            comp["id"].as_str().unwrap()
+        ),
+    )
+    .await;
+    assert_eq!(comp_qty, 1);
+    // A second top-level add merges into the top-level row, not the component.
+    let merged = c
         .post_ok(json!({"catalogEquipmentId": "comp-eq"}), StatusCode::OK)
         .await;
-    assert_eq!(bumped["id"], comp["id"]);
-    assert_eq!(bumped["quantity"], 2);
+    assert_eq!(merged["id"], top["id"]);
+    assert_eq!(merged["quantity"], 2);
 }
 
 // ── références invalides : rien n'est écrit ─────────────────────────────────
