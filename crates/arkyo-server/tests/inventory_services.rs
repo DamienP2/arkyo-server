@@ -424,7 +424,7 @@ fn is_auto_label(l: &str) -> bool {
 // ── validate_inventory_ref : existence et activité ──────────────────────────
 
 #[tokio::test]
-async fn catalog_refs_must_exist_and_be_active() {
+async fn catalog_refs_must_exist_active_or_not() {
     let d = db().await;
     catalogue_fixture(&d.pool).await;
     let mut conn = d.pool.acquire().await.unwrap();
@@ -433,6 +433,9 @@ async fn catalog_refs_must_exist_and_be_active() {
         InventoryRef::Equipment("eq1".into()),
         InventoryRef::Panel("pa1".into()),
         InventoryRef::Adapter("ad1".into()),
+        // An inactive catalogue item is accepted, as in arkyo.
+        InventoryRef::Equipment("eq-off".into()),
+        InventoryRef::Adapter("ad-off".into()),
         accessory("plaque", 1, Some("aere"), None),
     ] {
         validate_inventory_ref(&mut conn, &good)
@@ -454,16 +457,6 @@ async fn catalog_refs_must_exist_and_be_active() {
             InventoryRef::Panel("nope".into()),
             404,
             "Référence catalogue introuvable après création.",
-        ),
-        (
-            InventoryRef::Equipment("eq-off".into()),
-            400,
-            "Référence catalogue inactive",
-        ),
-        (
-            InventoryRef::Adapter("ad-off".into()),
-            400,
-            "Référence catalogue inactive",
         ),
     ] {
         let e = validate_inventory_ref(&mut conn, &bad).await.unwrap_err();
@@ -636,6 +629,49 @@ async fn ghost_slots_follow_inventory() {
             .unwrap()
     };
     assert_eq!(claimable.id, g.slot_id);
+}
+
+/// arkyo's degenerate case: more placed slots than the quantity, so the
+/// sync makes no ghost. A typed error with arkyo's message, mapped to 409.
+#[tokio::test]
+async fn ensure_ghost_without_ghost_is_typed() {
+    let d = db().await;
+    let pool = &d.pool;
+    catalogue_fixture(pool).await;
+    insert_item(pool, "it-x", "r2", "catalogEquipmentId", "eq1", 2).await;
+    for (i, u) in [1, 3, 5].into_iter().enumerate() {
+        sqlx::query(
+            r#"INSERT INTO "RackSlot" ("id","rackId","catalogEquipmentId","inventoryItemId","startU","createdAt","updatedAt")
+               VALUES (?,'r2','eq1','it-x',?,?,?)"#,
+        )
+        .bind(format!("s{i}"))
+        .bind(u)
+        .bind(NOW)
+        .bind(NOW)
+        .execute(pool)
+        .await
+        .unwrap();
+    }
+    let mut tx = begin_immediate(pool).await.unwrap();
+    let e = sync::ensure_ghost_slot_for_equipment(&mut tx, "r2", "eq1")
+        .await
+        .unwrap_err();
+    drop(tx);
+    match &e {
+        sync::GhostError::NoGhost(m) => assert_eq!(
+            m,
+            "Impossible de créer un slot fantôme pour l'équipement eq1 dans le rack r2."
+        ),
+        other => panic!("{other:?}"),
+    }
+    assert_eq!(e.status().as_u16(), 409);
+    // Rolled back: the quantity is unchanged.
+    let qty: i64 =
+        sqlx::query_scalar(r#"SELECT "quantity" FROM "RackInventoryItem" WHERE "id" = 'it-x'"#)
+            .fetch_one(pool)
+            .await
+            .unwrap();
+    assert_eq!(qty, 2);
 }
 
 // ── libellés automatiques ───────────────────────────────────────────────────

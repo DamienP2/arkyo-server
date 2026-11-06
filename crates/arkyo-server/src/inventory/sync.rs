@@ -11,6 +11,7 @@
 //! Slot order (arkyo's Prisma reads have none): creation order, `createdAt`
 //! then `rowid`.
 
+use axum::http::StatusCode;
 use sqlx::SqliteConnection;
 
 use crate::ids::{new_id, now_iso};
@@ -66,6 +67,35 @@ pub struct EnsuredGhost {
     /// The inventory quantity was raised (or the row created): the caller
     /// publishes the inventory events.
     pub quantity_incremented: bool,
+}
+
+/// Why [`ensure_ghost_slot_for_ref`] gives no ghost.
+#[derive(Debug)]
+pub enum GhostError {
+    /// arkyo's degenerate case: the sync made no ghost (more placed slots
+    /// than the raised quantity). Carries arkyo's message. The quantity was
+    /// already raised: the caller drops (rolls back) its transaction.
+    NoGhost(String),
+    Db(sqlx::Error),
+}
+
+impl GhostError {
+    /// arkyo let the `Error` escape (an unhandled 500). Here the caller
+    /// answers `409 {"error": message}` with arkyo's message (phase 4
+    /// decision 5: no implicit 500): the rack's slots contradict its
+    /// inventory, a state conflict rather than a server fault.
+    pub fn status(&self) -> StatusCode {
+        match self {
+            Self::NoGhost(_) => StatusCode::CONFLICT,
+            Self::Db(_) => StatusCode::INTERNAL_SERVER_ERROR,
+        }
+    }
+}
+
+impl From<sqlx::Error> for GhostError {
+    fn from(e: sqlx::Error) -> Self {
+        Self::Db(e)
+    }
 }
 
 #[derive(sqlx::FromRow)]
@@ -222,12 +252,12 @@ pub async fn find_claimable_ghost_slot(
 /// with quantity 1, or raised by 1) is synced and its new ghost returned.
 ///
 /// arkyo's degenerate case (the sync made no ghost, e.g. more placed slots
-/// than the quantity) is an `sqlx::Error::Protocol` with arkyo's message.
+/// than the quantity) is [`GhostError::NoGhost`] with arkyo's message.
 pub async fn ensure_ghost_slot_for_ref(
     conn: &mut SqliteConnection,
     rack_id: &str,
     r: &GhostRef,
-) -> Result<EnsuredGhost, sqlx::Error> {
+) -> Result<EnsuredGhost, GhostError> {
     if let Some(g) = find_claimable_ghost_slot(conn, rack_id, r).await? {
         return Ok(EnsuredGhost {
             slot_id: g.id,
@@ -236,6 +266,8 @@ pub async fn ensure_ghost_slot_for_ref(
         });
     }
 
+    // As in arkyo, the row is matched on the rack and the reference only: a
+    // component row (`hostItemId` set) of the same equipment can match.
     let col = r.column();
     let existing: Option<String> = sqlx::query_scalar(&format!(
         r#"SELECT "id" FROM "RackInventoryItem" WHERE "rackId" = ? AND "{col}" = ?
@@ -288,7 +320,7 @@ pub async fn ensure_ghost_slot_for_ref(
                 GhostRef::Equipment(_) => "l'équipement",
                 GhostRef::Panel(_) => "le panel",
             };
-            Err(sqlx::Error::Protocol(format!(
+            Err(GhostError::NoGhost(format!(
                 "Impossible de créer un slot fantôme pour {what} {} dans le rack {rack_id}.",
                 r.id()
             )))
@@ -301,7 +333,7 @@ pub async fn ensure_ghost_slot_for_equipment(
     conn: &mut SqliteConnection,
     rack_id: &str,
     catalog_equipment_id: &str,
-) -> Result<EnsuredGhost, sqlx::Error> {
+) -> Result<EnsuredGhost, GhostError> {
     ensure_ghost_slot_for_ref(
         conn,
         rack_id,
@@ -315,6 +347,6 @@ pub async fn ensure_ghost_slot_for_panel(
     conn: &mut SqliteConnection,
     rack_id: &str,
     panel_id: &str,
-) -> Result<EnsuredGhost, sqlx::Error> {
+) -> Result<EnsuredGhost, GhostError> {
     ensure_ghost_slot_for_ref(conn, rack_id, &GhostRef::Panel(panel_id.to_string())).await
 }

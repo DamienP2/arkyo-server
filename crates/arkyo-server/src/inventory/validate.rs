@@ -11,9 +11,9 @@
 //! is written. arkyo wrote the row first and answered 500 « Référence
 //! catalogue introuvable après création. » when the item did not resolve
 //! (and a panel foreign key error was an unhandled 500). Here an unknown
-//! item is a 404 with that same message, and an inactive equipment or
-//! adapter (hidden from the inventory catalogue panel) a 400; nothing is
-//! written (phase 4 decision 5: no implicit 500).
+//! item is a 404 with that same message and nothing is written (phase 4
+//! decision 5: no implicit 500). An inactive equipment or adapter is
+//! accepted, as in arkyo.
 
 use axum::http::StatusCode;
 use sqlx::SqliteConnection;
@@ -79,20 +79,16 @@ pub enum RefError {
     Invalid(&'static str),
     /// The equipment, panel or adapter does not exist (404).
     Unknown,
-    /// The equipment or adapter is inactive (400).
-    Inactive,
     Db(sqlx::Error),
 }
 
 /// The message of [`RefError::Unknown`]: arkyo's, kept for parity.
 pub const UNKNOWN_MSG: &str = "Référence catalogue introuvable après création.";
-/// The message of [`RefError::Inactive`] (no equivalent in arkyo).
-pub const INACTIVE_MSG: &str = "Référence catalogue inactive";
 
 impl RefError {
     pub fn status(&self) -> StatusCode {
         match self {
-            Self::Invalid(_) | Self::Inactive => StatusCode::BAD_REQUEST,
+            Self::Invalid(_) => StatusCode::BAD_REQUEST,
             Self::Unknown => StatusCode::NOT_FOUND,
             Self::Db(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
@@ -103,8 +99,7 @@ impl RefError {
         match self {
             Self::Invalid(m) => m,
             Self::Unknown => UNKNOWN_MSG,
-            Self::Inactive => INACTIVE_MSG,
-            Self::Db(_) => "Erreur interne",
+            Self::Db(_) => "Erreur serveur",
         }
     }
 }
@@ -194,28 +189,26 @@ pub fn parse_inventory_ref(body: &RefInput) -> Result<InventoryRef, RefError> {
     Ok(candidates.remove(0))
 }
 
-/// The catalogue check: the equipment (`TenantEquipment`) or adapter
-/// (`TenantAdapter`) exists and is active, the panel (`Panel`) exists. An
-/// accessory has nothing to check.
+/// The catalogue check: the equipment (`TenantEquipment`), adapter
+/// (`TenantAdapter`) or panel (`Panel`) exists, active or not (arkyo
+/// accepts an inactive catalogue item). An accessory has nothing to check.
 pub async fn validate_inventory_ref(
     conn: &mut SqliteConnection,
     r: &InventoryRef,
 ) -> Result<(), RefError> {
-    let (table, has_active) = match r {
-        InventoryRef::Equipment(_) => ("TenantEquipment", true),
-        InventoryRef::Adapter(_) => ("TenantAdapter", true),
-        InventoryRef::Panel(_) => ("Panel", false),
+    let table = match r {
+        InventoryRef::Equipment(_) => "TenantEquipment",
+        InventoryRef::Adapter(_) => "TenantAdapter",
+        InventoryRef::Panel(_) => "Panel",
         InventoryRef::Accessory { .. } => return Ok(()),
     };
-    let active = if has_active { r#""isActive""# } else { "1" };
-    let found: Option<bool> =
-        sqlx::query_scalar(&format!(r#"SELECT {active} FROM "{table}" WHERE "id" = ?"#))
+    let found: Option<i64> =
+        sqlx::query_scalar(&format!(r#"SELECT 1 FROM "{table}" WHERE "id" = ?"#))
             .bind(r.ref_id())
             .fetch_optional(conn)
             .await?;
     match found {
         None => Err(RefError::Unknown),
-        Some(false) => Err(RefError::Inactive),
-        Some(true) => Ok(()),
+        Some(_) => Ok(()),
     }
 }
