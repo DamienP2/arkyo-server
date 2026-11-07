@@ -18,7 +18,7 @@ import { useMemo, useState, type ReactNode } from "react";
 import type { RackCanvasData } from "@/app/(fullscreen)/project/[id]/rack/rack-tab-client";
 import type { Equipment, Slot } from "@/components/synoptique/lib/types";
 import { cn } from "@/lib/utils";
-import { drawingConnectorTypes, drawingSignals, fmtNumber, parseConnectors, totalPorts } from "../catalogue-model";
+import { drawingConnectorTypes, drawingSignals, fmtNumber, totalPorts } from "../catalogue-model";
 import { DIRECTION_LABEL, EquipmentFace, genderLetter } from "../drawings/equipment-face";
 import { entryLabel, portCount, type FaceSide } from "../drawings/face-layout";
 import { cardFace } from "../pages/strata-catalogue-grid";
@@ -27,7 +27,9 @@ import {
   cableLabel,
   canvasLookup,
   endName,
+  heatOf,
   portLabel,
+  rackConnectors,
   slotLinks,
   slotsIndex,
   type RackConnectionRow,
@@ -124,7 +126,7 @@ function FaceCardBody({
   slots,
   rackName,
 }: EquipmentFaceCardProps & { eq: Equipment; canvasData: RackCanvasData }) {
-  const connectors = useMemo(() => parseConnectors(eq.connectors), [eq.connectors]);
+  const connectors = useMemo(() => rackConnectors(eq.connectors), [eq.connectors]);
   const lookup = useMemo(() => canvasLookup(canvasData), [canvasData]);
   const connectorTypes = useMemo(() => drawingConnectorTypes(lookup), [lookup]);
   const signals = useMemo(() => drawingSignals(lookup), [lookup]);
@@ -152,8 +154,7 @@ function FaceCardBody({
     startU != null
       ? `${heightU > 1 ? `U${startU}–U${startU + heightU - 1}` : `U${startU}`} · ${heightU} U · ${VIEW_LABEL[slot?.view ?? ""] ?? slot?.view}`
       : "Non placé";
-  const heat = flag(eq, "heatBtuH");
-  const btu = typeof heat === "number" && heat > 0 ? heat : (eq.powerW ?? 0) * 3.412;
+  const btu = heatOf(eq);
   const is2110 = flag(eq, "is2110") === true || flag(eq, "is2110") === 1;
   const mode2110 = flag(eq, "ip2110Mode");
   const netPorts = connectors.filter((c) => c.networkRole).reduce((a, c) => a + portCount(c), 0);

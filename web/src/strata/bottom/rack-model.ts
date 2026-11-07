@@ -8,6 +8,10 @@
  * sa quantité, `quantity ?? 1`), comme le synoptique d'arkyo
  * (`use-validation-report.ts`, `expandedPortCount`). Les dessins désignent un
  * port par `"<index de l'entrée>:<n>"` (n à partir de 1).
+ *
+ * Une seule lecture de la connectique pour tout ce qui suit (face, entrées,
+ * occupation, index de câble, contrôles) : `rackConnectors`, qui garde l'index
+ * de chaque entrée brute et compte une entrée sans quantité pour 1 port.
  */
 
 import type { ConnectorEntry } from "@/app/(app)/admin/equipment/[id]/_editor/types";
@@ -44,19 +48,39 @@ export type RackSource = {
   connections: RackConnectionRow[] | null;
 };
 
-/** Quantité d'une entrée au sens des index de câble (`quantity ?? 1`, comme arkyo). */
-function cableQty(entry: unknown): number {
-  const raw = entry && typeof entry === "object" ? (entry as { quantity?: unknown }).quantity : undefined;
-  const q = Number(raw ?? 1);
-  return Number.isFinite(q) ? Math.max(0, Math.floor(q)) : 0;
+/** Entrée illisible : gardée pour ne pas décaler les index, sans port ni face dessinée. */
+const unreadable = (i: number): ConnectorEntry => ({
+  id: String(i),
+  face: "TOP",
+  connectorTypeId: "",
+  signalName: "",
+  quantity: 0,
+  label: "",
+  direction: "BOTH",
+  gender: "FEMALE",
+});
+
+/**
+ * Connectique d'un équipement du contenant : `parseConnectors` entrée par
+ * entrée (même index que le JSON brut), quantité absente = 1 port (arkyo :
+ * `quantity ?? 1`), sinon `portCount`.
+ */
+export function rackConnectors(raw: unknown): ConnectorEntry[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.map((c, i) => {
+    const [e] = parseConnectors([c]);
+    if (!e) return unreadable(i);
+    const q = (c as { quantity?: unknown }).quantity;
+    return { ...e, id: typeof (c as { id?: unknown }).id === "string" ? e.id : String(i), quantity: q == null ? 1 : portCount(e) };
+  });
 }
 
 /** Clé de port (`"<entrée>:<n>"`) d'un index de câble, `null` hors connectique. */
-export function portKeyOfIndex(connectors: unknown, index: number | null | undefined): string | null {
-  if (!Array.isArray(connectors) || index == null || index < 0) return null;
+export function portKeyOfIndex(connectors: readonly ConnectorEntry[], index: number | null | undefined): string | null {
+  if (index == null || index < 0) return null;
   let flat = 0;
   for (let e = 0; e < connectors.length; e++) {
-    const q = cableQty(connectors[e]);
+    const q = portCount(connectors[e]);
     if (index < flat + q) return `${e}:${index - flat + 1}`;
     flat += q;
   }
@@ -75,7 +99,7 @@ export function slotTitle(slot: Pick<Slot, "label" | "equipment" | "panel">): st
 
 /** Connectique lisible de l'équipement d'un slot. */
 export function slotConnectors(slot: Pick<Slot, "equipment">): ConnectorEntry[] {
-  return parseConnectors(slot.equipment?.connectors);
+  return rackConnectors(slot.equipment?.connectors);
 }
 
 /** Nom d'un port à partir de sa clé (`"SDI 2"`), `null` si la clé est inconnue. */
@@ -113,7 +137,7 @@ function endOf(c: RackConnectionRow, side: Side) {
 function portOnSlot(c: RackConnectionRow, side: Side, slot: Slot): string | null {
   const end = endOf(c, side);
   if (end.slotId !== slot.id || end.adapterId || end.componentItemId) return null;
-  return portKeyOfIndex(slot.equipment?.connectors, end.index);
+  return portKeyOfIndex(slotConnectors(slot), end.index);
 }
 
 /** Repère affiché d'un câble (`"—"` sans numéro). */
@@ -179,7 +203,7 @@ export function endName(c: RackConnectionRow, side: Side, slotsById: ReadonlyMap
     const comp = slot.components?.find((k) => k.itemId === end.componentItemId);
     return `${slotTitle(slot)} · ${comp?.equipment?.name ?? "composant"}`;
   }
-  const key = portKeyOfIndex(slot.equipment?.connectors, end.index);
+  const key = portKeyOfIndex(slotConnectors(slot), end.index);
   const port = key ? portLabel(slotConnectors(slot), key) : null;
   return port ? `${slotTitle(slot)} · ${port}` : slotTitle(slot);
 }
@@ -212,7 +236,7 @@ export function canvasLookup(data: RackCanvasData): CatalogueLookup {
 }
 
 /** Dissipation d'un équipement : `heatBtuH` du catalogue, sinon 1 W ≈ 3,412 BTU/h (fiche équipement). */
-function heatOf(eq: Equipment): number {
+export function heatOf(eq: Equipment): number {
   const heat = (eq as { heatBtuH?: number | null }).heatBtuH;
   if (typeof heat === "number" && Number.isFinite(heat) && heat > 0) return heat;
   return (eq.powerW ?? 0) * 3.412;
@@ -252,7 +276,7 @@ export function rackBilan(data: RackCanvasData, slots: readonly Slot[]): RackBil
     for (let u = s.startU; u < s.startU + s.heightU && u <= data.rack.totalU; u++) used.add(u);
   }
   const eqs = equipmentOf(slots);
-  const connectors = eqs.flatMap((e) => parseConnectors(e.connectors));
+  const connectors = eqs.flatMap((e) => rackConnectors(e.connectors));
   const families = portFamilies(connectors, canvasLookup(data));
   const cap = data.rack.maxPowerW;
   return {

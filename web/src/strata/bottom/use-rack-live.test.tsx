@@ -1,12 +1,12 @@
 /**
- * `useRacksLive` : une lecture et un flux temps réel par contenant, partagés
- * par les abonnés (inspecteur, dock bas, vue Connectique) ; un évènement du
- * contenant relance les lectures.
+ * `useRacksLive` : une lecture par contenant, partagée par les abonnés
+ * (inspecteur, dock bas, vue Connectique) ; un évènement du flux applicatif
+ * qui porte le `rackId` relance les lectures. Aucun flux par contenant.
  */
 
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { mockApi, resetApp } from "@/tests/app-harness";
+import { emitAppEvent, mockApi, resetApp } from "@/tests/app-harness";
 import { useRacksLive } from "./use-rack-live";
 import { CONNECTIONS, RACK } from "./test-fixtures";
 
@@ -16,7 +16,7 @@ const calls = (spy: ReturnType<typeof mockApi>, path: string) =>
   spy.mock.calls.filter(([input]) => String(input).split("?")[0] === path).length;
 
 describe("useRacksLive", () => {
-  test("abonnés partagés, relecture sur évènement du contenant, fermeture au dernier départ", async () => {
+  test("abonnés partagés, relecture sur évènement applicatif du contenant, aucun flux par contenant", async () => {
     let rows = CONNECTIONS.slice(0, 1);
     const spy = mockApi({
       "GET /api/racks/r1/connections": () => ({ body: rows }),
@@ -29,14 +29,18 @@ describe("useRacksLive", () => {
     expect(calls(spy, "/api/racks/r1/connections")).toBe(1);
     expect(calls(spy, "/api/tenant/projects/p1/racks/r1/canvas-data")).toBe(1);
 
-    // Un câble ajouté ailleurs : le flux du contenant relance les lectures.
-    const es = (globalThis.EventSource as unknown as { open: Set<{ url: string; onmessage?: (e: MessageEvent) => void }> })
-      .open;
-    const stream = [...es].find((e) => e.url === "/api/racks/r1/events")!;
-    expect([...es].filter((e) => e.url === "/api/racks/r1/events")).toHaveLength(1);
+    // Un seul flux : celui de l'application, partagé.
+    const es = (globalThis.EventSource as unknown as { open: Set<{ url: string }> }).open;
+    expect([...es].map((e) => e.url)).toEqual(["/api/events"]);
+
+    // Un évènement d'un autre contenant : rien n'est relu.
     rows = CONNECTIONS;
     vi.useFakeTimers({ shouldAdvanceTime: true });
-    act(() => stream.onmessage?.(new MessageEvent("message", { data: JSON.stringify({ type: "connection_added" }) })));
+    act(() => emitAppEvent({ type: "update", entity: "rackConnection", action: "created", id: "r9", rackId: "r9" }));
+    act(() => void vi.advanceTimersByTime(200));
+    expect(calls(spy, "/api/racks/r1/connections")).toBe(1);
+    // Un câble ajouté ailleurs sur ce contenant : les lectures sont relancées.
+    act(() => emitAppEvent({ type: "update", entity: "rackConnection", action: "created", id: "r1", rackId: "r1" }));
     act(() => void vi.advanceTimersByTime(200));
     vi.useRealTimers();
     await waitFor(() => expect(a.result.current.r1.connections).toHaveLength(3));
@@ -44,6 +48,6 @@ describe("useRacksLive", () => {
 
     a.unmount();
     b.unmount();
-    await waitFor(() => expect([...es].some((e) => e.url === "/api/racks/r1/events")).toBe(false));
+    await waitFor(() => expect(es.size).toBe(0));
   });
 });

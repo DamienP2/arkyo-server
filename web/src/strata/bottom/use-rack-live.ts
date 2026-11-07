@@ -8,15 +8,21 @@
  *     {rackId}/canvas-data`), quand le canevas du rack, qui le charge
  *     d'ordinaire, n'est pas monté (vue Connectique).
  *
- * Une seule lecture et un seul flux temps réel (`/api/racks/{rackId}/events`)
- * par contenant, partagés par tous les abonnés ; un évènement du contenant
- * (câble, slot) relance les lectures.
+ * Une seule lecture par contenant, partagée par tous les abonnés. Le suivi
+ * passe par le flux applicatif déjà ouvert (`/api/events`, singleton
+ * `subscribeAppEvents`) : un évènement qui porte le `rackId` d'un contenant
+ * suivi (câble, slot, adaptateur…) relance ses lectures. Aucun flux
+ * `/api/racks/{rackId}/events` n'est ouvert ici : le serveur est en HTTP/1.1
+ * (6 connexions par origine) et chaque canevas de rack en tient déjà un
+ * (`use-rack-sync.ts`) ; doubler les flux bloquerait les requêtes suivantes
+ * (voir `lib/app-events-client.ts`).
  */
 
 import { useEffect, useMemo } from "react";
 import { create } from "zustand";
 import type { RackCanvasData } from "@/app/(fullscreen)/project/[id]/rack/rack-tab-client";
 import { api } from "@/lib/api-client";
+import { subscribeAppEvents } from "@/lib/app-events-client";
 import type { RackConnectionRow } from "./rack-model";
 
 export type RackLive = {
@@ -31,13 +37,27 @@ type Sub = {
   refs: number;
   /** Abonnés qui ont besoin du `canvas-data` (projet de la lecture). */
   canvasRefs: Map<string, number>;
-  es: EventSource | null;
   timer: ReturnType<typeof setTimeout> | null;
   /** Fermeture différée : un abonné qui se réabonne dans le même rendu (dépendances changées) garde les données. */
   teardown: ReturnType<typeof setTimeout> | null;
 };
 
 const subs = new Map<string, Sub>();
+
+/** Abonnement au flux applicatif, tant qu'un contenant est suivi. */
+let unsubscribeApp: (() => void) | null = null;
+
+function onAppEvent(data: unknown) {
+  const rackId = (data as { type?: unknown; rackId?: unknown } | null)?.rackId;
+  if ((data as { type?: unknown } | null)?.type !== "update" || typeof rackId !== "string") return;
+  const sub = subs.get(rackId);
+  if (!sub) return;
+  if (sub.timer) clearTimeout(sub.timer);
+  sub.timer = setTimeout(() => {
+    sub.timer = null;
+    reload(rackId);
+  }, 150);
+}
 
 function patch(rackId: string, next: Partial<RackLive>) {
   if (!subs.has(rackId)) return;
@@ -79,29 +99,11 @@ function acquire(rackId: string, projectId: string | null, wantCanvas: boolean):
     sub.teardown = null;
   }
   if (!sub) {
-    sub = { refs: 0, canvasRefs: new Map(), es: null, timer: null, teardown: null };
+    sub = { refs: 0, canvasRefs: new Map(), timer: null, teardown: null };
     subs.set(rackId, sub);
     patch(rackId, {});
     loadConnections(rackId);
-    if (typeof EventSource !== "undefined") {
-      const es = new EventSource(`/api/racks/${rackId}/events`);
-      const s = sub;
-      es.onmessage = (e) => {
-        let type = "";
-        try {
-          type = (JSON.parse(e.data) as { type?: string }).type ?? "";
-        } catch {
-          return;
-        }
-        if (type === "ping" || type === "connected") return;
-        if (s.timer) clearTimeout(s.timer);
-        s.timer = setTimeout(() => {
-          s.timer = null;
-          reload(rackId);
-        }, 150);
-      };
-      sub.es = es;
-    }
+    unsubscribeApp ??= subscribeAppEvents(onAppEvent);
   }
   sub.refs += 1;
   const canvasKey = wantCanvas && projectId ? projectId : null;
@@ -125,9 +127,12 @@ function acquire(rackId: string, projectId: string | null, wantCanvas: boolean):
     if (owned.refs > 0) return;
     owned.teardown = setTimeout(() => {
       if (owned.refs > 0 || subs.get(rackId) !== owned) return;
-      owned.es?.close();
       if (owned.timer) clearTimeout(owned.timer);
       subs.delete(rackId);
+      if (subs.size === 0) {
+        unsubscribeApp?.();
+        unsubscribeApp = null;
+      }
       useRackLiveStore.setState((s) => {
         const byRack = { ...s.byRack };
         delete byRack[rackId];

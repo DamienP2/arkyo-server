@@ -15,8 +15,9 @@
  * Contrôles du rapport que celui-ci publie (`SynopticBottomDock`).
  *
  * Quand la topbar porte l'état d'enregistrement (`data-strata-save`), le
- * badge de la barre contextuelle existante (`ProjectContextualTopbar`, dernier
- * `span` de sa racine) est masqué : l'état n'est affiché qu'une fois.
+ * badge de la barre contextuelle existante (`ProjectContextualTopbar` : dernier
+ * `span` de sa racine, à pictogramme) est masqué : l'état n'est affiché
+ * qu'une fois. Le repère n'est posé que pendant un état visible (pas `idle`).
  *
  * Même boîte `fixed` et même décalage haut qu'`EditorShell`. Un slot absent ou
  * `null` ne réserve aucune largeur.
@@ -38,7 +39,7 @@ import { SEG_BAR, SEG_TAB, SEG_TAB_OFF, SEG_TAB_ON } from "./seg-tabs";
 
 /** Masque le badge d'enregistrement de la barre contextuelle quand la topbar l'affiche. */
 const SAVE_BADGE_CSS =
-  '[data-strata-editor]:has([data-strata-save]) [data-dock="contextual"] > div > span:last-child:not([aria-hidden]) { display: none; }';
+  '[data-strata-editor]:has([data-strata-save]) [data-dock="contextual"] > div > span:last-child:has(> svg) { display: none; }';
 
 /** Hauteur de la topbar Strata (`--topbar-height` de `[data-interface="strata"]`). */
 export const STRATA_TOPBAR_H = 46;

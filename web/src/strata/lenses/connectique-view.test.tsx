@@ -56,6 +56,16 @@ describe("ConnectiqueView", () => {
     // Une ligne sélectionne son équipement.
     fireEvent.click(within(rows()[1]).getByText("MON 1"));
     expect(onSelectSlot).toHaveBeenCalledWith(SLOTS[2]);
+
+    // Un câble est atteignable au clavier : il sélectionne l'équipement et son port.
+    fireEvent.click(screen.getByRole("button", { name: "Arrière" }));
+    const cableButton = within(within(rows()[2]).getByRole("list", { name: "Câbles" })).getByRole("button", {
+      name: /^V-0101\s*SDI OUT 1 → MON 1 · SDI IN$/,
+    });
+    expect(cableButton.tagName).toBe("BUTTON");
+    fireEvent.click(cableButton);
+    expect(onSelectSlot).toHaveBeenLastCalledWith(SLOTS[0]);
+    expect(rows()[2].querySelector('[data-port="0:1"]')).toHaveAttribute("data-selected");
   });
 
   test("ligne sélectionnée marquée", () => {

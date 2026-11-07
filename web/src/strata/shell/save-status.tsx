@@ -6,8 +6,9 @@
  *
  * `getEditorSlots` (project-editor.tsx) enveloppe sa topbar globale dans
  * `withStrataSaveStatus` ; `StrataProjectTopbar` lit l'état par
- * `useStrataSaveStatus` et pose le repère `data-strata-save`, qui masque le
- * badge de la barre contextuelle (`StrataEditorShell`). En Classique, le
+ * `useStrataSaveStatus` et, pendant un état visible (pas `idle`), pose le
+ * repère `data-strata-save`, qui masque le badge de la barre contextuelle
+ * (`StrataEditorShell`). En Classique, le
  * contexte n'est lu par personne : le badge reste dans la barre contextuelle.
  */
 

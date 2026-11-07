@@ -17,7 +17,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingState } from "@/components/ui/loading-state";
 import type { Slot } from "@/components/synoptique/lib/types";
 import { cn } from "@/lib/utils";
-import { drawingConnectorTypes, drawingSignals, parseConnectors, totalPorts } from "../catalogue-model";
+import { drawingConnectorTypes, drawingSignals, totalPorts } from "../catalogue-model";
 import { EquipmentFace } from "../drawings/equipment-face";
 import type { FaceSide } from "../drawings/face-layout";
 import { RackElevation, type RackElevationSlot } from "../drawings/rack-elevation";
@@ -28,6 +28,7 @@ import {
   canvasLookup,
   endName,
   portLabel,
+  rackConnectors,
   slotCablesOnFace,
   slotLinks,
   slotTitle,
@@ -71,7 +72,7 @@ function RackConnectique({
       brand: s.equipment!.brand?.name ?? null,
       heightU: s.heightU,
       isRackable: true,
-      connectors: parseConnectors(s.equipment!.connectors),
+      connectors: rackConnectors(s.equipment!.connectors),
     },
     links: slotLinks(s, src.connections),
   }));
@@ -101,7 +102,7 @@ function RackConnectique({
         <ul aria-label={src.data.rack.name} className="flex min-w-0 flex-1 flex-col gap-2">
           {rows.map((s) => {
             const eq = s.equipment!;
-            const connectors = parseConnectors(eq.connectors);
+            const connectors = rackConnectors(eq.connectors);
             const links = slotLinks(s, src.connections);
             const cables = slotCablesOnFace(s, face, src.connections).sort((a, b) => byCableLabel(a.cable, b.cable));
             const sel = s.id === selectedSlotId;
@@ -154,18 +155,20 @@ function RackConnectique({
                 ) : (
                   <ul aria-label="Câbles" className="flex min-w-0 flex-col gap-0.5 text-[12px]">
                     {cables.map(({ cable, side, key }) => (
-                      <li
-                        key={`${cable.id}-${side}`}
-                        onClick={() => {
-                          setPort({ slotId: s.id, key });
-                          onSelectSlot(s);
-                        }}
-                        className="flex min-w-0 cursor-pointer items-baseline gap-2 rounded px-1 hover:bg-[var(--muted)]"
-                      >
-                        <span className="shrink-0 font-mono text-[var(--foreground)]">{cableLabel(cable)}</span>
-                        <span className="truncate text-[var(--muted-foreground)]">
-                          {`${portLabel(connectors, key) ?? key} → ${endName(cable, side === "from" ? "to" : "from", byId)}`}
-                        </span>
+                      <li key={`${cable.id}-${side}`}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPort({ slotId: s.id, key });
+                            onSelectSlot(s);
+                          }}
+                          className="flex w-full min-w-0 items-baseline gap-2 rounded px-1 text-left outline-none hover:bg-[var(--muted)] focus-visible:bg-[var(--muted)] focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
+                        >
+                          <span className="shrink-0 font-mono text-[var(--foreground)]">{cableLabel(cable)}</span>
+                          <span className="truncate text-[var(--muted-foreground)]">
+                            {`${portLabel(connectors, key) ?? key} → ${endName(cable, side === "from" ? "to" : "from", byId)}`}
+                          </span>
+                        </button>
                       </li>
                     ))}
                   </ul>

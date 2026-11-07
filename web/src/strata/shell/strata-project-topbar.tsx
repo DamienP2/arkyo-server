@@ -456,8 +456,8 @@ export function StrataProjectTopbar({
       <div className="flex-1" />
 
       <div className="flex shrink-0 items-center gap-1.5">
-        {/* État d'enregistrement : le repère masque le badge de la barre contextuelle. */}
-        {saveStatus !== undefined && (
+        {/* État d'enregistrement visible : le repère masque le badge de la barre contextuelle. */}
+        {saveStatus !== undefined && saveStatus !== "idle" && (
           <span data-strata-save="" className="mr-1.5 inline-flex">
             <StrataSaveBadge status={saveStatus} />
           </span>

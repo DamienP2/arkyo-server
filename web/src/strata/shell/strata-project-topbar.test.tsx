@@ -95,9 +95,21 @@ describe("StrataProjectTopbar", () => {
     expect(saved.closest("[data-strata-save]")).not.toBeNull();
   });
 
-  test("sans état fourni : pas de repère, le badge de la barre contextuelle reste", async () => {
+  test("sans état fourni, ou au repos : pas de repère, le badge de la barre contextuelle reste", async () => {
     renderTopbar("/project/p1?tab=rack");
     await waitFor(() => lensBar());
     expect(document.querySelector("[data-strata-save]")).toBeNull();
+    resetApp();
+    renderTopbar("/project/p1?tab=rack", (n) => withStrataSaveStatus("idle", n));
+    await waitFor(() => lensBar());
+    expect(document.querySelector("[data-strata-save]")).toBeNull();
+  });
+
+  test("règle de masquage limitée au badge à pictogramme de la barre contextuelle", async () => {
+    renderTopbar("/project/p1?tab=rack", (n) => withStrataSaveStatus("saving", n));
+    await waitFor(() => lensBar());
+    const css = document.querySelector("[data-strata-editor] style")!.textContent!;
+    expect(css).toContain("[data-strata-editor]:has([data-strata-save])");
+    expect(css).toContain('[data-dock="contextual"] > div > span:last-child:has(> svg)');
   });
 });

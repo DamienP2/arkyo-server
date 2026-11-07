@@ -5,8 +5,8 @@
  *
  * Même composition que le synoptique d'arkyo
  * (`components/synoptique/hooks/use-validation-report.ts`) :
- *   - un slot par équipement, ports à plat (`quantity ?? 1` par entrée), type
- *     et famille du connecteur ;
+ *   - un slot par équipement, ports à plat (`quantity ?? 1` par entrée, lecture
+ *     `rackConnectors` partagée avec la face), type et famille du connecteur ;
  *   - un panel est développé en rangées virtuelles d'1 U (`<slot>__row<n>`,
  *     `expandPanelSlots`), seules les rangées équipées comptent, deux ports
  *     (arrière, avant) par emplacement ; les extrémités de câble passent en
@@ -23,7 +23,8 @@
 import type { RackCanvasData } from "@/app/(fullscreen)/project/[id]/rack/rack-tab-client";
 import type { Slot } from "@/components/synoptique/lib/types";
 import type { ValidationInput } from "@/lib/services/rack-validation";
-import { flattenSlots, type RackConnectionRow } from "./rack-model";
+import { portCount } from "../drawings/face-layout";
+import { flattenSlots, rackConnectors, type RackConnectionRow } from "./rack-model";
 
 const ADAPTER_PREFIX = "__a__:";
 const ROW = "__row";
@@ -95,17 +96,10 @@ export function toValidationInput(canvasData: RackCanvasData, extras: Validation
       continue;
     }
     const ports: InputPort[] = [];
-    const raw = Array.isArray(s.equipment?.connectors) ? (s.equipment.connectors as unknown[]) : [];
     let flat = 0;
-    for (const entry of raw) {
-      const c = (entry ?? {}) as {
-        quantity?: number | null;
-        connectorTypeId?: string | null;
-        signalName?: string | null;
-        direction?: string | null;
-      };
-      const qty = Number(c.quantity ?? 1);
-      for (let i = 0; i < (Number.isFinite(qty) ? qty : 0); i++) {
+    // Même lecture de la connectique que la face et les index de câble.
+    for (const c of rackConnectors(s.equipment?.connectors)) {
+      for (let i = 0; i < portCount(c); i++) {
         ports.push({
           index: flat++,
           signalName: c.signalName || null,

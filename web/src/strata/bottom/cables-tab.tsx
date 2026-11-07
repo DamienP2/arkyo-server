@@ -33,7 +33,7 @@ function cableSignal(c: RackConnectionRow, slotsById: ReadonlyMap<string, Slot>)
   ] as const) {
     const slot = slotId ? slotsById.get(slotId) : undefined;
     if (!slot || comp) continue;
-    const key = portKeyOfIndex(slot.equipment?.connectors, index);
+    const key = portKeyOfIndex(slotConnectors(slot), index);
     const entry = key ? slotConnectors(slot)[Number(key.split(":")[0])] : undefined;
     if (entry?.signalName) return entry.signalName;
   }

@@ -8,16 +8,21 @@
 import { forwardRef, useImperativeHandle } from "react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
-import { OWNER_PERMS, renderApp, resetApp, signedInApi, type Api } from "@/tests/app-harness";
+import { OWNER_PERMS, emitAppEvent, renderApp, resetApp, signedInApi, type Api } from "@/tests/app-harness";
+import type { Slot } from "@/components/synoptique/lib/types";
 import type { UiInterface } from "@/strata/interface-context";
-import { CONNECTIONS, RACK } from "../bottom/test-fixtures";
+import { CONNECTIONS, RACK, canvasData } from "../bottom/test-fixtures";
 
 const FIRST_LOAD = { timeout: 15000 };
 
 // Canevas de placement simulé, comme `rack-tab.test.tsx` (Konva hors de portée de happy-dom).
-vi.mock("@/app/(fullscreen)/project/[id]/rack/_components/rack-placement-canvas", () => ({
+// Il ouvre, comme le vrai, le flux temps réel de son contenant (`useRackSync`).
+vi.mock("@/app/(fullscreen)/project/[id]/rack/_components/rack-placement-canvas", async () => {
+  const { useRackSync } = await import("@/components/synoptique/hooks/use-rack-sync");
+  return {
   RackDragOverlayContent: () => null,
-  RackPlacementCanvas: forwardRef<unknown, { rack: { id: string } }>(function FakeCanvas(props, ref) {
+  RackPlacementCanvas: forwardRef<unknown, { rack: { id: string }; initialSlots?: Slot[] }>(function FakeCanvas(props, ref) {
+    useRackSync(props.rack.id, props.initialSlots ?? NO_SLOTS);
     useImperativeHandle(ref, () => ({
       rackId: props.rack.id,
       ownsSlot: () => false,
@@ -34,7 +39,10 @@ vi.mock("@/app/(fullscreen)/project/[id]/rack/_components/rack-placement-canvas"
     }));
     return <div data-testid="rack-canvas" data-rack={props.rack.id} />;
   }),
-}));
+  };
+});
+
+const NO_SLOTS: Slot[] = [];
 
 const HEADER = {
   id: "p1",
@@ -143,8 +151,8 @@ afterEach(() => {
 });
 
 /** Empty state plein canevas de l'onglet Rack (sans contenant rackable). */
-async function rackEmptyState(iface: UiInterface): Promise<string> {
-  renderApp("/project/p1?tab=rack", api(iface, [rack("r1", "Caisse", { isRackable: false })]));
+async function rackEmptyState(iface: UiInterface, url = "/project/p1?tab=rack"): Promise<string> {
+  renderApp(url, api(iface, [rack("r1", "Caisse", { isRackable: false })]));
   const title = await screen.findByText("Aucun contenant rackable", {}, FIRST_LOAD);
   return title.parentElement!.outerHTML;
 }
@@ -158,6 +166,20 @@ describe("onglet Rack en Strata", () => {
     expect(screen.getByRole("button", { name: "Aller à l'Inventaire" })).toBeInTheDocument();
     expect(dock("bottom")).toBeNull();
     expect(dock("right")).toBeNull();
+  });
+
+  test("sans contenant rackable, lentille Connectique ouverte : même EmptyState, pas de dock bas", async () => {
+    const classique = await rackEmptyState("classique", "/project/p1?tab=rack&lens=connectique");
+    resetApp();
+    const strata = await rackEmptyState("strata", "/project/p1?tab=rack&lens=connectique");
+    expect(strata).toBe(classique);
+    expect(screen.getByRole("button", { name: "Aller à l'Inventaire" })).toBeInTheDocument();
+    expect(within(screen.getByRole("navigation", { name: "Lentilles" })).getByRole("link", { name: "Connectique" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    expect(dock("bottom")).toBeNull();
+    expect(screen.queryByRole("list", { name: "Caisse" })).toBeNull();
   });
 
   test("dock bas : un clic sur un contrôle sélectionne l'équipement, dont l'inspecteur montre la face", async () => {
@@ -224,6 +246,69 @@ describe("onglet Rack en Strata", () => {
     expect(document.querySelector("[data-strata-editor]")).toBeNull();
     expect(screen.queryByRole("tab", { name: /Contrôles/ })).toBeNull();
     expect(screen.queryByRole("list", { name: "Baie 1" })).toBeNull();
+  });
+});
+
+/** Trois baies du même lieu, affichées en portée « par emplacement ». */
+const LOCATION_RACKS = ["r1", "r2", "r3"].map((id, i) => rack(id, `Baie ${i + 1}`));
+
+function locationApi(iface: UiInterface): Api {
+  const extra: Api = {};
+  for (const [i, id] of ["r1", "r2", "r3"].entries()) {
+    extra[`GET /api/tenant/projects/p1/racks/${id}/canvas-data`] = {
+      body: id === "r1" ? RACK : canvasData(id, `Baie ${i + 1}`, []),
+    };
+    extra[`GET /api/tenant/projects/p1/racks/${id}/inventory`] = { body: { items: [] } };
+    extra[`GET /api/racks/${id}/connections`] = { body: id === "r1" ? CONNECTIONS : [] };
+  }
+  return api(iface, LOCATION_RACKS, extra);
+}
+
+/** Flux temps réel ouverts (`EventSource` simulé du harnais), par URL. */
+function streams(): string[] {
+  const open = (globalThis.EventSource as unknown as { open: Set<{ url: string }> }).open;
+  return [...open].map((e) => e.url).sort();
+}
+
+async function openLocation(iface: UiInterface, url = "/project/p1?tab=rack") {
+  window.localStorage.setItem("rack-tab:display-scope", JSON.stringify("location"));
+  window.localStorage.setItem("rack-tab:location", JSON.stringify("l1"));
+  const app = renderApp(url, locationApi(iface));
+  await screen.findByText("Finale Coupe de France", {}, FIRST_LOAD);
+  return app;
+}
+
+describe("flux temps réel en portée lieu (HTTP/1.1 : 6 connexions par origine)", () => {
+  const RACK_STREAMS = ["/api/racks/r1/events", "/api/racks/r2/events", "/api/racks/r3/events"];
+
+  test("vue Rack : les flux des canevas et le flux applicatif seulement, comme en Classique", async () => {
+    await openLocation("classique");
+    await waitFor(() => expect(screen.getAllByTestId("rack-canvas")).toHaveLength(3), FIRST_LOAD);
+    await waitFor(() => expect(streams()).toEqual(["/api/events", ...RACK_STREAMS]));
+    const classique = streams();
+    resetApp();
+
+    await openLocation("strata");
+    await waitFor(() => expect(screen.getAllByTestId("rack-canvas")).toHaveLength(3), FIRST_LOAD);
+    // Le dock bas est là, avec les câbles de la Baie 1…
+    const bottom = await waitFor(() => dock("bottom")!);
+    expect(await within(bottom).findByRole("tab", { name: "Câbles 3" })).toBeInTheDocument();
+    // …sans aucun flux de plus.
+    expect(streams()).toEqual(classique);
+  });
+
+  test("vue Connectique : le flux applicatif seul, et il tient les câbles à jour", async () => {
+    const { fetchSpy } = await openLocation("strata", "/project/p1?tab=rack&lens=connectique");
+    await screen.findByRole("list", { name: "Baie 1" }, FIRST_LOAD);
+    expect(screen.queryByTestId("rack-canvas")).toBeNull();
+    await waitFor(() => expect(streams()).toEqual(["/api/events"]));
+
+    const reads = () =>
+      fetchSpy.mock.calls.filter(([input]) => String(input).split("?")[0] === "/api/racks/r2/connections").length;
+    const before = reads();
+    emitAppEvent({ type: "update", entity: "rackConnection", action: "created", id: "r2", rackId: "r2" });
+    await waitFor(() => expect(reads()).toBe(before + 1));
+    expect(streams()).toEqual(["/api/events"]);
   });
 });
 
