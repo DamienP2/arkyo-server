@@ -80,3 +80,39 @@ Le produit s'affiche « Strata Arkyo » ; seuls les noms affichés changent, jam
 - **Marque** : composant `StrataBrand` (`web/src/components/brand`), titres « Strata Arkyo ».
 - **Icônes** : « SA » (Inter ExtraBold, licence OFL) générées par `tools/make-icons` dans `assets/icons/` (les fichiers gardent leurs noms `arkyo.*`).
 - **Paquets** : application macOS `/Applications/Strata Arkyo.app` et `Uninstall Strata Arkyo.app` ; MSI Windows (dossier du menu Démarrer « Strata Arkyo », service affiché « Strata Arkyo Server », même affichage via `arkyo-server service install` et dans les métadonnées des exécutables). Le nom du service, la règle de pare-feu, les dossiers et les `UpgradeCode` restent inchangés.
+
+## Deux interfaces (Classique / Strata)
+
+Le site choisit son interface dans Administration › Système. **Classique** est le recodage fidèle d'arkyo ; **Strata** refond la présentation sans toucher aux fonctions ni à l'API. Spec : `docs/superpowers/specs/2026-11-07-interface-strata-design.md`.
+
+- **Réglage.** Clé `ui.interface` de `AppConfig` (`classique`, défaut quand la clé est absente, ou `strata`). Pas de migration. Comme `site.*`, elle n'entre pas dans l'export de sauvegarde au format arkyo.
+  - `GET /api/site` renvoie `{ name, logoUrl, interface }`.
+  - `PUT /api/system/interface` `{ "interface": "strata" }` : garde `settings:admin`, évènement `("config", "updated")`, `204`. Toute autre valeur donne `400 { "error": "Interface inconnue." }`.
+  - Les sessions ouvertes basculent sans rechargement : `AppSync` rafraîchit à chaque évènement et la coquille relit `/api/site`.
+- **Contexte.** `web/src/strata/interface-context.tsx` fournit `InterfaceProvider` et `useInterface()` (`"classique"` hors provider) ; le provider pose `data-interface` sur `<html>`, ce qui active le bloc `[data-interface="strata"]` de `globals.css`.
+- **Points d'accroche dans les fichiers copiés.** Liste fermée, chacun commenté `// arkyo-server: interface Strata` et sans effet en Classique. Toute autre modification d'un fichier copié est refusée en relecture.
+
+| Fichier | Accroche |
+| --- | --- |
+| `app/(app)/app-layout.tsx` | provider ; en Strata, `StrataAppShell` autour du même `<Outlet/>` |
+| `app/(fullscreen)/fullscreen-layout.tsx` | provider seulement |
+| `components/editor-shell/editor-shell.tsx` | en Strata, délègue à `StrataEditorShell` avec les mêmes slots ; type `EditorShellSlots` : champ optionnel `strata?: { leftDockTabs; bottomDock }` |
+| `_editor/project-global-topbar.tsx` | en Strata, `StrataProjectTopbar` avec les mêmes props |
+| `components/layout/topbar.tsx` | exports des menus internes (notifications, langue, profil, rôle) |
+| `admin/systeme/systeme-page.tsx` | section « Interface » |
+| `admin/equipment/[id]/equipment-editor.tsx` | panneau « Faces et schéma » au-dessus de la Connectique |
+| `project-editor.tsx` (`getEditorSlots`) | bibliothèque en dock gauche, face de l'équipement dans l'inspecteur, dock bas, vue Connectique |
+| `app/globals.css` | bloc `[data-interface="strata"]` et variables `--strata-face-*` (clair et sombre) |
+| `admin/catalogue/_components/{equipment,cables,adapters}-list-panel.tsx` | grilles dessinées en vue grille |
+
+- **Code neuf, `web/src/strata/`.**
+  - `shell/` : `StrataAppShell`, `StrataTopbar`, `StrataSideNav`, `StrataProjectTopbar`, `StrataEditorShell`, `BottomDock`, état d'enregistrement.
+  - `drawings/` : `EquipmentFace`, `BlockDiagram`, `CableDrawing`, `AdapterDrawing`, `RackElevation`, `Gauge` ; calcul de disposition des faces dans `face-layout.ts`.
+  - `pages/` : `StrataHome` (accueil) et grilles du catalogue (équipements, cordons, adaptateurs).
+  - `library/` : `LibraryDock`, bibliothèque glissable du dock gauche.
+  - `inspector/` : carte de la face de l'équipement sélectionné.
+  - `bottom/` : dock bas du rack (onglets Contrôles, Câbles, Bilan), alimenté par `use-rack-live`.
+  - `lenses/` : lentilles portées par l'URL sans nouvel id d'onglet (Connectique = onglet `rack` avec `?lens=connectique`).
+  - `editor/` : variantes Strata des onglets Inventaire et Rack.
+  - Couleurs : variables de `globals.css` uniquement ; couleurs métier inchangées.
+- **Règle de phase.** Une phase qui porte une page la rend dans les deux interfaces, et ajoute au besoin sa présentation Strata. La table « Où vit chaque fonction » de la spec se met à jour à chaque phase.
