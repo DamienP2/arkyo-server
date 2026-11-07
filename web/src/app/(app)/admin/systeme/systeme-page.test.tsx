@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from "vitest";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
-import { renderApp, resetApp, signedInApi } from "@/tests/app-harness";
+import { emitAppEvent, renderApp, resetApp, sentBody, signedInApi } from "@/tests/app-harness";
 
 afterEach(resetApp);
 
@@ -106,5 +106,72 @@ describe("/admin/systeme", () => {
     expect(
       screen.getByRole("button", { name: "Revenir à la version précédente" }),
     ).toBeTruthy();
+  });
+});
+
+describe("/admin/systeme : interface", () => {
+  test("affiche le choix d'interface courant", async () => {
+    renderApp("/admin/systeme", api());
+    const classique = await screen.findByRole("radio", { name: /Classique \(arkyo\)/ });
+    const strata = screen.getByRole("radio", { name: /Strata/ });
+    expect(classique).toHaveAttribute("aria-checked", "true");
+    expect(strata).toHaveAttribute("aria-checked", "false");
+    expect(screen.getByText("L'interface d'arkyo, inchangée.")).toBeInTheDocument();
+  });
+
+  test("bascule vers Strata après confirmation", async () => {
+    const { fetchSpy } = renderApp(
+      "/admin/systeme",
+      api({ "PUT /api/system/interface": { status: 204, body: null } }),
+    );
+    fireEvent.click(await screen.findByRole("radio", { name: /Strata/ }));
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText("Changer l'interface ?")).toBeInTheDocument();
+    expect(
+      within(dialog).getByText("L'interface change pour tous les utilisateurs connectés."),
+    ).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Changer" }));
+    await waitFor(() =>
+      expect(sentBody(fetchSpy, "PUT", "/api/system/interface")).toEqual({ interface: "strata" }),
+    );
+    expect(
+      await screen.findByText("Interface Strata activée pour tous les utilisateurs"),
+    ).toBeInTheDocument();
+  });
+
+  test("annuler la confirmation n'envoie rien", async () => {
+    const { fetchSpy } = renderApp(
+      "/admin/systeme",
+      api({ "PUT /api/system/interface": { status: 204, body: null } }),
+    );
+    fireEvent.click(await screen.findByRole("radio", { name: /Strata/ }));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Annuler" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(sentBody(fetchSpy, "PUT", "/api/system/interface")).toBeUndefined();
+  });
+
+  test("bascule pendant l'édition : la coquille se relit et data-interface passe à strata", async () => {
+    let iface = "classique";
+    const { fetchSpy } = renderApp(
+      "/admin/systeme",
+      api({
+        "GET /api/site": () => ({ body: { name: "Régie A", interface: iface } }),
+        "PUT /api/system/interface": () => {
+          iface = "strata";
+          return { status: 204, body: null };
+        },
+      }),
+    );
+    await waitFor(() => expect(document.documentElement.dataset.interface).toBe("classique"));
+    const siteCalls = () =>
+      fetchSpy.mock.calls.filter(([u]) => String(u).split("?")[0] === "/api/site").length;
+    const before = siteCalls();
+    fireEvent.click(await screen.findByRole("radio", { name: /Strata/ }));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Changer" }));
+    emitAppEvent({ domain: "config", action: "updated" });
+    await waitFor(() => expect(siteCalls()).toBeGreaterThan(before));
+    await waitFor(() => expect(document.documentElement.dataset.interface).toBe("strata"));
   });
 });

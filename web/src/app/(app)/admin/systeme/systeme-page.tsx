@@ -24,6 +24,8 @@ import { useConfirm } from "@/components/ui/confirm-dialog";
 import { useToast } from "@/components/ui/toast";
 import { api, getApiErrorMessage } from "@/lib/api-client";
 import { usePageTitle } from "@/lib/hooks/use-page-title";
+import { useRouter } from "next/navigation"; // arkyo-server: interface Strata
+import { useInterface, type UiInterface } from "@/strata/interface-context"; // arkyo-server: interface Strata
 
 type SystemInfo = { version: string; dataDir: string; urls: string[] };
 
@@ -88,6 +90,8 @@ export default function SystemePage() {
   usePageTitle("Système");
   const confirm = useConfirm();
   const toast = useToast();
+  const router = useRouter(); // arkyo-server: interface Strata
+  const currentInterface = useInterface(); // arkyo-server: interface Strata
   const fileRef = useRef<HTMLInputElement>(null);
   const [system, setSystem] = useState<SystemInfo | null>(null);
   const [update, setUpdate] = useState<UpdateInfo | null>(null);
@@ -164,6 +168,28 @@ export default function SystemePage() {
     }
   }
 
+  // arkyo-server: interface Strata
+  async function changeInterface(next: UiInterface) {
+    if (next === currentInterface) return;
+    const ok = await confirm({
+      title: "Changer l'interface ?",
+      description: "L'interface change pour tous les utilisateurs connectés.",
+      confirmLabel: "Changer",
+    });
+    if (!ok) return;
+    try {
+      await api.put("/api/system/interface", { interface: next });
+      router.refresh();
+      toast.success(
+        next === "strata"
+          ? "Interface Strata activée pour tous les utilisateurs"
+          : "Interface Classique activée pour tous les utilisateurs",
+      );
+    } catch (e) {
+      toast.error(getApiErrorMessage(e));
+    }
+  }
+
   async function copy(url: string) {
     try {
       await navigator.clipboard.writeText(url);
@@ -216,6 +242,34 @@ export default function SystemePage() {
   return (
     <AdminTabLayout>
       <div className="max-w-2xl space-y-8">
+        {/* arkyo-server: interface Strata */}
+        <Section title="Interface">
+          <div role="radiogroup" aria-label="Interface" className="grid grid-cols-2 gap-3">
+            {(
+              [
+                ["classique", "Classique (arkyo)", "L'interface d'arkyo, inchangée."],
+                ["strata", "Strata", "Topbar et docks façon Strata Graphics, dessins techniques."],
+              ] as const
+            ).map(([value, label, hint]) => (
+              <button
+                key={value}
+                type="button"
+                role="radio"
+                aria-checked={currentInterface === value}
+                onClick={() => void changeInterface(value)}
+                className={`rounded-lg border p-3 text-left transition-colors ${
+                  currentInterface === value
+                    ? "border-[var(--accent)] bg-[var(--accent-soft)]"
+                    : "border-[var(--border)] hover:bg-[var(--muted)]"
+                }`}
+              >
+                <div className="text-sm font-medium">{label}</div>
+                <div className="text-muted-foreground text-xs">{hint}</div>
+              </button>
+            ))}
+          </div>
+        </Section>
+
         <Section title="Serveur">
           <div className="grid grid-cols-2 gap-3">
             <InfoCard
