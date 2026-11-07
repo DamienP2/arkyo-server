@@ -278,6 +278,72 @@ async fn resizing_panel_clears_slots() {
     assert_eq!(r.status, StatusCode::NOT_FOUND);
 }
 
+/// arkyo-server: écart assumé (4a M-1), comme la garde de l'adaptateur. arkyo
+/// supprimait un panel posé dans un contenant : son slot restait dessiné
+/// « — » dans l'élévation, ineffaçable (son DELETE le rend fantôme), et la
+/// ligne d'inventaire sans référence n'apparaissait plus nulle part.
+#[tokio::test]
+async fn delete_panel_in_use_refused() {
+    let c = ctx().await;
+    let p = &c.e.pool;
+    let id = c
+        .panel(json!({"name": "Patch 24", "panelType": "PATCH", "heightU": 1}))
+        .await["id"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    let path = format!("{PANELS}/{id}");
+    for sql in [
+        r#"INSERT INTO "Rack" ("id","name","createdAt","updatedAt") VALUES ('r1','Baie 1',?,?)"#,
+        r#"INSERT INTO "Rack" ("id","name","createdAt","updatedAt") VALUES ('r2','Baie 2',?,?)"#,
+        r#"INSERT INTO "RackInventoryItem" ("id","rackId","panelId","quantity","createdAt","updatedAt") VALUES ('i1','r1',?,1,?,?)"#,
+        r#"INSERT INTO "RackSlot" ("id","rackId","panelId","inventoryItemId","startU","createdAt","updatedAt") VALUES ('s1','r1',?,'i1',3,?,?)"#,
+        r#"INSERT INTO "RackSlot" ("id","rackId","panelId","startU","createdAt","updatedAt") VALUES ('s2','r2',?,4,?,?)"#,
+    ] {
+        let mut q = sqlx::query(sql);
+        if sql.contains("panelId") {
+            q = q.bind(&id);
+        }
+        q.bind(NOW).bind(NOW).execute(p).await.unwrap();
+    }
+    let used =
+        json!({"error": "Utilisé dans 2 contenant(s) — suppression impossible", "usageCount": 2});
+
+    // Inventory line and placed slots in two containers: 409, nothing deleted.
+    let r = c.req("DELETE", &path, None).await;
+    assert_eq!((r.status, r.body), (StatusCode::CONFLICT, used));
+    let panels: i64 = sqlx::query_scalar(r#"SELECT COUNT(*) FROM "Panel" WHERE "id" = ?"#)
+        .bind(&id)
+        .fetch_one(p)
+        .await
+        .unwrap();
+    assert_eq!(panels, 1);
+    // A slot alone (no inventory line) is a use too.
+    sqlx::query(r#"DELETE FROM "RackSlot" WHERE "id" = 's1'"#)
+        .execute(p)
+        .await
+        .unwrap();
+    sqlx::query(r#"DELETE FROM "RackInventoryItem""#)
+        .execute(p)
+        .await
+        .unwrap();
+    let r = c.req("DELETE", &path, None).await;
+    assert_eq!(
+        (r.status, r.body),
+        (
+            StatusCode::CONFLICT,
+            json!({"error": "Utilisé dans 1 contenant(s) — suppression impossible", "usageCount": 1})
+        )
+    );
+    // No longer used: deleted.
+    sqlx::query(r#"DELETE FROM "RackSlot""#)
+        .execute(p)
+        .await
+        .unwrap();
+    let r = c.req("DELETE", &path, None).await;
+    assert_eq!((r.status, r.body), (StatusCode::OK, json!({"ok": true})));
+}
+
 #[tokio::test]
 async fn neutrik_d_rules() {
     let c = ctx().await;

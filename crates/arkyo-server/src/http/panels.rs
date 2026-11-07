@@ -505,31 +505,64 @@ async fn update_inner(
 
 // ── DELETE /api/panels/:id ──────────────────────────────────────────────────
 
-/// The panel and its slots (`PanelSlot` ON DELETE CASCADE); the rack slots
-/// and inventory items that used it keep a `NULL` `panelId` (SetNull).
+/// The panel and its slots (`PanelSlot` ON DELETE CASCADE).
+///
+/// arkyo-server: écart assumé (4a M-1), sur le modèle de la garde de
+/// l'adaptateur (4a I-4) : un panel utilisé par un contenant (`RackSlot` ou
+/// `RackInventoryItem`) est refusé en 409. arkyo le supprimait, ces lignes
+/// gardaient un `panelId` `NULL` (SetNull) : un slot « — » ineffaçable dans
+/// l'élévation (son DELETE le rend fantôme) et une ligne d'inventaire
+/// invisible.
 pub async fn remove(
     State(st): State<AppState>,
     CurrentUser(me): CurrentUser,
     Path(id): Path<String>,
 ) -> Response {
+    remove_inner(&st, &me, &id).await.unwrap_or_else(|r| r)
+}
+
+async fn remove_inner(
+    st: &AppState,
+    me: &crate::users::User,
+    id: &str,
+) -> Result<Response, Response> {
     // arkyo-server: garde serveur alignée sur l'UI (design:admin).
-    if let Err(r) = require(&me, &st.pool, Domain::Design, Level::Admin).await {
-        return r;
+    require(me, &st.pool, Domain::Design, Level::Admin).await?;
+    let mut tx = begin(&st.pool).await?;
+    // arkyo-server: garde d'usage, nombre de contenants distincts.
+    let used: i64 = sqlx::query_scalar(
+        r#"SELECT COUNT(*) FROM (
+             SELECT "rackId" FROM "RackSlot" WHERE "panelId" = ?1
+             UNION
+             SELECT "rackId" FROM "RackInventoryItem" WHERE "panelId" = ?1)"#,
+    )
+    .bind(id)
+    .fetch_one(&mut *tx)
+    .await
+    .map_err(db_error)?;
+    if used > 0 {
+        return Err((
+            StatusCode::CONFLICT,
+            Json(json!({
+                "error": format!("Utilisé dans {used} contenant(s) — suppression impossible"),
+                "usageCount": used,
+            })),
+        )
+            .into_response());
     }
-    let res = sqlx::query(r#"DELETE FROM "Panel" WHERE "id" = ?"#)
-        .bind(&id)
-        .execute(&st.pool)
-        .await;
-    match res {
-        // arkyo-server: un panel inconnu donne 404 « Not found » ; Prisma
-        // levait une erreur (500) dans arkyo.
-        Ok(r) if r.rows_affected() == 0 => not_found(),
-        Ok(_) => {
-            st.events.publish("panel", "delete", Some(&id));
-            Json(json!({ "ok": true })).into_response()
-        }
-        Err(e) => db_error(e),
+    let r = sqlx::query(r#"DELETE FROM "Panel" WHERE "id" = ?"#)
+        .bind(id)
+        .execute(&mut *tx)
+        .await
+        .map_err(db_error)?;
+    // arkyo-server: un panel inconnu donne 404 « Not found » ; Prisma
+    // levait une erreur (500) dans arkyo.
+    if r.rows_affected() == 0 {
+        return Err(not_found());
     }
+    tx.commit().await.map_err(db_error)?;
+    st.events.publish("panel", "delete", Some(id));
+    Ok(Json(json!({ "ok": true })).into_response())
 }
 
 // ── POST /api/panels/:id/slots ──────────────────────────────────────────────
