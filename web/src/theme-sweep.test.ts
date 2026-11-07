@@ -356,6 +356,33 @@ const COPIED_FILES = [
   "lib/pdf/synoptic-export.ts",
   "lib/print/export-with-cartouche.ts",
   "lib/print/render-print-layout.ts",
+  // Phase 4c (Task 8) : socle du synoptique. `synoptic-adapter-{node,picker}`
+  // sont avancés de la Task 10 (importés par `fit-all` et `use-validation-report`).
+  "components/editor-shell/contextual-topbar.tsx",
+  "components/editor-shell/cursor-hint.tsx",
+  "components/editor-shell/floating-context-menu.tsx",
+  "components/editor-shell/hooks/use-cursor-hint.ts",
+  "components/editor-shell/hooks/use-keyboard-shortcuts.ts",
+  "components/editor-shell/hooks/use-layers.ts",
+  "components/editor-shell/left-toolbar.tsx",
+  "components/editor-shell/right-panel.tsx",
+  "components/editor-shell/slide-over-panel.tsx",
+  "components/editor-shell/synoptic-actions-bar.tsx",
+  "components/editor-shell/tools-synoptic.tsx",
+  "components/synoptique/components/synoptic-adapter-node.tsx",
+  "components/synoptique/components/synoptic-adapter-picker.tsx",
+  "components/synoptique/hooks/use-cable-lane-offsets.ts",
+  "components/synoptique/hooks/use-synoptic-history.ts",
+  "components/synoptique/hooks/use-validation-report.ts",
+  "components/synoptique/lib/cable-paths.ts",
+  "components/synoptique/lib/cabling-api.ts",
+  "components/synoptique/lib/connection-devirt.ts",
+  "components/synoptique/lib/external-ports.ts",
+  "components/synoptique/lib/fit-all.ts",
+  "components/synoptique/lib/grid.ts",
+  "components/synoptique/lib/scene-descriptor.ts",
+  "components/synoptique/lib/snapshot-sync.ts",
+  "lib/services/audit-format.ts",
 ];
 
 /** Fichiers posés sur la topbar ou le rail : ils suivent le thème (variante « Clair A »). */
@@ -1037,6 +1064,27 @@ const ALLOW_HEX: AllowMap = {
   ],
   "lib/pdf/synoptic-export.ts": [
     { line: /"#[0-9a-f]{6}"/, reason: "cadre « dessin technique » et cartouche de secours dessinés par jsPDF : rendu des PDF" },
+  ],
+  // Phase 4c (Task 8) : socle du synoptique.
+  "components/editor-shell/hooks/use-layers.ts": [
+    { line: /^\s*color: (p|c)\.color \?\? "#64748b",$/, reason: "repli de la couleur d'un calque (catégorie d'équipement ou de signal) : couleur de calque, métier" },
+  ],
+  "components/editor-shell/tools-synoptic.tsx": [
+    {
+      line: /^\s*const COLORS = \["#111827", "#ef4444", "#f59e0b", "#10b981", "#3b82f6", "#8b5cf6"\];$|^\s*"#[0-9a-f]{6}",$/,
+      reason:
+        "pastilles proposées pour la couleur des étiquettes, de leur pastille de fond et des zones du synoptique " +
+        "(choisies par l'utilisateur) : couleur métier",
+    },
+  ],
+  "components/synoptique/components/synoptic-adapter-node.tsx": [
+    { line: /const color = ct\?\.color \?\? "#9ca3af";/, reason: CONN },
+  ],
+  "components/synoptique/components/synoptic-adapter-picker.tsx": [
+    {
+      line: /style=\{\{ background: "rgba\(0,0,0,0\.45\)", zIndex: 9999 \}\}/,
+      reason: "voile noir translucide derrière la modale (comme `bg-black/60` des autres modales) : neutre, identique dans les deux thèmes",
+    },
   ],
   "lib/print/export-with-cartouche.ts": [
     { line: /"#ffffff"/, reason: "fond blanc de la feuille et de la zone de dessin du PDF : rendu des PDF" },
