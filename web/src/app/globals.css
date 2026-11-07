@@ -147,6 +147,17 @@ body {
   --rail-icon: #5f6584;
   --rail-icon-active: #3346c9;
   --rail-active-bg: rgba(79, 99, 230, 0.1);
+  /* arkyo-server: interface Strata — dessins techniques (faces d'équipement,
+     élévation de rack) : châssis, trait, encres, fond du rack et sélection.
+     Une face est un rendu du matériel : sombre dans les deux thèmes (mêmes
+     valeurs dans .dark), comme la maquette approuvée. */
+  --strata-face-bg: #1d2030;
+  --strata-face-line: #3d4258;
+  --strata-face-ink: #e6e8f2;
+  --strata-face-ink-2: #a3a8bf;
+  --strata-face-ink-3: #8a90ad;
+  --strata-face-well: #07080c;
+  --strata-face-accent: #8fa3ff;
 
   /* ── Tokens couleurs métier (centralisés) ─────────────────────────
      Utilisés dans tout le module supervisor pour les rôles, plans,
@@ -218,6 +229,14 @@ body {
   --rail-icon: #8a90ad;
   --rail-icon-active: #e6e8f2;
   --rail-active-bg: rgba(143, 163, 255, 0.16);
+  /* arkyo-server: interface Strata — dessins techniques : mêmes valeurs qu'en clair */
+  --strata-face-bg: #1d2030;
+  --strata-face-line: #3d4258;
+  --strata-face-ink: #e6e8f2;
+  --strata-face-ink-2: #a3a8bf;
+  --strata-face-ink-3: #8a90ad;
+  --strata-face-well: #07080c;
+  --strata-face-accent: #8fa3ff;
 
   /* ── Tokens couleurs métier — variantes dark légèrement ajustées
      pour conserver le contraste sur fond sombre. */
@@ -236,6 +255,14 @@ body {
   --collab-tech: #34d399;
 
   --premium: #fbbf24; /* amber-400 */
+}
+
+/* arkyo-server: interface Strata — coquille Strata : barre latérale de 240 px
+   et topbar de 46 px. Les en-têtes fixes (AdminTabLayout) suivent ces
+   variables, et `--topbar-bottom` (calculé sur :root) avec elles. */
+[data-interface="strata"] {
+  --rail-width: 240px;
+  --topbar-height: 46px;
 }
 
 /* Dark mode géré par next-themes via classe .dark sur <html> */

@@ -13,6 +13,8 @@ import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 
 import { cn } from "@/lib/utils";
 import { StrataBrand } from "@/components/brand/strata-brand"; // arkyo-server: habillage Strata
+import { useInterface } from "@/strata/interface-context"; // arkyo-server: interface Strata
+import { StrataProjectTopbar } from "@/strata/shell/strata-project-topbar"; // arkyo-server: interface Strata
 
 import {
   STATUS_OPTIONS,
@@ -80,6 +82,9 @@ export function ProjectGlobalTopbar({
   tabs,
   onClose,
 }: ProjectGlobalTopbarProps) {
+  // arkyo-server: interface Strata — topbar à onglets segmentés, mêmes props (et couleurs de statut).
+  const ui = useInterface();
+  if (ui === "strata") return <StrataProjectTopbar {...{ projectName, tenantName, status, onStatusChange, onEditCharacteristics, onExport, tabs, onClose }} statusMeta={STATUS_META} />;
   const statusMeta = status ? STATUS_META[status] : null;
   return (
     // arkyo-server: habillage Strata (topbar claire ou sombre selon le thème, comme la topbar principale)

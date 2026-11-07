@@ -118,3 +118,88 @@ async fn upload_of_garbage_is_refused() {
     .await;
     assert_eq!(r.status, StatusCode::BAD_REQUEST);
 }
+
+// ── Interface (classique / strata) ──────────────────────────────────────────
+
+async fn site_interface(e: &Env, tok: &str) -> serde_json::Value {
+    let r = call(&e.app, "GET", "/api/site", LOCAL, Some(tok), None).await;
+    assert_eq!(r.status, StatusCode::OK);
+    r.body["interface"].clone()
+}
+
+#[tokio::test]
+async fn site_exposes_interface_classique_by_default() {
+    let e = env().await;
+    add_user(&e.pool, "t@b.fr", "technicien", false).await;
+    let tech = login(&e.app, "t@b.fr").await;
+    assert_eq!(site_interface(&e, &tech).await, "classique");
+}
+
+#[tokio::test]
+async fn interface_requires_settings_admin() {
+    let e = env().await;
+    add_user(&e.pool, "t@b.fr", "technicien", false).await;
+    let tech = login(&e.app, "t@b.fr").await;
+    let body = Some(json!({"interface":"strata"}));
+    let r = call(
+        &e.app,
+        "PUT",
+        "/api/system/interface",
+        LOCAL,
+        Some(&tech),
+        body.clone(),
+    )
+    .await;
+    assert_eq!(r.status, StatusCode::FORBIDDEN);
+    assert_eq!(r.body["error"], "Accès refusé");
+    let r = call(&e.app, "PUT", "/api/system/interface", LOCAL, None, body).await;
+    assert_eq!(r.status, StatusCode::UNAUTHORIZED);
+    assert_eq!(site_interface(&e, &tech).await, "classique");
+}
+
+#[tokio::test]
+async fn interface_put_switches_and_publishes() {
+    let e = env().await;
+    add_user(&e.pool, "o@b.fr", "owner", false).await;
+    let owner = login(&e.app, "o@b.fr").await;
+    let mut rx = e.events.subscribe();
+    for v in ["strata", "classique"] {
+        let r = call(
+            &e.app,
+            "PUT",
+            "/api/system/interface",
+            LOCAL,
+            Some(&owner),
+            Some(json!({ "interface": v })),
+        )
+        .await;
+        assert_eq!(r.status, StatusCode::NO_CONTENT);
+        let ev: serde_json::Value = serde_json::from_str(&rx.recv().await.unwrap()).unwrap();
+        assert_eq!(
+            ev,
+            json!({"type":"update","entity":"config","action":"updated"})
+        );
+        assert_eq!(site_interface(&e, &owner).await, v);
+    }
+}
+
+#[tokio::test]
+async fn interface_rejects_unknown() {
+    let e = env().await;
+    add_user(&e.pool, "o@b.fr", "owner", false).await;
+    let owner = login(&e.app, "o@b.fr").await;
+    for body in [Some(json!({"interface":"rose"})), Some(json!({})), None] {
+        let r = call(
+            &e.app,
+            "PUT",
+            "/api/system/interface",
+            LOCAL,
+            Some(&owner),
+            body,
+        )
+        .await;
+        assert_eq!(r.status, StatusCode::BAD_REQUEST);
+        assert_eq!(r.body["error"], "Interface inconnue.");
+    }
+    assert_eq!(site_interface(&e, &owner).await, "classique");
+}

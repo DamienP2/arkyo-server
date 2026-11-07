@@ -52,6 +52,54 @@ pub async fn info(State(st): State<AppState>, CurrentUser(u): CurrentUser) -> Re
     .into_response()
 }
 
+/// Interface of the site: `"strata"` or, for any other value or none,
+/// `"classique"`.
+pub async fn interface(pool: &sqlx::SqlitePool) -> &'static str {
+    let v: Option<String> =
+        sqlx::query_scalar(r#"SELECT "value" FROM "AppConfig" WHERE "key" = 'ui.interface'"#)
+            .fetch_optional(pool)
+            .await
+            .unwrap_or_default();
+    if v.as_deref() == Some("strata") {
+        "strata"
+    } else {
+        "classique"
+    }
+}
+
+#[derive(Deserialize)]
+struct InterfaceBody {
+    interface: String,
+}
+
+pub async fn set_interface(
+    State(st): State<AppState>,
+    CurrentUser(u): CurrentUser,
+    body: Bytes,
+) -> Response {
+    if let Err(r) = require(&u, &st.pool, Domain::Settings, Level::Admin).await {
+        return r;
+    }
+    let value = match serde_json::from_slice::<InterfaceBody>(&body) {
+        Ok(b) if b.interface == "classique" || b.interface == "strata" => b.interface,
+        _ => return error(StatusCode::BAD_REQUEST, "Interface inconnue."),
+    };
+    let res = sqlx::query(
+        r#"INSERT INTO "AppConfig" ("id","key","value","updatedAt") VALUES (?,'ui.interface',?,?)
+           ON CONFLICT("key") DO UPDATE SET "value" = excluded."value", "updatedAt" = excluded."updatedAt""#,
+    )
+    .bind(crate::ids::new_id())
+    .bind(&value)
+    .bind(crate::ids::now_iso())
+    .execute(&st.pool)
+    .await;
+    if res.is_err() {
+        return server_error();
+    }
+    st.events.publish("config", "updated", None);
+    StatusCode::NO_CONTENT.into_response()
+}
+
 pub async fn update_info(State(st): State<AppState>, CurrentUser(u): CurrentUser) -> Response {
     if let Err(r) = require(&u, &st.pool, Domain::Settings, Level::Admin).await {
         return r;

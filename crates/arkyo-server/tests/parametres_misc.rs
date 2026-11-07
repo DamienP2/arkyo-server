@@ -198,7 +198,7 @@ async fn site_keys_are_not_writable_through_generic_config() {
     let site = call(&e.app, "GET", "/api/site", LOCAL, Some(&tok), None).await;
     assert_eq!(
         site.body,
-        json!({"name": "Régie", "logoUrl": "/uploads/logo.png"})
+        json!({"name": "Régie", "logoUrl": "/uploads/logo.png", "interface": "classique"})
     );
     let g = call(&e.app, "GET", APPLICATION, LOCAL, Some(&tok), None).await;
     assert_eq!(g.body["site.name"], "Régie");

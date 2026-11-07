@@ -172,7 +172,7 @@ async fn espace_name_logo_roundtrip() {
     let site = call(&e.app, "GET", "/api/site", LOCAL, Some(&tt), None).await;
     assert_eq!(
         site.body,
-        json!({"name":"Studio Lyon","logoUrl":"/uploads/logo.png"})
+        json!({"name":"Studio Lyon","logoUrl":"/uploads/logo.png","interface":"classique"})
     );
     // clear the logo, keep the name
     let c = call(
@@ -186,7 +186,10 @@ async fn espace_name_logo_roundtrip() {
     .await;
     assert_eq!(c.status, StatusCode::OK);
     let site = call(&e.app, "GET", "/api/site", LOCAL, Some(&tt), None).await;
-    assert_eq!(site.body, json!({"name":"Studio Lyon","logoUrl":null}));
+    assert_eq!(
+        site.body,
+        json!({"name":"Studio Lyon","logoUrl":null,"interface":"classique"})
+    );
     // validation, empty, permission
     let v = call(
         &e.app,

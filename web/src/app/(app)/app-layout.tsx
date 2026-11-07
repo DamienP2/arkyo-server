@@ -16,7 +16,7 @@
  * « Espace suspendu / archivé / supprimé » et la redirection hors membership.
  */
 
-import { Suspense, useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react"; // arkyo-server: interface Strata
 import { Navigate, Outlet } from "react-router";
 import { useSession } from "next-auth/react";
 import { useRefresh } from "next/navigation";
@@ -32,11 +32,14 @@ import { TenantPlanProvider } from "@/lib/tenant-plan-context";
 import { TenantPermissionsProvider } from "@/components/tenant-permissions-context";
 import type { TenantPermissions } from "@/lib/tenant-permissions";
 import type { MemberRole } from "@/lib/prisma/main-client";
+import { InterfaceProvider, type UiInterface } from "@/strata/interface-context"; // arkyo-server: interface Strata
+import { StrataTopbar } from "@/strata/shell/strata-topbar"; // arkyo-server: interface Strata
+import { StrataSideNav } from "@/strata/shell/strata-side-nav"; // arkyo-server: interface Strata
 
 const MEMBER_ROLES: readonly MemberRole[] = ["OWNER", "CHEF_PROJET", "TECHNICIEN", "CONSULTATION"];
 
 export type ShellGate =
-  | { kind: "ok"; permissions: TenantPermissions; siteName: string }
+  | { kind: "ok"; permissions: TenantPermissions; siteName: string; interface: UiInterface } // arkyo-server: interface Strata
   | { kind: "auth" }
   | { kind: "password" };
 
@@ -44,7 +47,7 @@ export type ShellGate =
  * Lit les permissions (et le garde `mustChangePassword`) puis le nom du site.
  * Partagé avec le layout `(fullscreen)`.
  */
-export async function loadShell(): Promise<ShellGate> {
+export async function loadShell(lastInterface: UiInterface = "classique"): Promise<ShellGate> { // arkyo-server: interface Strata
   const res = await fetch("/api/tenant/me/permissions", {
     credentials: "include",
     headers: { Accept: "application/json" },
@@ -56,9 +59,14 @@ export async function loadShell(): Promise<ShellGate> {
   }
   const permissions = res.ok ? ((await res.json()) as TenantPermissions) : null;
   let siteName = "";
+  let iface: UiInterface = lastInterface; // arkyo-server: interface Strata — échec passager de /api/site : dernière interface connue
   try {
     const site = await fetch("/api/site", { headers: { Accept: "application/json" } });
-    if (site.ok) siteName = ((await site.json()) as { name?: string }).name ?? "";
+    if (site.ok) { // arkyo-server: interface Strata
+      const body = (await site.json()) as { name?: string; interface?: string }; // arkyo-server: interface Strata
+      siteName = body.name ?? ""; // arkyo-server: interface Strata
+      iface = body.interface === "strata" ? "strata" : "classique"; // arkyo-server: interface Strata
+    }
   } catch {
     // Nom du site facultatif : la topbar n'affiche alors que le lockup.
   }
@@ -70,6 +78,7 @@ export async function loadShell(): Promise<ShellGate> {
       permissions: { projects: "none", design: "none", catalog: "none", members: "none", settings: "none" },
     },
     siteName,
+    interface: iface, // arkyo-server: interface Strata
   };
 }
 
@@ -78,11 +87,13 @@ export function useShellGate(): ShellGate | "loading" {
   const { data: session, status } = useSession();
   const [gate, setGate] = useState<ShellGate | "loading">("loading");
   const signedIn = !!session;
+  const lastInterface = useRef<UiInterface>("classique"); // arkyo-server: interface Strata
 
   const load = useCallback(() => {
     let cancelled = false;
-    loadShell()
+    loadShell(lastInterface.current) // arkyo-server: interface Strata
       .then((g) => {
+        if (g.kind === "ok") lastInterface.current = g.interface; // arkyo-server: interface Strata
         if (!cancelled) setGate(g);
       })
       .catch(() => {
@@ -124,12 +135,12 @@ export default function AppLayout() {
         <div className="flex h-screen bg-[var(--background)]">
           {/* Topbar pleine largeur (z-40) */}
           <Suspense>
-            <Topbar />
+            {gate.interface === "strata" ? <StrataTopbar /> : <Topbar />}{/* arkyo-server: interface Strata (seules topbar et navigation changent : une bascule ne remonte pas la page) */}
           </Suspense>
 
           {/* Rail gauche — sous la topbar */}
           <Suspense>
-            <Sidebar />
+            {gate.interface === "strata" ? <StrataSideNav /> : <Sidebar />}{/* arkyo-server: interface Strata */}
           </Suspense>
 
           {/* Contenu principal */}
@@ -159,7 +170,9 @@ export default function AppLayout() {
           role={role}
         >
           <TenantPermissionsProvider initialPermissions={gate.permissions}>
+            <InterfaceProvider value={gate.interface /* arkyo-server: interface Strata */}>
             {layoutContent}
+            </InterfaceProvider>{/* arkyo-server: interface Strata */}
           </TenantPermissionsProvider>
         </TenantMembershipProvider>
       </TenantPlanProvider>

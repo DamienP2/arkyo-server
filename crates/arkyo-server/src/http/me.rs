@@ -17,7 +17,8 @@ pub async fn permissions(State(st): State<AppState>, CurrentUser(u): CurrentUser
 
 pub async fn site(State(st): State<AppState>, _: CurrentUser) -> Json<Value> {
     let (name, logo_url) = super::espace::read(&st.pool).await;
-    Json(json!({ "name": name, "logoUrl": logo_url }))
+    let interface = super::system::interface(&st.pool).await;
+    Json(json!({ "name": name, "logoUrl": logo_url, "interface": interface }))
 }
 
 const LOCALES: [&str; 5] = ["fr", "en", "es", "de", "it"];

@@ -34,6 +34,7 @@ import PanelsRedirect from "@/app/(app)/panels/page";
 import ProjectLayout from "@/app/(fullscreen)/project/[id]/layout";
 import { ComingSoon } from "@/components/coming-soon";
 import { LoadingState } from "@/components/ui/loading-state";
+import { InterfaceSwitch } from "@/strata/interface-switch";
 
 // Pages du catalogue (phase 2) : chargées à la demande, hors du bundle principal.
 const ParametresPage = lazy(() => import("@/app/(app)/admin/parametres/page"));
@@ -50,6 +51,8 @@ const ProfilePage = lazy(() => import("@/app/(app)/profile/page"));
 // Phase 3 : tableau de bord, liste des projets, modèles (`/templates`) et
 // détail de régie.
 const DashboardPage = lazy(() => import("@/app/(app)/dashboard/page"));
+// Interface Strata : accueil à la place du tableau de bord (`/dashboard`).
+const StrataHome = lazy(() => import("@/strata/pages/strata-home"));
 const ProjectsPage = lazy(() => import("@/app/(app)/projects/page"));
 const TemplatesPage = lazy(() => import("@/app/(app)/templates/page"));
 const RigDetailPage = lazy(() => import("@/app/(app)/rigs/[id]/page"));
@@ -63,6 +66,11 @@ const ProjectEditorPage = lazy(() => import("@/app/(fullscreen)/project/[id]/pag
 const SettingsRedirect = SettingsPage as unknown as React.ComponentType;
 
 const errorElement = <NavigationErrorElement />;
+
+/** `/dashboard` : tableau de bord d'arkyo en Classique, accueil en Strata. */
+function DashboardRoute() {
+  return <InterfaceSwitch classique={<DashboardPage />} strata={<StrataHome />} />;
+}
 
 /** Page chargée à la demande (`lazy()`), avec `<LoadingState>` en attendant.
  *  `path` absent : page index de son parent. */
@@ -95,7 +103,7 @@ export const routes: RouteObject[] = [
         element: <AppLayout />,
         errorElement,
         children: [
-          lazyPage("dashboard", DashboardPage),
+          lazyPage("dashboard", DashboardRoute),
           lazyPage("projects", ProjectsPage),
           // Les redirections d'arkyo (garde, puis `redirect()`) sont chargées
           // d'emblée, comme `/settings`.
