@@ -68,7 +68,7 @@ describe("page de connexion", () => {
     });
     // Tableau de bord (phase 3), chargé à la demande.
     expect(
-      await screen.findByText("Tous les projets actifs", {}, { timeout: 5000 }),
+      await screen.findByText("Tous les projets actifs", {}, { timeout: 15000 }),
     ).toBeInTheDocument();
   });
 

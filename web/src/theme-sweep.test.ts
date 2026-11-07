@@ -304,8 +304,8 @@ const COPIED_FILES = [
   "lib/export/technical-table-pdf.ts",
   "lib/print/technical-frame.ts",
   "lib/services/export/csv.ts",
-  // Phase 4b (Task 3) : composants rack partagés. Les bouchons 4b restants
-  // (`rack/**`, `rack-placement-canvas`) ne sont pas des copies (décision 1).
+  // Phase 4b (Task 3) : composants rack partagés. L'onglet Rack (`rack/**`,
+  // `rack-placement-canvas`) suit aux Tasks 4 à 8 ; il ne reste aucun bouchon 4b.
   "app/(app)/rigs/[id]/rack/[rackId]/_components/draggable-bom-item.tsx",
   "app/(app)/rigs/[id]/rack/[rackId]/_components/draggable-items.tsx",
   "app/(app)/rigs/[id]/rack/[rackId]/_components/draggable-slot.tsx",
@@ -1032,7 +1032,7 @@ const ALLOW_HEX: AllowMap = {
   "app/(fullscreen)/project/[id]/rack/_components/rack-export-composer.tsx": [
     {
       line: /^\s*background: "#ffffff",$|^\s*"0 1px 2px rgba\(15,17,26,0\.06\), 0 8px 28px rgba\(15,17,26,0\.10\)",$/,
-      reason: "feuille de papier du composeur : fond blanc capturé en image (rendu des exports) et son ombre de feuille, comme l'aperçu des planches d'étiquettes",
+      reason: "feuille de papier du composeur : fond blanc capturé en image (rendu des exports) et son ombre de feuille, qui n'est pas une couleur d'interface (comme l'ombre de list-toolbar-helpers.tsx)",
     },
   ],
   "lib/pdf/synoptic-export.ts": [
