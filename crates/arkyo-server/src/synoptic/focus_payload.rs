@@ -340,12 +340,20 @@ pub async fn load_rack_for_payload(
 
 /// `loadCableAppConfig(db)`: the numbering keys of `AppConfig`.
 pub async fn load_cable_app_config(conn: &mut SqliteConnection) -> Result<Obj, sqlx::Error> {
+    load_app_config(conn, &CABLE_APP_CONFIG_KEYS).await
+}
+
+/// The `AppConfig` rows of `keys` as `{ key: value }`, insertion order.
+pub(crate) async fn load_app_config(
+    conn: &mut SqliteConnection,
+    keys: &[&str],
+) -> Result<Obj, sqlx::Error> {
     let sql = format!(
         r#"SELECT "key", "value" FROM "AppConfig" WHERE "key" IN ({}) ORDER BY rowid"#,
-        crate::inventory::marks(CABLE_APP_CONFIG_KEYS.len())
+        crate::inventory::marks(keys.len())
     );
     let mut q = sqlx::query_as::<_, (String, String)>(&sql);
-    for k in CABLE_APP_CONFIG_KEYS {
+    for k in keys {
         q = q.bind(k);
     }
     Ok(q.fetch_all(conn)
@@ -470,14 +478,7 @@ pub async fn load_catalog_rows(
         "rowid",
     )
     .await?;
-    let functions = fetch(
-        conn,
-        r#"SELECT "id", "key", "label", "cablePrefix", "cableSuffix", "color"
-           FROM "TenantFunction" ORDER BY "sortOrder", rowid"#,
-        &[],
-        &PLAIN,
-    )
-    .await?;
+    let functions = function_rows(conn).await?;
     let categories = fetch(
         conn,
         r#"SELECT "id", "name", "color", "parentId" FROM "TenantEquipmentCategory"
@@ -496,6 +497,19 @@ pub async fn load_catalog_rows(
         brands,
         components,
     })
+}
+
+/// Every `TenantFunction` `{id, key, label, cablePrefix, cableSuffix,
+/// color}`, by `sortOrder` then insertion order.
+pub(crate) async fn function_rows(conn: &mut SqliteConnection) -> Result<Vec<Obj>, sqlx::Error> {
+    fetch(
+        conn,
+        r#"SELECT "id", "key", "label", "cablePrefix", "cableSuffix", "color"
+           FROM "TenantFunction" ORDER BY "sortOrder", rowid"#,
+        &[],
+        &PLAIN,
+    )
+    .await
 }
 
 /// Rows keyed by their `id`.

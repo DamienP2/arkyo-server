@@ -1,7 +1,7 @@
 //! Projects: arkyo:app/api/tenant/projects/** ([`tenant`], [`locations`],
 //! [`locations_item`], [`racks`], [`racks_item`], [`racks_template`],
 //! [`inventory`], [`inventory_item`], [`canvas_data`],
-//! [`synoptic_location`]) and
+//! [`synoptic_general`], [`synoptic_location`]) and
 //! arkyo:app/api/projects/route.ts ([`legacy`]),
 //! plus [`editor`], the data of arkyo's Server Component
 //! `app/(fullscreen)/project/[id]/page.tsx`.
@@ -23,6 +23,7 @@ mod locations_item;
 mod racks;
 mod racks_item;
 mod racks_template;
+mod synoptic_general;
 mod synoptic_location;
 mod tenant;
 
@@ -92,6 +93,10 @@ pub fn router() -> Router<AppState> {
         .route(
             "/tenant/projects/{id}/racks/{rack_id}/inventory/{item_id}/transfer",
             post(inventory_item::transfer),
+        )
+        .route(
+            "/tenant/projects/{id}/synoptic/general",
+            get(synoptic_general::get),
         )
         .route(
             "/tenant/projects/{id}/synoptic/location/{location_id}",

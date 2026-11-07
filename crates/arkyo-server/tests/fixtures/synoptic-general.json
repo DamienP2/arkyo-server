@@ -1,0 +1,82 @@
+{
+  "$comment": "Réponse attendue de GET /api/tenant/projects/p1/synoptic/general pour le jeu de données de tests/synoptic_general.rs, écrite à la main d'après arkyo:app/api/tenant/projects/[id]/synoptic/general/route.ts. Lieux par sortOrder (loc2, loc1, loc3) ; ports MONDE exclus ; marques triées côté gauche d'abord, puis equipmentId ?? slotId, slotId, portIndex ; connexions intra-lieu (pc2, pc5) et d'un autre projet (pcx) exclues ; stats : poids 20,25 + 3 (racks non virtuels) + 4 × 4,5 (eq1) = 41,25 → 41,3, puissance 4 × 60 + 3 × 150 = 690.",
+  "expected": {
+    "locations": [
+      {
+        "id": "loc2", "name": "Régie", "cableCode": null, "canvasX": null, "canvasY": null,
+        "externalConnectors": [
+          {"externalId": "ez1", "slotId": "sz1", "portIndex": 3, "label": "—", "direction": null, "signalName": null, "connectorTypeId": "ctgone", "side": "right", "equipmentId": "eq1", "equipmentName": "HDC-5500", "rackId": "rz", "rackName": "Baie Z"}
+        ]
+      },
+      {
+        "id": "loc1", "name": "Plateau", "cableCode": "PLT", "canvasX": 10, "canvasY": 20,
+        "externalConnectors": [
+          {"externalId": "e2", "slotId": "sa1", "portIndex": 2, "label": "Retour", "direction": "IN", "signalName": null, "connectorTypeId": "ct2", "side": "left", "equipmentId": "eq1", "equipmentName": "HDC-5500", "rackId": "ra", "rackName": "Baie A"},
+          {"externalId": "e9", "slotId": "sz1", "portIndex": 4, "label": "GPI", "direction": "IN", "signalName": null, "connectorTypeId": null, "side": "left", "equipmentId": "eq1", "equipmentName": "HDC-5500", "rackId": "ra", "rackName": "Baie A"},
+          {"externalId": "e4", "slotId": "sa3", "portIndex": 3, "label": "IN 3", "direction": "BIDIR", "signalName": null, "connectorTypeId": "ct1", "side": "left", "equipmentId": null, "equipmentName": "Patch custom", "rackId": "ra", "rackName": "Baie A"},
+          {"externalId": "e1", "slotId": "sa1", "portIndex": 0, "label": "SDI OUT 1", "direction": "OUT", "signalName": "SDI", "connectorTypeId": "ct1", "side": "right", "equipmentId": "eq1", "equipmentName": "HDC-5500", "rackId": "ra", "rackName": "Baie A"},
+          {"externalId": "ev1", "slotId": "sv1", "portIndex": 0, "label": "Port 1", "direction": null, "signalName": null, "connectorTypeId": null, "side": "right", "equipmentId": "eq2", "equipmentName": "Mixeur", "rackId": "rv", "rackName": "Plateau"},
+          {"externalId": "e7", "slotId": "sa6", "portIndex": 0, "label": "Port 1", "direction": null, "signalName": null, "connectorTypeId": null, "side": "right", "equipmentId": "gone", "equipmentName": null, "rackId": "ra", "rackName": "Baie A"},
+          {"externalId": "e3", "slotId": "sa2", "portIndex": 0, "label": "1", "direction": "BIDIR", "signalName": null, "connectorTypeId": "ct2", "side": "right", "equipmentId": null, "equipmentName": "Patch BNC", "rackId": "ra", "rackName": "Baie A"},
+          {"externalId": "e5", "slotId": "sa3", "portIndex": 5, "label": "  Patch custom ", "direction": null, "signalName": null, "connectorTypeId": null, "side": "right", "equipmentId": null, "equipmentName": "Patch custom", "rackId": "ra", "rackName": "Baie A"},
+          {"externalId": "e6", "slotId": "sa5", "portIndex": 1, "label": "Libre", "direction": null, "signalName": null, "connectorTypeId": null, "side": "right", "equipmentId": null, "equipmentName": "Libre", "rackId": "ra", "rackName": "Baie A"}
+        ]
+      },
+      {
+        "id": "loc3", "name": "Vide", "cableCode": null, "canvasX": null, "canvasY": null,
+        "externalConnectors": []
+      }
+    ],
+    "racks": [
+      {
+        "id": "ru", "name": "Valise", "rackType": "PELICAN", "totalU": 4, "canvasX": 300, "canvasY": 400,
+        "externalConnectors": [
+          {"externalId": "eu2", "slotId": "su1", "portIndex": 2, "label": "XLR", "direction": "IN", "signalName": null, "connectorTypeId": "ct2", "side": "left", "equipmentId": "eq1", "equipmentName": "HDC-5500"},
+          {"externalId": "eu1", "slotId": "su1", "portIndex": 1, "label": "SDI OUT 2", "direction": "OUT", "signalName": "SDI", "connectorTypeId": "ct1", "side": "right", "equipmentId": "eq1", "equipmentName": "HDC-5500"}
+        ]
+      },
+      {
+        "id": "ru2", "name": "Sans port", "rackType": "STANDARD", "totalU": 42, "canvasX": null, "canvasY": null,
+        "externalConnectors": []
+      }
+    ],
+    "connections": [
+      {"id": "pc3", "projectId": "p1", "fromRackId": "ru", "fromSlotId": "su1", "fromConnectorIndex": 2, "fromAdapterId": null, "fromAdapterPortIndex": null, "fromAdapterSide": null, "toRackId": "ra", "toSlotId": "sa1", "toConnectorIndex": 2, "toAdapterId": null, "toAdapterPortIndex": null, "toAdapterSide": null, "label": null, "color": null, "waypoints": null, "cableStyle": null, "notes": null, "tags": null, "catalogCableModelId": null, "wired": false, "wiredAt": null, "wiredNotes": null, "bundleId": null, "createdAt": "2026-11-01T08:00:00.000Z"},
+      {"id": "pc1", "projectId": "p1", "fromRackId": "ra", "fromSlotId": "sa1", "fromConnectorIndex": 0, "fromAdapterId": null, "fromAdapterPortIndex": null, "fromAdapterSide": null, "toRackId": "rz", "toSlotId": "sz1", "toConnectorIndex": 3, "toAdapterId": null, "toAdapterPortIndex": null, "toAdapterSide": null, "label": "V-001", "color": "#ff0000", "waypoints": [{"x": 1, "y": 2}], "cableStyle": "ortho", "notes": null, "tags": [{"color": "#000", "text": "A"}], "catalogCableModelId": null, "wired": true, "wiredAt": null, "wiredNotes": null, "bundleId": "pb1", "createdAt": "2026-11-07T10:00:00.000Z"},
+      {"id": "pc4", "projectId": "p1", "fromRackId": "ru", "fromSlotId": "su1", "fromConnectorIndex": 1, "fromAdapterId": null, "fromAdapterPortIndex": null, "fromAdapterSide": null, "toRackId": "ru2", "toSlotId": null, "toConnectorIndex": null, "toAdapterId": null, "toAdapterPortIndex": null, "toAdapterSide": null, "label": null, "color": null, "waypoints": null, "cableStyle": null, "notes": null, "tags": null, "catalogCableModelId": null, "wired": false, "wiredAt": null, "wiredNotes": null, "bundleId": null, "createdAt": "2026-11-07T10:00:00.000Z"}
+    ],
+    "bundles": [
+      {"id": "pb2", "projectId": "p1", "name": "Secours", "color": "#6366f1", "createdAt": "2026-11-01T08:00:00.000Z", "updatedAt": "2026-11-07T10:00:00.000Z"},
+      {"id": "pb1", "projectId": "p1", "name": "Faisceau", "color": "#ff00ff", "createdAt": "2026-11-07T10:00:00.000Z", "updatedAt": "2026-11-07T10:00:00.000Z"}
+    ],
+    "connectorTypes": [
+      {"id": "ct1", "name": "BNC", "versions": ["75"], "iconId": "bnc", "color": "#2563eb", "functions": [{"functionId": "f1"}], "functionId": "f1"},
+      {"id": "ct2", "name": "XLR", "versions": [], "iconId": null, "color": "#ff0000", "functions": [], "functionId": null},
+      {"id": "ct3", "name": "RJ45", "versions": [], "iconId": null, "color": "#a3a3a3", "functions": [{"functionId": "f2"}], "functionId": "f2"}
+    ],
+    "signals": [
+      {"id": "sg1", "name": "SDI", "color": "#2563eb", "cablePrefix": "S", "cableSuffix": null, "category": "Vidéo", "categoryRef": {"name": "Vidéo", "cablePrefix": "V", "cableSuffix": null}},
+      {"id": "sg2", "name": "AES", "color": "#a3a3a3", "cablePrefix": null, "cableSuffix": null, "category": "Audio", "categoryRef": {"name": "Audio", "cablePrefix": "A", "cableSuffix": "x"}},
+      {"id": "sg3", "name": "GPIO", "color": "#00ff00", "cablePrefix": null, "cableSuffix": null, "category": null, "categoryRef": null}
+    ],
+    "signalCategories": [
+      {"name": "Vidéo", "cablePrefix": "V", "cableSuffix": null},
+      {"name": "Audio", "cablePrefix": "A", "cableSuffix": "x"}
+    ],
+    "appConfig": {"cable_pad": "3", "cable_template_enabled": "true"},
+    "project": {"id": "p1", "name": "Match"},
+    "stats": {"rackCount": 4, "totalWeightKg": 41.3, "totalPowerW": 690}
+  },
+  "empty": {
+    "locations": [],
+    "racks": [],
+    "connections": [],
+    "bundles": [],
+    "connectorTypes": [],
+    "signals": [],
+    "signalCategories": [],
+    "appConfig": {},
+    "project": {"id": "p3", "name": "Vide"},
+    "stats": {"rackCount": 0, "totalWeightKg": 0, "totalPowerW": 0}
+  }
+}
