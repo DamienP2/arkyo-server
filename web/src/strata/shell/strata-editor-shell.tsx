@@ -4,7 +4,7 @@
  * Disposition en docks de l'éditeur (interface Strata), avec les mêmes slots
  * qu'`EditorShell` :
  *   - topbar (46 px) ;
- *   - dock gauche : barre d'outils (48 px) puis onglets `leftDockTabs` ou
+ *   - dock gauche : barre d'outils (48 px) puis onglets `strata.leftDockTabs` ou
  *     panneau latéral existant (280 px) ;
  *   - colonne centrale : barre de lentilles (portail de la topbar projet),
  *     barre contextuelle existante, canevas, dock bas ;
@@ -46,10 +46,8 @@ export const STRATA_TOPBAR_H = 46;
 
 export type StrataDockTab = { id: string; label: string; node: ReactNode };
 
-export type StrataEditorShellProps = EditorShellSlots & {
-  bottomDock?: ReactNode;
-  leftDockTabs?: StrataDockTab[];
-};
+/** Slots d'`EditorShell` ; les docks propres à Strata passent par `strata.*`. */
+export type StrataEditorShellProps = EditorShellSlots;
 
 /**
  * Emplacement de la barre de lentilles, en tête de la colonne centrale : la
@@ -94,14 +92,12 @@ export function StrataEditorShell(props: StrataEditorShellProps) {
   const slideOverOpen = useWorkspace((s) => s.slideOver);
   const [lensSlot, setLensSlot] = useState<HTMLElement | null>(null);
 
-  const leftDockTabs = props.leftDockTabs ?? props.strata?.leftDockTabs;
+  const leftDockTabs: StrataDockTab[] | undefined = props.strata?.leftDockTabs;
   // Synoptique : dock Contrôles d'après le rapport qu'il publie (store de la topbar), s'il y en a un.
   const workspace = useWorkspace((s) => s.workspace);
   const synopticReport = useTopbarActions((s) => s.validationReport);
   const bottomDock =
-    props.bottomDock ??
-    props.strata?.bottomDock ??
-    (workspace === "synoptic" && synopticReport ? <SynopticBottomDock /> : null);
+    props.strata?.bottomDock ?? (workspace === "synoptic" && synopticReport ? <SynopticBottomDock /> : null);
   const hasTabs = !!leftDockTabs && leftDockTabs.length > 0;
   const hasPanel = hasTabs || !!props.leftSidePanel;
   const hasLeft = !!props.leftToolbar || hasPanel;
