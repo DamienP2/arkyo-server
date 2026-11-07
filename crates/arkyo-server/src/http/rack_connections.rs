@@ -44,9 +44,12 @@
 //!   `POST` (404 « Not found »), connexion inconnue ou d'un autre rack
 //!   (404 « Connexion introuvable », arkyo : P2025), identifiant client déjà
 //!   pris (409, arkyo : P2002) ;
-//! - une extrémité (slot ou adaptateur) doit appartenir au rack : 404
-//!   « Slot introuvable dans ce rack » / « Adaptateur introuvable » (arkyo :
-//!   clé étrangère en 500, ou câble pointant en silence vers un autre rack) ;
+//! - une extrémité (slot ou adaptateur) inexistante donne 404 « Slot
+//!   introuvable » / « Adaptateur introuvable » (arkyo : clé étrangère,
+//!   500). Celle d'un autre rack est acceptée, comme dans arkyo : la vue
+//!   lieu glisse une extrémité sur n'importe quel port du lieu et envoie le
+//!   `PATCH` au rack du câble (`location-canvas.tsx`, `patchOne`), et
+//!   l'annulation recrée ce câble par le `POST` en lot ;
 //! - un corps `{connections: …}` invalide est refusé (400, `fieldErrors.
 //!   connections`) : arkyo retombait sur le schéma unitaire et créait une
 //!   connexion vide.
@@ -102,7 +105,7 @@ static CONN: Table = Table {
 
 const ENTITY: &str = "rackConnection";
 const CONN_404: &str = "Connexion introuvable";
-const SLOT_404: &str = "Slot introuvable dans ce rack";
+const SLOT_404: &str = "Slot introuvable";
 const ADAPTER_404: &str = "Adaptateur introuvable";
 
 const SIDES: &[&str] = &["left", "right"];
@@ -287,14 +290,9 @@ async fn check_components(
     Ok(())
 }
 
-/// arkyo-server: correction, les slots et adaptateurs désignés (valeurs non
-/// nulles) appartiennent au rack (arkyo : clé étrangère en 500, ou câble
-/// vers un autre rack accepté).
-async fn check_endpoints(
-    conn: &mut SqliteConnection,
-    rack: &str,
-    rows: &[Obj],
-) -> Result<(), Response> {
+/// The slots and adapters named (non-null values) exist, in any rack (see
+/// the module notes). arkyo-server: 404 au lieu de la clé étrangère en 500.
+async fn check_endpoints(conn: &mut SqliteConnection, rows: &[Obj]) -> Result<(), Response> {
     for obj in rows {
         for (k, table, msg) in [
             ("fromSlotId", "RackSlot", SLOT_404),
@@ -305,14 +303,12 @@ async fn check_endpoints(
             let Some(Value::String(id)) = obj.get(k) else {
                 continue;
             };
-            let found: Option<i64> = sqlx::query_scalar(&format!(
-                r#"SELECT 1 FROM "{table}" WHERE "id" = ? AND "rackId" = ?"#
-            ))
-            .bind(id)
-            .bind(rack)
-            .fetch_optional(&mut *conn)
-            .await
-            .map_err(db_error)?;
+            let found: Option<i64> =
+                sqlx::query_scalar(&format!(r#"SELECT 1 FROM "{table}" WHERE "id" = ?"#))
+                    .bind(id)
+                    .fetch_optional(&mut *conn)
+                    .await
+                    .map_err(db_error)?;
             if found.is_none() {
                 return Err(error(StatusCode::NOT_FOUND, msg));
             }
@@ -392,7 +388,7 @@ async fn run_create(
         return Err(error(StatusCode::NOT_FOUND, "Not found"));
     }
     check_components(&mut tx, rack, &conns).await?;
-    check_endpoints(&mut tx, rack, &conns).await?;
+    check_endpoints(&mut tx, &conns).await?;
 
     let now = now_iso();
     let mut ids = Vec::with_capacity(conns.len());
@@ -497,7 +493,7 @@ async fn run_update(
     }
     let rows = [obj];
     check_components(&mut tx, rack, &rows).await?;
-    check_endpoints(&mut tx, rack, &rows).await?;
+    check_endpoints(&mut tx, &rows).await?;
     let [obj] = rows;
     if !obj.is_empty() {
         let sets: Vec<String> = obj.keys().map(|k| format!(r#""{k}" = ?"#)).collect();

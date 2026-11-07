@@ -23,7 +23,7 @@ const MODELS: &str = "/api/tenant/parametres/cabling";
 const CABLES: &str = "/api/tenant/catalogue/cables";
 const NOW: &str = "2026-11-07T10:00:00.000Z";
 const CLIENT: &str = "tab-1";
-const SLOT_404: &str = "Slot introuvable dans ce rack";
+const SLOT_404: &str = "Slot introuvable";
 const ADAPTER_404: &str = "Adaptateur introuvable";
 const CONN_404: &str = "Connexion introuvable";
 
@@ -867,13 +867,12 @@ async fn invalid_port_rejected_nothing_written() {
         .await;
     }
 
-    // arkyo-server: a slot or adapter outside the rack is refused (arkyo:
-    // foreign key 500, or a cable silently pointing into another rack).
+    // arkyo-server: an unknown slot or adapter is a 404 (arkyo: foreign
+    // key 500).
     for (body, msg) in [
         (json!({"fromSlotId": "nope", "toSlotId": "s2"}), SLOT_404),
-        (json!({"fromSlotId": "s1", "toSlotId": "sb"}), SLOT_404),
         (
-            json!({"fromAdapterId": "ab", "toSlotId": "s2"}),
+            json!({"fromAdapterId": "nope", "toSlotId": "s2"}),
             ADAPTER_404,
         ),
         (
@@ -898,7 +897,7 @@ async fn invalid_port_rejected_nothing_written() {
         &c.url(),
         Some(json!({"connections": [
             {"fromSlotId": "s1", "toSlotId": "s2"},
-            {"fromSlotId": "s1", "toSlotId": "sb"}
+            {"fromSlotId": "s1", "toSlotId": "nope"}
         ]})),
         StatusCode::NOT_FOUND,
         json!({"error": SLOT_404}),
@@ -946,7 +945,7 @@ async fn invalid_port_rejected_nothing_written() {
     )
     .await;
 
-    // PATCH: re-attaching to another rack's slot or adapter is refused too.
+    // PATCH: re-attaching to an unknown slot or adapter is refused too.
     let k = c
         .ok(
             "POST",
@@ -958,12 +957,12 @@ async fn invalid_port_rejected_nothing_written() {
     next_rack(&mut rack).await;
     for (body, status, expected) in [
         (
-            json!({"toSlotId": "sb", "toConnectorIndex": 0}),
+            json!({"toSlotId": "nope", "toConnectorIndex": 0}),
             StatusCode::NOT_FOUND,
             json!({"error": SLOT_404}),
         ),
         (
-            json!({"fromAdapterId": "ab"}),
+            json!({"fromAdapterId": "nope"}),
             StatusCode::NOT_FOUND,
             json!({"error": ADAPTER_404}),
         ),
@@ -998,6 +997,30 @@ async fn invalid_port_rejected_nothing_written() {
     }
     let r = c.send("GET", &c.url(), None).await;
     assert_eq!(r.body, json!([k]));
+
+    // Another rack's slot or adapter is accepted, as in arkyo: the location
+    // view drags an endpoint onto any port of the location and PATCHes the
+    // cable's own rack; undo recreates it with the batch POST. The cable
+    // stays in its rack.
+    let p = c
+        .ok(
+            "PATCH",
+            &c.item("cx-0001"),
+            json!({"toSlotId": "sb", "toConnectorIndex": 0, "fromAdapterId": "ab"}),
+        )
+        .await;
+    assert_eq!(
+        (&p["rackId"], &p["toSlotId"], &p["fromAdapterId"]),
+        (&json!(c.rack), &json!("sb"), &json!("ab"))
+    );
+    let k2 = c
+        .ok(
+            "POST",
+            &c.url(),
+            json!({"connections": [{"fromSlotId": "s1", "toSlotId": "sb"}]}),
+        )
+        .await;
+    assert_eq!(k2[0]["rackId"], json!(c.rack));
 }
 
 // ── cable model usage guard (4c decision 2) ────────────────────────────────
