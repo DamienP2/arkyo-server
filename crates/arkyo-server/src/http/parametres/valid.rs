@@ -29,6 +29,8 @@ pub enum Kind {
     },
     /// `z.string().max(n)` (default message).
     MaxLen(usize),
+    /// `z.string().min(min).max(max)` (default messages).
+    StrLen(usize, usize),
     /// `z.string().url("URL invalide")`.
     Url,
     /// `assetUrlSchema`: absolute http(s) URL or `/relative/path`.
@@ -157,6 +159,7 @@ fn expected(kind: &Kind) -> &'static str {
         | Kind::NonEmpty
         | Kind::Bounded { .. }
         | Kind::MaxLen(_)
+        | Kind::StrLen(..)
         | Kind::Url
         | Kind::Asset
         | Kind::UpperKey { .. } => "string",
@@ -346,6 +349,19 @@ fn check(kind: &Kind, v: &Value) -> Vec<String> {
         }
         (Kind::MaxLen(max), Value::String(s)) => {
             if s.chars().count() > *max {
+                errs.push(format!(
+                    "Too big: expected string to have <={max} characters"
+                ));
+            }
+        }
+        (Kind::StrLen(min, max), Value::String(s)) => {
+            let n = s.chars().count();
+            if n < *min {
+                errs.push(format!(
+                    "Too small: expected string to have >={min} characters"
+                ));
+            }
+            if n > *max {
                 errs.push(format!(
                     "Too big: expected string to have <={max} characters"
                 ));
@@ -558,6 +574,23 @@ mod tests {
 
     fn errs(kind: Kind, v: Value) -> Vec<String> {
         check(&kind, &v)
+    }
+
+    #[test]
+    fn str_len_uses_zod_default_messages() {
+        assert!(errs(Kind::StrLen(6, 64), json!("abcdef")).is_empty());
+        assert_eq!(
+            errs(Kind::StrLen(6, 64), json!("abc")),
+            ["Too small: expected string to have >=6 characters"]
+        );
+        assert_eq!(
+            errs(Kind::StrLen(1, 3), json!("abcd")),
+            ["Too big: expected string to have <=3 characters"]
+        );
+        assert_eq!(
+            errs(Kind::StrLen(1, 3), json!(1)),
+            ["Invalid input: expected string, received number"]
+        );
     }
 
     #[test]
