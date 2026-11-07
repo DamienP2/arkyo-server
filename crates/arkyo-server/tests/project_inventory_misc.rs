@@ -339,7 +339,8 @@ async fn transfer_item_between_racks() {
     assert_eq!(audit_count(p).await, before);
     no_event(&mut rx);
 
-    // The transfer: raw row, slots purged and not re-synced (arkyo).
+    // The transfer: raw row, slots purged, then re-synced as ghosts of the
+    // target (arkyo-server: arkyo did not re-sync, 4a M-2).
     let r = c
         .req("POST", &url, Some(json!({"targetRackId": c.rack_b})))
         .await;
@@ -351,7 +352,12 @@ async fn transfer_item_between_racks() {
     assert_eq!(moved["catalogEquipmentId"], "eq1");
     assert_eq!(moved["snapshotId"], Value::Null);
     assert!(moved.get("name").is_none(), "ligne brute, non enrichie");
-    assert_eq!(slot_count(p, &item).await, 0);
+    assert_eq!(slot_count(p, &item).await, 2);
+    assert_eq!(
+        int(p, &format!(r#"SELECT COUNT(*) FROM "RackSlot" WHERE "inventoryItemId" = '{item}' AND "rackId" = '{}' AND "startU" IS NULL"#, c.rack_b)).await,
+        2,
+        "fantômes dans le contenant cible"
+    );
     let (a, t, id, proj, b, af) = last_audit(p).await;
     assert_eq!(
         (a.as_str(), t.as_str(), id.as_str(), proj.as_deref()),
@@ -410,7 +416,9 @@ async fn transfer_item_between_racks() {
         .as_deref(),
         Some(c.virt.as_str())
     );
-    assert_eq!(slot_count(p, &host).await, 0);
+    // The host gets its ghost back; its component, none (creation rule).
+    assert_eq!(slot_count(p, &host).await, 1);
+    assert_eq!(slot_count(p, &comp).await, 0);
 
     // Consultation: 403, nothing moved.
     add_user(p, "c@b.fr", "consultation", false).await;
@@ -428,6 +436,76 @@ async fn transfer_item_between_racks() {
         (r.status, r.body),
         (StatusCode::FORBIDDEN, json!({"error": "Accès refusé"}))
     );
+}
+
+/// arkyo-server: 4a M-2. Sans resynchronisation après le transfert (arkyo),
+/// la ligne arrivait avec 3 exemplaires et 0 fantôme : la première pose dans
+/// l'onglet Rack n'en trouvait aucun à réclamer, et la quantité passait en
+/// silence à 4. La fusion avec une ligne existante reste celle d'arkyo.
+#[tokio::test]
+async fn transfer_resyncs_ghosts_then_placement_claims_one() {
+    let c = ctx().await;
+    let p = &c.e.pool;
+    let item = c
+        .add(&c.rack, json!({"catalogEquipmentId": "eq1", "quantity": 3}))
+        .await;
+    let r = c
+        .req(
+            "POST",
+            &format!("{}/transfer", c.item_url(&c.rack, &item)),
+            Some(json!({"targetRackId": c.rack_b})),
+        )
+        .await;
+    assert_eq!(r.status, StatusCode::OK, "{:?}", r.body);
+    assert_eq!(
+        int(p, &format!(r#"SELECT COUNT(*) FROM "RackSlot" WHERE "inventoryItemId" = '{item}' AND "rackId" = '{}' AND "startU" IS NULL"#, c.rack_b)).await,
+        3
+    );
+    assert_eq!(
+        int(
+            p,
+            &format!(
+                r#"SELECT COUNT(*) FROM "RackSlot" WHERE "rackId" = '{}'"#,
+                c.rack
+            )
+        )
+        .await,
+        0
+    );
+
+    // First placement in the target (`placeEquipment`, no inventoryItemId):
+    // it claims a ghost, the quantity stays 3.
+    let mut rx = c.e.events.subscribe();
+    let mut rack = c.e.events.subscribe_rack(&c.rack_b);
+    let r = c
+        .req(
+            "POST",
+            &format!("/api/racks/{}/slots", c.rack_b),
+            Some(json!({"equipmentId": "eq1", "startU": 1})),
+        )
+        .await;
+    assert_eq!(r.status, StatusCode::CREATED, "{:?}", r.body);
+    let ev = tokio::time::timeout(std::time::Duration::from_secs(2), rack.recv())
+        .await
+        .expect("évènement rack attendu")
+        .unwrap();
+    let ev: Value = serde_json::from_str(&ev).unwrap();
+    assert_eq!(ev["type"], json!("slot_updated"));
+    assert_eq!(
+        int(
+            p,
+            &format!(r#"SELECT "quantity" FROM "RackInventoryItem" WHERE "id" = '{item}'"#)
+        )
+        .await,
+        3
+    );
+    assert_eq!(slot_count(p, &item).await, 3);
+    let slot_ev = next_event(&mut rx).await;
+    assert_eq!(slot_ev["entity"], json!("slot"));
+    while let Ok(s) = rx.try_recv() {
+        let v: Value = serde_json::from_str(&s).unwrap();
+        assert_ne!(v["entity"], json!("rack_inventory"), "{v}");
+    }
 }
 
 // ── PATCH / DELETE d'un item ────────────────────────────────────────────────

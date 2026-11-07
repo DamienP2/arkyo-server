@@ -8,7 +8,8 @@
 //! - `DELETE` removes the item and its placements (`RackSlot`, and the
 //!   cables with them), a host its components.
 //! - `transfer` moves the item (and its components) to another container
-//!   of the project, its slots purged and not re-synced (arkyo).
+//!   of the project, its slots purged then re-synced as ghosts of the
+//!   target (arkyo-server, see below).
 //!
 //! Validation errors use `{ error: "Validation invalide", issues }`. Each
 //! write is audited and publishes `rack_inventory updated` with
@@ -24,7 +25,10 @@
 //!   `DELETE` d'arkyo n'en avait pas ;
 //! - un corps JSON illisible donne 400 au `PATCH` (arkyo : 500 implicite,
 //!   décision 5) ;
-//! - `quantity` plafonnée à 999 (voir `inventory.rs`).
+//! - `quantity` plafonnée à 999 (voir `inventory.rs`) ;
+//! - le transfert resynchronise les fantômes de la ligne (pas ceux d'un
+//!   composant), comme la création ; arkyo ne le faisait pas (4a M-2). La
+//!   fusion avec une ligne existante de la cible reste absente, comme arkyo.
 
 use arkyo_core::permissions::{Domain, Level};
 use axum::body::Bytes;
@@ -466,7 +470,7 @@ async fn transfer_inner(
     }
 
     // Slots purged (the item is « à placer » again in the target), the
-    // components follow their host. No re-sync, as in arkyo.
+    // components follow their host.
     sqlx::query(
         r#"DELETE FROM "RackSlot" WHERE "inventoryItemId" = ?1
                OR "inventoryItemId" IN (SELECT "id" FROM "RackInventoryItem" WHERE "hostItemId" = ?1)"#,
@@ -488,6 +492,20 @@ async fn transfer_inner(
     .await
     .map_err(db_error)?;
     let item = raw_item(&mut tx, item_id).await?;
+    // arkyo-server: 4a M-2, arkyo ne resynchronisait pas. Sans fantôme, la
+    // première pose dans l'onglet Rack augmentait la quantité de un. Même
+    // règle qu'à la création : une ligne équipement ou panel en a, un
+    // composant (et donc ceux qui suivent leur hôte) n'en a pas.
+    let set = |k: &str| {
+        item.get(k)
+            .and_then(Value::as_str)
+            .is_some_and(|s| !s.is_empty())
+    };
+    if !set("hostItemId") && (set("catalogEquipmentId") || set("panelId")) {
+        sync_inventory_slots(&mut tx, item_id)
+            .await
+            .map_err(db_error)?;
+    }
 
     audit_item(
         &mut tx,

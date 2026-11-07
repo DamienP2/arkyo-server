@@ -452,7 +452,8 @@ async fn phase4a_project_editor_inventory_end_to_end() {
 
     // ── 5. Transfers (handleTransferItem) ───────────────────────────────
     // Whole item (quantity 1): the transfer route, to the free equipment
-    // of the second location. Its slots are purged, not re-synced.
+    // of the second location. Its slots are purged, then re-synced as one
+    // ghost of the target (arkyo-server, 4a M-2 fixed in 4b).
     let r = o
         .ok(
             "POST",
@@ -462,7 +463,7 @@ async fn phase4a_project_editor_inventory_end_to_end() {
         )
         .await;
     assert_eq!(r["item"]["rackId"], plateau_virtual.as_str());
-    assert_eq!(slots_of(pool, &panel_item).await, 0);
+    assert_eq!(slots_of(pool, &panel_item).await, 1);
     // Part of a line (quantity > 1): one unit added to the target, the
     // source decremented.
     let r = o
