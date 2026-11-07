@@ -9,7 +9,15 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { afterEach, beforeAll, describe, expect, test } from "vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { OWNER_PERMS, renderApp, resetApp, signedInApi, TECH_PERMS, type Api } from "@/tests/app-harness";
+import {
+  emitAppEvent,
+  OWNER_PERMS,
+  renderApp,
+  resetApp,
+  signedInApi,
+  TECH_PERMS,
+  type Api,
+} from "@/tests/app-harness";
 import { isItemActive, sectionOf, STRATA_NAV } from "@/strata/shell/nav-model";
 import { InterfaceProvider } from "@/strata/interface-context";
 
@@ -22,6 +30,7 @@ beforeAll(async () => {
   await Promise.all([
     import("@/app/(app)/dashboard/page"),
     import("@/app/(app)/admin/catalogue/page"),
+    import("@/app/(app)/admin/espace/page"),
   ]);
 }, 60000);
 
@@ -286,6 +295,69 @@ describe("coquille Strata", () => {
     expect(within(aside).getByText("Dashboard")).toBeInTheDocument();
     expect(screen.queryByRole("navigation", { name: "Navigation principale" })).toBeNull();
     expect(document.body.textContent).not.toContain("// arkyo-server");
+  });
+});
+
+describe("bascule d'interface en direct", () => {
+  test("la page ouverte n'est pas remontée : saisie conservée, seule la coquille change", async () => {
+    let iface = "classique";
+    renderApp("/admin/espace", {
+      ...signedInApi(),
+      "GET /api/site": () => ({ body: { name: "Régie A", logoUrl: null, interface: iface } }),
+      "GET /api/tenant/espace/informations": { body: { id: "site", name: "Régie A", logoUrl: null } },
+    });
+    const input = (await screen.findByLabelText("Nom de l'espace", {}, { timeout: 15000 })) as HTMLInputElement;
+    await waitFor(() => expect(input.value).toBe("Régie A"));
+    fireEvent.change(input, { target: { value: "Régie B" } });
+    const main = document.querySelector("main#main-content");
+    expect(await shellPart("aside")).toHaveTextContent("Dashboard");
+
+    // Classique → Strata : la coquille Strata apparaît, la page reste montée.
+    iface = "strata";
+    emitAppEvent({ entity: "config", action: "updated", id: "1" });
+    await waitFor(() => expect(document.documentElement.dataset.interface).toBe("strata"));
+    await strataHeader();
+    expect(document.querySelector("aside")).not.toHaveTextContent("Dashboard");
+    expect(document.querySelector("main#main-content")).toBe(main);
+    expect(input.isConnected).toBe(true);
+    expect(screen.getByLabelText("Nom de l'espace")).toBe(input);
+    expect(input.value).toBe("Régie B");
+
+    // Strata → Classique : même chose dans l'autre sens.
+    iface = "classique";
+    emitAppEvent({ entity: "config", action: "updated", id: "2" });
+    await waitFor(() =>
+      expect(screen.queryByRole("navigation", { name: "Navigation principale" })).toBeNull(),
+    );
+    expect(await shellPart("aside")).toHaveTextContent("Dashboard");
+    expect(document.querySelector("main#main-content")).toBe(main);
+    expect(input.isConnected).toBe(true);
+    expect(input.value).toBe("Régie B");
+  });
+});
+
+describe("échec passager de /api/site", () => {
+  test("la dernière interface connue est conservée", async () => {
+    let site: () => { status?: number; body: unknown } = () => ({ body: { name: "Régie A", interface: "strata" } });
+    const { fetchSpy } = renderApp("/dashboard", { ...signedInApi(), "GET /api/site": () => site() });
+    await waitFor(() => expect(document.documentElement.dataset.interface).toBe("strata"));
+    await strataHeader();
+    const siteCalls = () => fetchSpy.mock.calls.filter(([u]) => String(u).split("?")[0] === "/api/site").length;
+
+    // Réponse en erreur, puis panne réseau : la coquille reste Strata.
+    site = () => ({ status: 500, body: { error: "Erreur serveur" } });
+    let before = siteCalls();
+    emitAppEvent({ entity: "config", action: "updated", id: "1" });
+    await waitFor(() => expect(siteCalls()).toBeGreaterThan(before));
+    site = () => {
+      throw new TypeError("Failed to fetch");
+    };
+    before = siteCalls();
+    emitAppEvent({ entity: "config", action: "updated", id: "2" });
+    await waitFor(() => expect(siteCalls()).toBeGreaterThan(before));
+    await new Promise((r) => setTimeout(r, 50));
+    expect(document.documentElement.dataset.interface).toBe("strata");
+    expect(screen.getByRole("navigation", { name: "Navigation principale" })).toBeInTheDocument();
   });
 });
 
