@@ -404,6 +404,17 @@ const COPIED_FILES = [
   "components/synoptique/components/synoptic-decable-dialog.tsx",
   "components/synoptique/components/synoptic-clear-labels-dialog.tsx",
   "components/synoptique/components/synoptic-cable-model-picker.tsx",
+  // Phase 4c (Task 10) : composants du synoptique 2/2 (adapter-node, adapter-picker
+  // et cable-model-picker sont déjà portés par les Tasks 8 et 9).
+  "components/synoptique/components/synoptic-layers-panel.tsx",
+  "components/synoptique/components/synoptic-mini-map.tsx",
+  "components/synoptique/components/synoptic-rulers.tsx",
+  "components/synoptique/components/port-adapter-picker.tsx",
+  "components/synoptique/components/synoptic-cable-model-dialog.tsx",
+  "components/synoptique/components/synoptic-bundles-section.tsx",
+  "components/synoptique/components/synoptic-renumber-dialog.tsx",
+  "components/synoptique/components/validation-panel.tsx",
+  "components/synoptique/components/audit-panel.tsx",
 ];
 
 /** Fichiers posés sur la topbar ou le rail : ils suivent le thème (variante « Clair A »). */
@@ -1135,6 +1146,24 @@ const ALLOW_HEX: AllowMap = {
     {
       line: /style=\{\{ background: "rgba\(0,0,0,0\.45\)", zIndex: 9999 \}\}/,
       reason: "voile noir translucide derrière la modale (comme `bg-black/60` des autres modales) : neutre, identique dans les deux thèmes",
+    },
+  ],
+  // Phase 4c (Task 10) : composants du synoptique 2/2.
+  "components/synoptique/components/port-adapter-picker.tsx": [
+    { line: /const color = \(p\.ctId && ctMap\[p\.ctId\]\?\.color\) \|\| "#9ca3af";/, reason: CONN },
+  ],
+  "components/synoptique/components/synoptic-bundles-section.tsx": [
+    {
+      line: /^\s*"#[0-9a-f]{6}",$/,
+      reason: "pastilles proposées pour la couleur d'un faisceau de câbles (choisie par l'utilisateur) : couleur métier",
+    },
+  ],
+  "components/synoptique/components/synoptic-renumber-dialog.tsx": [
+    {
+      line: /^const COLOR_(RACK|SUFFIX) = "var\(--arkyo-blue(-light)?, #[0-9a-f]{6}\)";$/,
+      reason:
+        "segments de l'aperçu de numérotation, comme numbering-tab : --arkyo-blue(-light) est déjà remappée sur la " +
+        "palette Strata (globals.css, clair et sombre) : le repli n'est jamais utilisé",
     },
   ],
   "lib/print/export-with-cartouche.ts": [
