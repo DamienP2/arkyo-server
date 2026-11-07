@@ -20,7 +20,10 @@
 //!   audit de rack : session seule, comme arkyo (éditeur de rack de conception) ;
 //! - un `limit` non numérique (ou fractionnaire) donne 400 « Paramètres
 //!   invalides » (arkyo : `take: NaN`, erreur Prisma, 500) ;
-//! - à date égale, l'ordre d'insertion départage (Postgres : indéfini).
+//! - à date égale, l'ordre d'insertion départage (Postgres : indéfini) ;
+//! - chaque ligne porte `user: {id, name, email} | null` (l'auteur, lu dans
+//!   `User`), qu'attend `audit-panel.tsx` : arkyo ne pouvait pas le fournir
+//!   (utilisateurs dans une base séparée), d'où « Utilisateur inconnu ».
 
 #![allow(clippy::result_large_err)]
 
@@ -30,7 +33,8 @@ use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use axum::routing::get;
 use axum::{Json, Router};
-use serde_json::Value;
+use serde_json::{json, Value};
+use std::collections::{HashMap, HashSet};
 
 use super::parametres::{db_error, row_map, Table};
 use super::{error, require, AppState, CurrentUser};
@@ -76,15 +80,50 @@ async fn rows(st: &AppState, sql: &str, binds: &[&str], take: i64) -> Response {
     for b in binds {
         q = q.bind(*b);
     }
-    match q.bind(take).fetch_all(&mut *conn).await {
-        Ok(rows) => Json(Value::Array(
-            rows.iter()
-                .map(|r| Value::Object(row_map(r, &AUDIT_LOG)))
-                .collect(),
-        ))
-        .into_response(),
-        Err(e) => db_error(e),
+    let rows = match q.bind(take).fetch_all(&mut *conn).await {
+        Ok(rows) => rows,
+        Err(e) => return db_error(e),
+    };
+    let mut out: Vec<_> = rows.iter().map(|r| row_map(r, &AUDIT_LOG)).collect();
+    // arkyo-server: auteur de chaque ligne (`user`), lu dans `User` local.
+    let ids: Vec<&str> = out
+        .iter()
+        .filter_map(|r| r.get("userId").and_then(Value::as_str))
+        .collect::<HashSet<_>>()
+        .into_iter()
+        .collect();
+    let mut users: HashMap<String, Value> = HashMap::new();
+    if !ids.is_empty() {
+        let sql = format!(
+            r#"SELECT "id", "name", "email" FROM "User" WHERE "id" IN ({})"#,
+            vec!["?"; ids.len()].join(", ")
+        );
+        let mut q = sqlx::query_as::<_, (String, Option<String>, Option<String>)>(&sql);
+        for id in &ids {
+            q = q.bind(*id);
+        }
+        match q.fetch_all(&mut *conn).await {
+            Ok(found) => {
+                for (id, name, email) in found {
+                    users.insert(
+                        id.clone(),
+                        json!({ "id": id, "name": name, "email": email }),
+                    );
+                }
+            }
+            Err(e) => return db_error(e),
+        }
     }
+    for r in &mut out {
+        let user = r
+            .get("userId")
+            .and_then(Value::as_str)
+            .and_then(|id| users.get(id))
+            .cloned()
+            .unwrap_or(Value::Null);
+        r.insert("user".into(), user);
+    }
+    Json(Value::Array(out.into_iter().map(Value::Object).collect())).into_response()
 }
 
 pub async fn project(

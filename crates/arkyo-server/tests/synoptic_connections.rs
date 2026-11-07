@@ -677,6 +677,16 @@ async fn audit_union_and_limit() {
     for (n, t, id) in rows {
         log_at(&e.pool, n, t, id).await;
     }
+    // One entry by the owner (a local `User`), the others by an unknown id.
+    let owner: String = sqlx::query_scalar(r#"SELECT "id" FROM "User" WHERE "email" = 'o@b.fr'"#)
+        .fetch_one(&e.pool)
+        .await
+        .unwrap();
+    sqlx::query(r#"UPDATE "AuditLog" SET "userId" = ? WHERE "id" = 'log0009'"#)
+        .bind(&owner)
+        .execute(&e.pool)
+        .await
+        .unwrap();
     let ids = |v: &Value| -> Vec<String> {
         v.as_array()
             .unwrap()
@@ -690,14 +700,21 @@ async fn audit_union_and_limit() {
         ids(&r.body),
         ["log0012", "log0009", "log0006", "log0005", "log0003", "log0001"]
     );
+    // arkyo-server: `user` = the author (`{id, name, email}`, `audit-panel.tsx`),
+    // `null` when unknown (arkyo: base séparée, jamais fourni).
     assert_eq!(
         r.body[0],
         json!({"id": "log0012", "userId": "u", "action": "act.12", "entityType": "Rack",
             "entityId": "rb", "projectId": null, "before": null, "after": {"n": 1},
-            "createdAt": "2026-11-07T00:00:12.000Z"})
+            "createdAt": "2026-11-07T00:00:12.000Z", "user": null})
+    );
+    assert_eq!(
+        r.body[1]["user"],
+        json!({"id": owner, "name": "Test", "email": "o@b.fr"})
     );
     let r = send(&e, &tok, "GET", "/api/racks/ra/audit", None).await;
     assert_eq!(ids(&r.body), ["log0005", "log0003"]);
+    assert_eq!(r.body[0]["user"], Value::Null);
     // A rack without logs (or unknown): an empty list, as arkyo.
     let r = send(&e, &tok, "GET", "/api/racks/ghost/audit", None).await;
     assert_eq!((r.status, r.body), (StatusCode::OK, json!([])));
