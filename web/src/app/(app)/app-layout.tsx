@@ -33,6 +33,7 @@ import { TenantPermissionsProvider } from "@/components/tenant-permissions-conte
 import type { TenantPermissions } from "@/lib/tenant-permissions";
 import type { MemberRole } from "@/lib/prisma/main-client";
 import { InterfaceProvider, type UiInterface } from "@/strata/interface-context"; // arkyo-server: interface Strata
+import { StrataAppShell } from "@/strata/shell/strata-app-shell"; // arkyo-server: interface Strata
 
 const MEMBER_ROLES: readonly MemberRole[] = ["OWNER", "CHEF_PROJET", "TECHNICIEN", "CONSULTATION"];
 
@@ -60,7 +61,7 @@ export async function loadShell(): Promise<ShellGate> {
   let iface: UiInterface = "classique"; // arkyo-server: interface Strata
   try {
     const site = await fetch("/api/site", { headers: { Accept: "application/json" } });
-    if (site.ok) {
+    if (site.ok) { // arkyo-server: interface Strata
       const body = (await site.json()) as { name?: string; interface?: string }; // arkyo-server: interface Strata
       siteName = body.name ?? ""; // arkyo-server: interface Strata
       iface = body.interface === "strata" ? "strata" : "classique"; // arkyo-server: interface Strata
@@ -155,6 +156,22 @@ export default function AppLayout() {
     </PresenceProvider>
   );
 
+  // arkyo-server: interface Strata — coquille Strata (topbar à onglets et barre
+  // latérale de bibliothèque) à la place de Topbar + Sidebar + main, dans les
+  // mêmes providers et autour du même <Outlet />.
+  const strataContent = (
+    <PresenceProvider>
+      <ViewProvider>
+        <TopbarTabsProvider>
+          <StrataAppShell>
+            <Outlet />
+          </StrataAppShell>
+          <AppSync />
+        </TopbarTabsProvider>
+      </ViewProvider>
+    </PresenceProvider>
+  );
+
   return (
     // GhostModeProvider conservé (consommé par plusieurs composants) mais le
     // ghost mode est supprimé → toujours false : plus rien n'est en lecture seule.
@@ -166,9 +183,9 @@ export default function AppLayout() {
           role={role}
         >
           <TenantPermissionsProvider initialPermissions={gate.permissions}>
-            <InterfaceProvider value={gate.interface}> {/* arkyo-server: interface Strata */}
-              {layoutContent}
-            </InterfaceProvider> // arkyo-server: interface Strata
+            <InterfaceProvider value={gate.interface /* arkyo-server: interface Strata */}>
+            {gate.interface === "strata" ? strataContent : layoutContent /* arkyo-server: interface Strata */}
+            </InterfaceProvider>{/* arkyo-server: interface Strata */}
           </TenantPermissionsProvider>
         </TenantMembershipProvider>
       </TenantPlanProvider>

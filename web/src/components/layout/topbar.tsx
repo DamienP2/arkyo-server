@@ -45,7 +45,7 @@ import { LoadingState } from "@/components/ui/loading-state";
 
 // arkyo-server: habillage Strata — teintes de rôle conservées, nuances ajustées pour un
 // contraste >= 4,5:1 en clair et en sombre (vérifié par theme-sweep.test.ts).
-const ROLE_BADGE: Record<MemberRole, { label: string; cls: string }> = {
+export const ROLE_BADGE: Record<MemberRole, { label: string; cls: string }> = { // arkyo-server: interface Strata (export pour la topbar Strata)
   OWNER: {
     label: "PROPRIÉTAIRE",
     cls: "text-purple-600 bg-purple-50 dark:text-purple-400 dark:bg-purple-950/30", // arkyo-server: habillage Strata
@@ -120,7 +120,7 @@ type Notif = {
   createdAt: string;
 };
 
-function NotificationsMenu() {
+export function NotificationsMenu() { // arkyo-server: interface Strata (export pour la topbar Strata)
   const [open, setOpen] = useState(false);
   const [count, setCount] = useState(0);
   const [items, setItems] = useState<Notif[]>([]);
@@ -299,7 +299,7 @@ function NotificationsMenu() {
 
 // ── Langue ───────────────────────────────────────────────────────────────────
 
-function LanguageMenu() {
+export function LanguageMenu() { // arkyo-server: interface Strata (export pour la topbar Strata)
   const [open, setOpen] = useState(false);
   const [current, setCurrent] = useState<Locale>("fr");
   const [busy, setBusy] = useState(false);
@@ -396,7 +396,7 @@ function LanguageMenu() {
 
 // ── Profil ───────────────────────────────────────────────────────────────────
 
-function ProfileMenu({
+export function ProfileMenu({ // arkyo-server: interface Strata (export pour la topbar Strata)
   email,
   badge,
   onLogout,
