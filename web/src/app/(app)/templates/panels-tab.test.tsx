@@ -190,4 +190,26 @@ describe("/templates?tab=panels", () => {
     ).toBe(true);
     expect(screen.getByText("Patch BNC")).toBeInTheDocument();
   });
+
+  test("panel_in_use_delete_shows_server_message", async () => {
+    // arkyo-server : la suppression d'un panel encore posé est refusée (409) ;
+    // le message du serveur doit s'afficher et le panel rester dans la liste.
+    renderApp(
+      "/templates?tab=panels",
+      panelsApi(OWNER_PERMS, {
+        "DELETE /api/panels/pn1": {
+          status: 409,
+          body: { error: "Utilisé dans 1 contenant(s) — suppression impossible", usageCount: 1 },
+        },
+      }),
+    );
+    await screen.findByText("Patch XLR A", {}, { timeout: 5000 });
+    fireEvent.click(within(card("Patch XLR A")).getByRole("button"));
+    const confirm = await screen.findByRole("dialog");
+    fireEvent.click(within(confirm).getByRole("button", { name: "Supprimer" }));
+    expect(
+      await screen.findByText("Utilisé dans 1 contenant(s) — suppression impossible"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Patch XLR A")).toBeInTheDocument();
+  });
 });

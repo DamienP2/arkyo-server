@@ -44,3 +44,7 @@ Ce fichier liste ce que la phase 4b (onglet Rack de l'éditeur projet : élévat
   - `theme-sweep.test.ts` : l'exemption `ALLOW_HEX` de `synoptic-export.ts` couvre tout hex à 6 chiffres. `rack-export.test.tsx` : la garde de marque d'`export-capture.ts` ne suit pas les fonctions appelées, et la garde de marque au niveau du source ne couvre que les 3 fichiers du composeur (la fermeture d'imports est propre aujourd'hui).
   - Corrigés par la vague (`0d3ca3c`, `20c5f3f`) : comparaison `toEqual` de nœuds DOM (`rack-export.test.tsx`, désormais `toBe` nœud par nœud) ; commentaire périmé des bouchons 4b et raison de l'ombre de la feuille (`theme-sweep.test.ts`) ; délai de 5 s d'`auth-page.test.tsx` qui échouait sous charge (le tableau de bord est chargé à la demande), porté à 15 s.
 - **Front (code).** `export-with-cartouche.ts:118` parle encore de « loader CDN » (copie fidèle). Le « + » d'`equipment-card.tsx` n'est pas plafonné à 999, mais n'a pas d'appelant.
+
+## Après la relecture du lot de corrections
+
+- Suppression d'un panel encore posé : le refus du serveur (409 « Utilisé dans N contenant(s) — suppression impossible ») s'affiche maintenant dans un toast de la bibliothèque des panels. arkyo avalait l'erreur sans message.

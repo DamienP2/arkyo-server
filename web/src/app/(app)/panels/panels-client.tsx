@@ -13,7 +13,9 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, LayoutPanelTop, Search, Trash2, ChevronRight } from "@/components/ui/icons";
 
-import { api, ApiError } from "@/lib/api-client";
+// arkyo-server: getApiErrorMessage et useToast pour le refus de suppression (409).
+import { api, ApiError, getApiErrorMessage } from "@/lib/api-client";
+import { useToast } from "@/components/ui/toast";
 import { broadcastCatalogUpdated } from "@/lib/catalog-broadcast";
 import { cn } from "@/lib/utils";
 
@@ -125,6 +127,8 @@ type FilterCategory = string | "all";
 export function PanelsClient({ initialPanels }: { initialPanels: Panel[] }) {
   const router = useRouter();
   const confirm = useConfirm();
+  // arkyo-server: message d'erreur de la suppression (panel encore posé).
+  const toast = useToast();
 
   const [panels, setPanels] = useState(initialPanels);
   useEffect(() => setPanels(initialPanels), [initialPanels]);
@@ -196,6 +200,8 @@ export function PanelsClient({ initialPanels }: { initialPanels: Panel[] }) {
       setPanels((prev) => prev.filter((p) => p.id !== panel.id));
     } catch (e) {
       if (!(e instanceof ApiError)) throw e;
+      // arkyo-server: le serveur refuse la suppression d'un panel encore posé (409) ; on affiche son message.
+      toast.error(getApiErrorMessage(e, "Échec de la suppression."));
     }
   };
 
