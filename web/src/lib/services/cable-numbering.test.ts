@@ -9,6 +9,9 @@
  */
 
 import { describe, it, expect } from "vitest";
+// arkyo-server: cas de computeCableLabel lus dans les fixtures partagées avec le Rust
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import {
   computeCableLabel,
   formatCableNumber,
@@ -769,152 +772,33 @@ describe("round-trip : format → parse → format", () => {
 // `includeZone: deprecated` dans le service)
 // ─────────────────────────────────────────────────────────────────────────────
 
+// arkyo-server: les cas de computeCableLabel (ceux d'arkyo, ici et dans
+// tests/unit/cable-numbering.test.ts, plus des cas limites) sont des fixtures
+// JSON partagées avec le port Rust (crates/arkyo-server/tests/cable_numbering.rs) :
+// les deux implémentations doivent produire exactement `expected`.
+type CableLabelFixture = {
+  source: string;
+  name: string;
+  input: Omit<Parameters<typeof computeCableLabel>[0], "config"> & { config: unknown };
+  expected: string;
+};
+const fixtures = JSON.parse(
+  readFileSync(
+    resolve(__dirname, "../../../../crates/arkyo-server/tests/fixtures/cable-numbering.json"),
+    "utf8",
+  ),
+) as { cases: CableLabelFixture[] };
+
 describe("computeCableLabel", () => {
-  const baseConfig: CableNumberingConfig = {
-    pad: 5,
-    sep1: "",
-    sep2: "",
-    includeRack: true,
-  };
-
-  it("format rack+prefix+IN avec sep1='' → segments collés", () => {
-    expect(
-      computeCableLabel({
-        zoneCode: "ALPH",
-        rackCode: "RGA",
-        signalPrefix: "S",
-        signalSuffix: "",
-        dirDigit: "1",
-        seq: 1,
-        config: baseConfig,
-      }),
-    ).toBe("RGAS10001");
+  it("fixtures : les 17 cas d'arkyo au moins", () => {
+    expect(fixtures.cases.length).toBeGreaterThanOrEqual(17);
   });
 
-  it("zoneCode est ignoré (zone retirée de la convention)", () => {
-    expect(
-      computeCableLabel({
-        zoneCode: null,
-        rackCode: "RGA",
-        signalPrefix: "S",
-        signalSuffix: "",
-        dirDigit: "1",
-        seq: 1,
-        config: baseConfig,
-      }),
-    ).toBe("RGAS10001");
-  });
-
-  it("toggle includeRack=false → omet le segment rack", () => {
-    expect(
-      computeCableLabel({
-        zoneCode: "ALPH",
-        rackCode: "RGA",
-        signalPrefix: "S",
-        signalSuffix: "",
-        dirDigit: "1",
-        seq: 1,
-        config: { ...baseConfig, includeRack: false },
-      }),
-    ).toBe("S10001");
-  });
-
-  it("ni zone ni rack", () => {
-    expect(
-      computeCableLabel({
-        zoneCode: null,
-        rackCode: null,
-        signalPrefix: "S",
-        signalSuffix: "",
-        dirDigit: "1",
-        seq: 42,
-        config: baseConfig,
-      }),
-    ).toBe("S10042");
-  });
-
-  it("direction OUT=2", () => {
-    expect(
-      computeCableLabel({
-        zoneCode: "ALPH",
-        rackCode: "RGA",
-        signalPrefix: "S",
-        signalSuffix: "",
-        dirDigit: "2",
-        seq: 1,
-        config: baseConfig,
-      }),
-    ).toBe("RGAS20001");
-  });
-
-  it("direction BIDI=3", () => {
-    expect(
-      computeCableLabel({
-        zoneCode: "ALPH",
-        rackCode: "RGA",
-        signalPrefix: "S",
-        signalSuffix: "",
-        dirDigit: "3",
-        seq: 1,
-        config: baseConfig,
-      }),
-    ).toBe("RGAS30001");
-  });
-
-  it("suffix avec sep2='-'", () => {
-    expect(
-      computeCableLabel({
-        zoneCode: "ALPH",
-        rackCode: "RGA",
-        signalPrefix: "S",
-        signalSuffix: "HD",
-        dirDigit: "1",
-        seq: 1,
-        config: { ...baseConfig, sep2: "-" },
-      }),
-    ).toBe("RGAS10001-HD");
-  });
-
-  it("sep1='-' entre rack et prefix", () => {
-    expect(
-      computeCableLabel({
-        zoneCode: "ALPH",
-        rackCode: "RGA",
-        signalPrefix: "S",
-        signalSuffix: "",
-        dirDigit: "1",
-        seq: 1,
-        config: { ...baseConfig, sep1: "-" },
-      }),
-    ).toBe("RGA-S10001");
-  });
-
-  it("signalPrefix vide → rack + dirDigit + seq sur pad-1 (direction toujours visible)", () => {
-    expect(
-      computeCableLabel({
-        zoneCode: "ALPH",
-        rackCode: "RGA",
-        signalPrefix: "",
-        signalSuffix: "",
-        dirDigit: "1",
-        seq: 7,
-        config: { ...baseConfig, pad: 3 },
-      }),
-    ).toBe("RGA107");
-  });
-
-  it("pad borné à [1,10] et seq borné à ≥1", () => {
-    // seq<1 → traité comme 1
-    expect(
-      computeCableLabel({
-        zoneCode: null,
-        rackCode: null,
-        signalPrefix: "S",
-        signalSuffix: "",
-        dirDigit: "1",
-        seq: 0,
-        config: { ...baseConfig, pad: 3 },
-      }),
-    ).toBe("S101");
-  });
+  for (const c of fixtures.cases) {
+    it(`${c.name} (${c.source})`, () => {
+      expect(
+        computeCableLabel({ ...c.input, config: c.input.config as CableNumberingConfig }),
+      ).toBe(c.expected);
+    });
+  }
 });

@@ -7,6 +7,7 @@ pub mod firewall;
 pub mod http;
 pub mod ids;
 pub mod inventory;
+pub mod numbering;
 pub mod paths;
 pub mod projects;
 pub mod seeds;

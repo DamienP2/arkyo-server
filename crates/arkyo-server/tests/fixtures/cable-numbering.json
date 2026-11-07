@@ -1,0 +1,1169 @@
+{
+  "_comment": [
+    "Fixtures partagées de computeCableLabel (arkyo:lib/services/cable-numbering.ts:541-580).",
+    "Lues par crates/arkyo-server/tests/cable_numbering.rs (Rust) et par",
+    "web/src/lib/services/cable-numbering.test.ts (Vitest) : les deux implémentations",
+    "doivent produire exactement `expected`. `config` est un objet JSON libre (sémantique JS :",
+    "`??`, vérité, `Number`, `String`), comme Rack.numberingOverride. Un `pad` absent vaut NaN."
+  ],
+  "cases": [
+    {
+      "source": "web/src/lib/services/cable-numbering.test.ts",
+      "name": "format rack+prefix+IN avec sep1='' → segments collés",
+      "input": {
+        "zoneCode": "ALPH",
+        "rackCode": "RGA",
+        "signalPrefix": "S",
+        "signalSuffix": "",
+        "dirDigit": "1",
+        "seq": 1,
+        "config": {
+          "pad": 5,
+          "sep1": "",
+          "sep2": "",
+          "includeRack": true
+        }
+      },
+      "expected": "RGAS10001"
+    },
+    {
+      "source": "web/src/lib/services/cable-numbering.test.ts",
+      "name": "zoneCode est ignoré (zone retirée de la convention)",
+      "input": {
+        "zoneCode": null,
+        "rackCode": "RGA",
+        "signalPrefix": "S",
+        "signalSuffix": "",
+        "dirDigit": "1",
+        "seq": 1,
+        "config": {
+          "pad": 5,
+          "sep1": "",
+          "sep2": "",
+          "includeRack": true
+        }
+      },
+      "expected": "RGAS10001"
+    },
+    {
+      "source": "web/src/lib/services/cable-numbering.test.ts",
+      "name": "toggle includeRack=false → omet le segment rack",
+      "input": {
+        "zoneCode": "ALPH",
+        "rackCode": "RGA",
+        "signalPrefix": "S",
+        "signalSuffix": "",
+        "dirDigit": "1",
+        "seq": 1,
+        "config": {
+          "pad": 5,
+          "sep1": "",
+          "sep2": "",
+          "includeRack": false
+        }
+      },
+      "expected": "S10001"
+    },
+    {
+      "source": "web/src/lib/services/cable-numbering.test.ts",
+      "name": "ni zone ni rack",
+      "input": {
+        "zoneCode": null,
+        "rackCode": null,
+        "signalPrefix": "S",
+        "signalSuffix": "",
+        "dirDigit": "1",
+        "seq": 42,
+        "config": {
+          "pad": 5,
+          "sep1": "",
+          "sep2": "",
+          "includeRack": true
+        }
+      },
+      "expected": "S10042"
+    },
+    {
+      "source": "web/src/lib/services/cable-numbering.test.ts",
+      "name": "direction OUT=2",
+      "input": {
+        "zoneCode": "ALPH",
+        "rackCode": "RGA",
+        "signalPrefix": "S",
+        "signalSuffix": "",
+        "dirDigit": "2",
+        "seq": 1,
+        "config": {
+          "pad": 5,
+          "sep1": "",
+          "sep2": "",
+          "includeRack": true
+        }
+      },
+      "expected": "RGAS20001"
+    },
+    {
+      "source": "web/src/lib/services/cable-numbering.test.ts",
+      "name": "direction BIDI=3",
+      "input": {
+        "zoneCode": "ALPH",
+        "rackCode": "RGA",
+        "signalPrefix": "S",
+        "signalSuffix": "",
+        "dirDigit": "3",
+        "seq": 1,
+        "config": {
+          "pad": 5,
+          "sep1": "",
+          "sep2": "",
+          "includeRack": true
+        }
+      },
+      "expected": "RGAS30001"
+    },
+    {
+      "source": "web/src/lib/services/cable-numbering.test.ts",
+      "name": "suffix avec sep2='-'",
+      "input": {
+        "zoneCode": "ALPH",
+        "rackCode": "RGA",
+        "signalPrefix": "S",
+        "signalSuffix": "HD",
+        "dirDigit": "1",
+        "seq": 1,
+        "config": {
+          "pad": 5,
+          "sep1": "",
+          "sep2": "-",
+          "includeRack": true
+        }
+      },
+      "expected": "RGAS10001-HD"
+    },
+    {
+      "source": "web/src/lib/services/cable-numbering.test.ts",
+      "name": "sep1='-' entre rack et prefix",
+      "input": {
+        "zoneCode": "ALPH",
+        "rackCode": "RGA",
+        "signalPrefix": "S",
+        "signalSuffix": "",
+        "dirDigit": "1",
+        "seq": 1,
+        "config": {
+          "pad": 5,
+          "sep1": "-",
+          "sep2": "",
+          "includeRack": true
+        }
+      },
+      "expected": "RGA-S10001"
+    },
+    {
+      "source": "web/src/lib/services/cable-numbering.test.ts",
+      "name": "signalPrefix vide → rack + dirDigit + seq sur pad-1 (direction toujours visible)",
+      "input": {
+        "zoneCode": "ALPH",
+        "rackCode": "RGA",
+        "signalPrefix": "",
+        "signalSuffix": "",
+        "dirDigit": "1",
+        "seq": 7,
+        "config": {
+          "pad": 3,
+          "sep1": "",
+          "sep2": "",
+          "includeRack": true
+        }
+      },
+      "expected": "RGA107"
+    },
+    {
+      "source": "web/src/lib/services/cable-numbering.test.ts",
+      "name": "pad borné à [1,10] et seq borné à ≥1",
+      "input": {
+        "zoneCode": null,
+        "rackCode": null,
+        "signalPrefix": "S",
+        "signalSuffix": "",
+        "dirDigit": "1",
+        "seq": 0,
+        "config": {
+          "pad": 3,
+          "sep1": "",
+          "sep2": "",
+          "includeRack": true
+        }
+      },
+      "expected": "S101"
+    },
+    {
+      "source": "web/src/tests/unit/cable-numbering.test.ts",
+      "name": "format classique avec dirDigit préfixé (sep1='' → segments collés)",
+      "input": {
+        "zoneCode": "ALPH",
+        "rackCode": "RGA",
+        "signalPrefix": "S",
+        "signalSuffix": "",
+        "dirDigit": "1",
+        "seq": 1,
+        "config": {
+          "pad": 5,
+          "sep1": "",
+          "sep2": "",
+          "includeRack": true
+        }
+      },
+      "expected": "RGAS10001"
+    },
+    {
+      "source": "web/src/tests/unit/cable-numbering.test.ts",
+      "name": "includeZone legacy ignoré (zone retirée de la convention)",
+      "input": {
+        "zoneCode": "ALPH",
+        "rackCode": "RGA",
+        "signalPrefix": "S",
+        "signalSuffix": "",
+        "dirDigit": "1",
+        "seq": 1,
+        "config": {
+          "pad": 5,
+          "sep1": "",
+          "sep2": "",
+          "includeRack": true,
+          "includeZone": false
+        }
+      },
+      "expected": "RGAS10001"
+    },
+    {
+      "source": "web/src/tests/unit/cable-numbering.test.ts",
+      "name": "legacy `separator` (alias sep1) entre rack et prefix",
+      "input": {
+        "zoneCode": "ALPH",
+        "rackCode": "RGA",
+        "signalPrefix": "S",
+        "signalSuffix": "",
+        "dirDigit": "1",
+        "seq": 1,
+        "config": {
+          "pad": 5,
+          "sep1": "-",
+          "sep2": "",
+          "includeRack": true
+        }
+      },
+      "expected": "RGA-S10001"
+    },
+    {
+      "source": "web/src/tests/unit/cable-numbering.test.ts",
+      "name": "ajoute suffix avec sep2='-'",
+      "input": {
+        "zoneCode": "ALPH",
+        "rackCode": "RGA",
+        "signalPrefix": "A",
+        "signalSuffix": "L",
+        "dirDigit": "1",
+        "seq": 1,
+        "config": {
+          "pad": 5,
+          "sep1": "",
+          "sep2": "-",
+          "includeRack": true
+        }
+      },
+      "expected": "RGAA10001-L"
+    },
+    {
+      "source": "web/src/tests/unit/cable-numbering.test.ts",
+      "name": "template libre remplace la composition classique",
+      "input": {
+        "zoneCode": "ALPH",
+        "rackCode": "RGA",
+        "signalPrefix": "S",
+        "signalSuffix": "L",
+        "dirDigit": "2",
+        "seq": 42,
+        "config": {
+          "pad": 5,
+          "sep1": "",
+          "sep2": "",
+          "includeRack": true,
+          "templateEnabled": true,
+          "template": "{zone}/{rack}.{prefix}{dir}{seq}_{suffix}"
+        }
+      },
+      "expected": "/RGA.S200042_L"
+    },
+    {
+      "source": "web/src/tests/unit/cable-numbering.test.ts",
+      "name": "template : placeholders manquants → chaînes vides",
+      "input": {
+        "zoneCode": null,
+        "rackCode": "RGA",
+        "signalPrefix": "",
+        "signalSuffix": "",
+        "dirDigit": "1",
+        "seq": 5,
+        "config": {
+          "pad": 5,
+          "sep1": "",
+          "sep2": "",
+          "includeRack": true,
+          "templateEnabled": true,
+          "template": "{zone}-{rack}-{prefix}{seq}"
+        }
+      },
+      "expected": "-RGA-00005"
+    },
+    {
+      "source": "web/src/tests/unit/cable-numbering.test.ts",
+      "name": "pad clampé à [1, 10]",
+      "input": {
+        "zoneCode": "A",
+        "rackCode": "B",
+        "signalPrefix": "S",
+        "signalSuffix": "",
+        "dirDigit": "1",
+        "seq": 1,
+        "config": {
+          "pad": 999,
+          "sep1": "",
+          "sep2": "",
+          "includeRack": true
+        }
+      },
+      "expected": "BS1000000001"
+    },
+    {
+      "source": "arkyo-server",
+      "name": "pad 1 → clampé à 3",
+      "input": {
+        "zoneCode": "ALPH",
+        "rackCode": "RGA",
+        "signalPrefix": "S",
+        "signalSuffix": "",
+        "dirDigit": "1",
+        "seq": 1,
+        "config": {
+          "pad": 1,
+          "sep1": "",
+          "sep2": "",
+          "includeRack": true
+        }
+      },
+      "expected": "RGAS101"
+    },
+    {
+      "source": "arkyo-server",
+      "name": "pad négatif → clampé à 3",
+      "input": {
+        "zoneCode": "ALPH",
+        "rackCode": "RGA",
+        "signalPrefix": "S",
+        "signalSuffix": "",
+        "dirDigit": "1",
+        "seq": 1,
+        "config": {
+          "pad": -4,
+          "sep1": "",
+          "sep2": "",
+          "includeRack": true
+        }
+      },
+      "expected": "RGAS101"
+    },
+    {
+      "source": "arkyo-server",
+      "name": "pad décimal 7.8 → tronqué à 7",
+      "input": {
+        "zoneCode": "ALPH",
+        "rackCode": "RGA",
+        "signalPrefix": "S",
+        "signalSuffix": "",
+        "dirDigit": "1",
+        "seq": 1,
+        "config": {
+          "pad": 7.8,
+          "sep1": "",
+          "sep2": "",
+          "includeRack": true
+        }
+      },
+      "expected": "RGAS1000001"
+    },
+    {
+      "source": "arkyo-server",
+      "name": "pad décimal 2.9 → tronqué à 2 puis clampé à 3",
+      "input": {
+        "zoneCode": "ALPH",
+        "rackCode": "RGA",
+        "signalPrefix": "S",
+        "signalSuffix": "",
+        "dirDigit": "1",
+        "seq": 1,
+        "config": {
+          "pad": 2.9,
+          "sep1": "",
+          "sep2": "",
+          "includeRack": true
+        }
+      },
+      "expected": "RGAS101"
+    },
+    {
+      "source": "arkyo-server",
+      "name": "pad 10.5 → 10",
+      "input": {
+        "zoneCode": "ALPH",
+        "rackCode": "RGA",
+        "signalPrefix": "S",
+        "signalSuffix": "",
+        "dirDigit": "1",
+        "seq": 1,
+        "config": {
+          "pad": 10.5,
+          "sep1": "",
+          "sep2": "",
+          "includeRack": true
+        }
+      },
+      "expected": "RGAS1000000001"
+    },
+    {
+      "source": "arkyo-server",
+      "name": "pad texte \"6\" (numberingOverride JSON libre) → 6",
+      "input": {
+        "zoneCode": "ALPH",
+        "rackCode": "RGA",
+        "signalPrefix": "S",
+        "signalSuffix": "",
+        "dirDigit": "1",
+        "seq": 1,
+        "config": {
+          "pad": "6",
+          "sep1": "",
+          "sep2": "",
+          "includeRack": true
+        }
+      },
+      "expected": "RGAS100001"
+    },
+    {
+      "source": "arkyo-server",
+      "name": "pad null → 0 → clampé à 3",
+      "input": {
+        "zoneCode": "ALPH",
+        "rackCode": "RGA",
+        "signalPrefix": "S",
+        "signalSuffix": "",
+        "dirDigit": "1",
+        "seq": 1,
+        "config": {
+          "pad": null,
+          "sep1": "",
+          "sep2": "",
+          "includeRack": true
+        }
+      },
+      "expected": "RGAS101"
+    },
+    {
+      "source": "arkyo-server",
+      "name": "pad absent → NaN → aucun padding",
+      "input": {
+        "zoneCode": "ALPH",
+        "rackCode": "RGA",
+        "signalPrefix": "S",
+        "signalSuffix": "",
+        "dirDigit": "1",
+        "seq": 12,
+        "config": {
+          "sep1": "",
+          "sep2": "",
+          "includeRack": true
+        }
+      },
+      "expected": "RGAS112"
+    },
+    {
+      "source": "arkyo-server",
+      "name": "pad texte non numérique → NaN → aucun padding",
+      "input": {
+        "zoneCode": "ALPH",
+        "rackCode": "RGA",
+        "signalPrefix": "S",
+        "signalSuffix": "",
+        "dirDigit": "1",
+        "seq": 12,
+        "config": {
+          "pad": "abc",
+          "sep1": "",
+          "sep2": "",
+          "includeRack": true
+        }
+      },
+      "expected": "RGAS112"
+    },
+    {
+      "source": "arkyo-server",
+      "name": "pad booléen true → 1 → clampé à 3",
+      "input": {
+        "zoneCode": "ALPH",
+        "rackCode": "RGA",
+        "signalPrefix": "S",
+        "signalSuffix": "",
+        "dirDigit": "1",
+        "seq": 1,
+        "config": {
+          "pad": true,
+          "sep1": "",
+          "sep2": "",
+          "includeRack": true
+        }
+      },
+      "expected": "RGAS101"
+    },
+    {
+      "source": "arkyo-server",
+      "name": "seq décimal 2.7 → tronqué à 2",
+      "input": {
+        "zoneCode": "ALPH",
+        "rackCode": "RGA",
+        "signalPrefix": "S",
+        "signalSuffix": "",
+        "dirDigit": "1",
+        "seq": 2.7,
+        "config": {
+          "pad": 5,
+          "sep1": "",
+          "sep2": "",
+          "includeRack": true
+        }
+      },
+      "expected": "RGAS10002"
+    },
+    {
+      "source": "arkyo-server",
+      "name": "seq négatif → 1",
+      "input": {
+        "zoneCode": "ALPH",
+        "rackCode": "RGA",
+        "signalPrefix": "S",
+        "signalSuffix": "",
+        "dirDigit": "1",
+        "seq": -5,
+        "config": {
+          "pad": 5,
+          "sep1": "",
+          "sep2": "",
+          "includeRack": true
+        }
+      },
+      "expected": "RGAS10001"
+    },
+    {
+      "source": "arkyo-server",
+      "name": "seq plus long que le pad → pas de troncature",
+      "input": {
+        "zoneCode": "ALPH",
+        "rackCode": "RGA",
+        "signalPrefix": "S",
+        "signalSuffix": "",
+        "dirDigit": "1",
+        "seq": 1234567,
+        "config": {
+          "pad": 5,
+          "sep1": "",
+          "sep2": "",
+          "includeRack": true
+        }
+      },
+      "expected": "RGAS11234567"
+    },
+    {
+      "source": "arkyo-server",
+      "name": "legacy separator/suffixSeparator quand sep1/sep2 absents",
+      "input": {
+        "zoneCode": "ALPH",
+        "rackCode": "RGA",
+        "signalPrefix": "S",
+        "signalSuffix": "HD",
+        "dirDigit": "1",
+        "seq": 1,
+        "config": {
+          "pad": 5,
+          "includeRack": true,
+          "separator": ".",
+          "suffixSeparator": "_"
+        }
+      },
+      "expected": "RGA.S10001_HD"
+    },
+    {
+      "source": "arkyo-server",
+      "name": "sep1 null → repli sur separator",
+      "input": {
+        "zoneCode": "ALPH",
+        "rackCode": "RGA",
+        "signalPrefix": "S",
+        "signalSuffix": "",
+        "dirDigit": "1",
+        "seq": 1,
+        "config": {
+          "pad": 5,
+          "sep1": null,
+          "sep2": "",
+          "includeRack": true,
+          "separator": "/"
+        }
+      },
+      "expected": "RGA/S10001"
+    },
+    {
+      "source": "arkyo-server",
+      "name": "sep1 vide l'emporte sur separator",
+      "input": {
+        "zoneCode": "ALPH",
+        "rackCode": "RGA",
+        "signalPrefix": "S",
+        "signalSuffix": "",
+        "dirDigit": "1",
+        "seq": 1,
+        "config": {
+          "pad": 5,
+          "sep1": "",
+          "sep2": "",
+          "includeRack": true,
+          "separator": "/"
+        }
+      },
+      "expected": "RGAS10001"
+    },
+    {
+      "source": "arkyo-server",
+      "name": "ni sep1 ni separator → aucun séparateur",
+      "input": {
+        "zoneCode": "ALPH",
+        "rackCode": "RGA",
+        "signalPrefix": "S",
+        "signalSuffix": "X",
+        "dirDigit": "1",
+        "seq": 1,
+        "config": {
+          "pad": 5,
+          "includeRack": true
+        }
+      },
+      "expected": "RGAS10001X"
+    },
+    {
+      "source": "arkyo-server",
+      "name": "suffix avec sep2 vide → collé",
+      "input": {
+        "zoneCode": "ALPH",
+        "rackCode": "RGA",
+        "signalPrefix": "S",
+        "signalSuffix": "HD",
+        "dirDigit": "1",
+        "seq": 1,
+        "config": {
+          "pad": 5,
+          "sep1": "",
+          "sep2": "",
+          "includeRack": true
+        }
+      },
+      "expected": "RGAS10001HD"
+    },
+    {
+      "source": "arkyo-server",
+      "name": "suffix vide → sep2 omis",
+      "input": {
+        "zoneCode": "ALPH",
+        "rackCode": "RGA",
+        "signalPrefix": "S",
+        "signalSuffix": "",
+        "dirDigit": "1",
+        "seq": 1,
+        "config": {
+          "pad": 5,
+          "sep1": "",
+          "sep2": "-",
+          "includeRack": true
+        }
+      },
+      "expected": "RGAS10001"
+    },
+    {
+      "source": "arkyo-server",
+      "name": "rackCode vide → segment rack omis",
+      "input": {
+        "zoneCode": "ALPH",
+        "rackCode": "",
+        "signalPrefix": "S",
+        "signalSuffix": "",
+        "dirDigit": "1",
+        "seq": 1,
+        "config": {
+          "pad": 5,
+          "sep1": "-",
+          "sep2": "",
+          "includeRack": true
+        }
+      },
+      "expected": "S10001"
+    },
+    {
+      "source": "arkyo-server",
+      "name": "includeRack texte \"false\" (vrai en JS) → rack inclus",
+      "input": {
+        "zoneCode": "ALPH",
+        "rackCode": "RGA",
+        "signalPrefix": "S",
+        "signalSuffix": "",
+        "dirDigit": "1",
+        "seq": 1,
+        "config": {
+          "pad": 5,
+          "sep1": "",
+          "sep2": "",
+          "includeRack": "false"
+        }
+      },
+      "expected": "RGAS10001"
+    },
+    {
+      "source": "arkyo-server",
+      "name": "includeRack null → rack omis",
+      "input": {
+        "zoneCode": "ALPH",
+        "rackCode": "RGA",
+        "signalPrefix": "S",
+        "signalSuffix": "",
+        "dirDigit": "1",
+        "seq": 1,
+        "config": {
+          "pad": 5,
+          "sep1": "",
+          "sep2": "",
+          "includeRack": null
+        }
+      },
+      "expected": "S10001"
+    },
+    {
+      "source": "arkyo-server",
+      "name": "sep1 numérique (JSON libre) → converti en texte",
+      "input": {
+        "zoneCode": "ALPH",
+        "rackCode": "RGA",
+        "signalPrefix": "S",
+        "signalSuffix": "",
+        "dirDigit": "1",
+        "seq": 1,
+        "config": {
+          "pad": 5,
+          "sep1": 5,
+          "sep2": "",
+          "includeRack": true
+        }
+      },
+      "expected": "RGA5S10001"
+    },
+    {
+      "source": "arkyo-server",
+      "name": "préfixe et suffixe accentués",
+      "input": {
+        "zoneCode": "ALPH",
+        "rackCode": "RGA",
+        "signalPrefix": "É",
+        "signalSuffix": "ß",
+        "dirDigit": "1",
+        "seq": 1,
+        "config": {
+          "pad": 5,
+          "sep1": "",
+          "sep2": "·",
+          "includeRack": true
+        }
+      },
+      "expected": "RGAÉ10001·ß"
+    },
+    {
+      "source": "arkyo-server",
+      "name": "template : tous les blocs",
+      "input": {
+        "zoneCode": "ALPH",
+        "rackCode": "RGA",
+        "signalPrefix": "S",
+        "signalSuffix": "HD",
+        "dirDigit": "3",
+        "seq": 9,
+        "config": {
+          "pad": 5,
+          "sep1": "-",
+          "sep2": ".",
+          "includeRack": true,
+          "templateEnabled": true,
+          "template": "{rack}{sep1}{prefix}{dir}{seq}{sep2}{suffix}"
+        }
+      },
+      "expected": "RGA-S300009.HD"
+    },
+    {
+      "source": "arkyo-server",
+      "name": "template : seq sur pad complet, sans direction",
+      "input": {
+        "zoneCode": "ALPH",
+        "rackCode": "RGA",
+        "signalPrefix": "S",
+        "signalSuffix": "",
+        "dirDigit": "1",
+        "seq": 3,
+        "config": {
+          "pad": 4,
+          "sep1": "",
+          "sep2": "",
+          "includeRack": true,
+          "templateEnabled": true,
+          "template": "{seq}"
+        }
+      },
+      "expected": "0003"
+    },
+    {
+      "source": "arkyo-server",
+      "name": "template : includeRack=false → {rack} vide",
+      "input": {
+        "zoneCode": "ALPH",
+        "rackCode": "RGA",
+        "signalPrefix": "S",
+        "signalSuffix": "",
+        "dirDigit": "1",
+        "seq": 1,
+        "config": {
+          "pad": 5,
+          "sep1": "",
+          "sep2": "",
+          "includeRack": false,
+          "templateEnabled": true,
+          "template": "[{rack}]{prefix}{seq}"
+        }
+      },
+      "expected": "[]S00001"
+    },
+    {
+      "source": "arkyo-server",
+      "name": "template : placeholder inconnu et accolades conservés",
+      "input": {
+        "zoneCode": "ALPH",
+        "rackCode": "RGA",
+        "signalPrefix": "S",
+        "signalSuffix": "",
+        "dirDigit": "1",
+        "seq": 1,
+        "config": {
+          "pad": 5,
+          "sep1": "",
+          "sep2": "",
+          "includeRack": true,
+          "templateEnabled": true,
+          "template": "{foo}{{rack}}{RACK}{ rack}{rack"
+        }
+      },
+      "expected": "{foo}{RGA}{RACK}{ rack}{rack"
+    },
+    {
+      "source": "arkyo-server",
+      "name": "template : motifs $& et $1 non interprétés",
+      "input": {
+        "zoneCode": "ALPH",
+        "rackCode": "RGA",
+        "signalPrefix": "S",
+        "signalSuffix": "",
+        "dirDigit": "1",
+        "seq": 1,
+        "config": {
+          "pad": 5,
+          "sep1": "",
+          "sep2": "",
+          "includeRack": true,
+          "templateEnabled": true,
+          "template": "$&{rack}$1$$"
+        }
+      },
+      "expected": "$&RGA$1$$"
+    },
+    {
+      "source": "arkyo-server",
+      "name": "template : blocs répétés",
+      "input": {
+        "zoneCode": "ALPH",
+        "rackCode": "RGA",
+        "signalPrefix": "S",
+        "signalSuffix": "",
+        "dirDigit": "1",
+        "seq": 1,
+        "config": {
+          "pad": 5,
+          "sep1": "",
+          "sep2": "",
+          "includeRack": true,
+          "templateEnabled": true,
+          "template": "{rack}{rack}-{dir}{dir}"
+        }
+      },
+      "expected": "RGARGA-11"
+    },
+    {
+      "source": "arkyo-server",
+      "name": "template non activé → convention globale",
+      "input": {
+        "zoneCode": "ALPH",
+        "rackCode": "RGA",
+        "signalPrefix": "S",
+        "signalSuffix": "",
+        "dirDigit": "1",
+        "seq": 1,
+        "config": {
+          "pad": 5,
+          "sep1": "",
+          "sep2": "",
+          "includeRack": true,
+          "templateEnabled": false,
+          "template": "{rack}!"
+        }
+      },
+      "expected": "RGAS10001"
+    },
+    {
+      "source": "arkyo-server",
+      "name": "template vide activé → convention globale",
+      "input": {
+        "zoneCode": "ALPH",
+        "rackCode": "RGA",
+        "signalPrefix": "S",
+        "signalSuffix": "",
+        "dirDigit": "1",
+        "seq": 1,
+        "config": {
+          "pad": 5,
+          "sep1": "",
+          "sep2": "",
+          "includeRack": true,
+          "templateEnabled": true,
+          "template": ""
+        }
+      },
+      "expected": "RGAS10001"
+    },
+    {
+      "source": "arkyo-server",
+      "name": "template d'espaces activé → convention globale",
+      "input": {
+        "zoneCode": "ALPH",
+        "rackCode": "RGA",
+        "signalPrefix": "S",
+        "signalSuffix": "",
+        "dirDigit": "1",
+        "seq": 1,
+        "config": {
+          "pad": 5,
+          "sep1": "",
+          "sep2": "",
+          "includeRack": true,
+          "templateEnabled": true,
+          "template": " \t\n "
+        }
+      },
+      "expected": "RGAS10001"
+    },
+    {
+      "source": "arkyo-server",
+      "name": "template U+FEFF seul (espace en JS) → convention globale",
+      "input": {
+        "zoneCode": "ALPH",
+        "rackCode": "RGA",
+        "signalPrefix": "S",
+        "signalSuffix": "",
+        "dirDigit": "1",
+        "seq": 1,
+        "config": {
+          "pad": 5,
+          "sep1": "",
+          "sep2": "",
+          "includeRack": true,
+          "templateEnabled": true,
+          "template": "﻿"
+        }
+      },
+      "expected": "RGAS10001"
+    },
+    {
+      "source": "arkyo-server",
+      "name": "template U+0085 seul (pas un espace en JS) → gabarit appliqué",
+      "input": {
+        "zoneCode": "ALPH",
+        "rackCode": "RGA",
+        "signalPrefix": "S",
+        "signalSuffix": "",
+        "dirDigit": "1",
+        "seq": 1,
+        "config": {
+          "pad": 5,
+          "sep1": "",
+          "sep2": "",
+          "includeRack": true,
+          "templateEnabled": true,
+          "template": ""
+        }
+      },
+      "expected": ""
+    },
+    {
+      "source": "arkyo-server",
+      "name": "template conservé avec espaces autour",
+      "input": {
+        "zoneCode": "ALPH",
+        "rackCode": "RGA",
+        "signalPrefix": "S",
+        "signalSuffix": "",
+        "dirDigit": "1",
+        "seq": 1,
+        "config": {
+          "pad": 5,
+          "sep1": "",
+          "sep2": "",
+          "includeRack": true,
+          "templateEnabled": true,
+          "template": " {rack} "
+        }
+      },
+      "expected": " RGA "
+    },
+    {
+      "source": "arkyo-server",
+      "name": "templateEnabled texte \"yes\" (vrai en JS) → gabarit",
+      "input": {
+        "zoneCode": "ALPH",
+        "rackCode": "RGA",
+        "signalPrefix": "S",
+        "signalSuffix": "",
+        "dirDigit": "1",
+        "seq": 1,
+        "config": {
+          "pad": 5,
+          "sep1": "",
+          "sep2": "",
+          "includeRack": true,
+          "templateEnabled": "yes",
+          "template": "<{rack}>"
+        }
+      },
+      "expected": "<RGA>"
+    },
+    {
+      "source": "arkyo-server",
+      "name": "templateEnabled \"false\" texte (vrai en JS) → gabarit",
+      "input": {
+        "zoneCode": "ALPH",
+        "rackCode": "RGA",
+        "signalPrefix": "S",
+        "signalSuffix": "",
+        "dirDigit": "1",
+        "seq": 1,
+        "config": {
+          "pad": 5,
+          "sep1": "",
+          "sep2": "",
+          "includeRack": true,
+          "templateEnabled": "false",
+          "template": "<{seq}>"
+        }
+      },
+      "expected": "<00001>"
+    },
+    {
+      "source": "arkyo-server",
+      "name": "template : pad NaN → seq sans padding",
+      "input": {
+        "zoneCode": "ALPH",
+        "rackCode": "RGA",
+        "signalPrefix": "S",
+        "signalSuffix": "",
+        "dirDigit": "1",
+        "seq": 4,
+        "config": {
+          "sep1": "",
+          "sep2": "",
+          "includeRack": true,
+          "templateEnabled": true,
+          "template": "{seq}"
+        }
+      },
+      "expected": "4"
+    },
+    {
+      "source": "arkyo-server",
+      "name": "template : séparateurs legacy",
+      "input": {
+        "zoneCode": "ALPH",
+        "rackCode": "RGA",
+        "signalPrefix": "S",
+        "signalSuffix": "L",
+        "dirDigit": "1",
+        "seq": 1,
+        "config": {
+          "pad": 5,
+          "includeRack": true,
+          "separator": "~",
+          "suffixSeparator": "+",
+          "templateEnabled": true,
+          "template": "{rack}{sep1}{prefix}{sep2}{suffix}"
+        }
+      },
+      "expected": "RGA~S+L"
+    },
+    {
+      "source": "arkyo-server",
+      "name": "template : emoji et texte libre",
+      "input": {
+        "zoneCode": "ALPH",
+        "rackCode": "RGA",
+        "signalPrefix": "S",
+        "signalSuffix": "",
+        "dirDigit": "1",
+        "seq": 1,
+        "config": {
+          "pad": 5,
+          "sep1": "",
+          "sep2": "",
+          "includeRack": true,
+          "templateEnabled": true,
+          "template": "🎬 {rack} — {prefix}{seq}"
+        }
+      },
+      "expected": "🎬 RGA — S00001"
+    },
+    {
+      "source": "arkyo-server",
+      "name": "pad 10 et seq de 10 chiffres",
+      "input": {
+        "zoneCode": "ALPH",
+        "rackCode": "RGA",
+        "signalPrefix": "S",
+        "signalSuffix": "",
+        "dirDigit": "1",
+        "seq": 1234567890,
+        "config": {
+          "pad": 10,
+          "sep1": "",
+          "sep2": "",
+          "includeRack": true
+        }
+      },
+      "expected": "RGAS11234567890"
+    }
+  ]
+}
