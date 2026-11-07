@@ -921,3 +921,82 @@ async fn consultation_cannot_write() {
     .await;
     assert_eq!(r.status, StatusCode::OK, "{:?}", r.body);
 }
+
+/// arkyo-server: correction d'un défaut d'arkyo (I-1 de la 4c). A bundle of
+/// a location's virtual rack (« Créer un faisceau » in the location view)
+/// takes the cables of every rack of the location, never those of a rack
+/// of another location; a real rack keeps only its own (see above).
+#[tokio::test]
+async fn virtual_rack_bundle_takes_location_cables() {
+    let c = ctx().await;
+    let pool = &c.e.pool;
+    let project: String = sqlx::query_scalar(r#"SELECT "id" FROM "Project""#)
+        .fetch_one(pool)
+        .await
+        .unwrap();
+    let pivot: String = sqlx::query_scalar(r#"SELECT "id" FROM "Rack" WHERE "isVirtual" = 1"#)
+        .fetch_one(pool)
+        .await
+        .unwrap();
+    let r = c
+        .send(
+            "POST",
+            &format!("{LIST}/{project}/locations"),
+            Some(json!({"name": "Régie"})),
+        )
+        .await;
+    let far_loc = r.body["id"].as_str().unwrap().to_string();
+    let r = c
+        .send(
+            "POST",
+            &format!("{LIST}/{project}/racks"),
+            Some(json!({"racks": [{"name": "Baie C", "locationId": far_loc}]})),
+        )
+        .await;
+    let far = r.body["racks"][0]["id"].as_str().unwrap().to_string();
+    for (id, rack) in [
+        ("cp", &pivot),
+        ("ca", &c.rack),
+        ("cb", &c.other),
+        ("cf", &far),
+    ] {
+        exec(
+            pool,
+            &format!(
+                r#"INSERT INTO "RackConnection" ("id","rackId","createdAt") VALUES ('{id}','{rack}',?)"#
+            ),
+        )
+        .await;
+    }
+    let r = c
+        .send(
+            "POST",
+            &format!("/api/racks/{pivot}/bundles"),
+            Some(json!({"name": "Faisceau", "cableIds": ["cp", "ca", "cf"]})),
+        )
+        .await;
+    assert_eq!(r.status, StatusCode::OK, "{:?}", r.body);
+    let id = r.body["id"].as_str().unwrap().to_string();
+    for (conn, want) in [("cp", true), ("ca", true), ("cb", false), ("cf", false)] {
+        assert_eq!(
+            bundle_of(pool, conn).await.as_deref() == Some(id.as_str()),
+            want,
+            "{conn}"
+        );
+    }
+    let r = c
+        .send(
+            "PATCH",
+            &format!("/api/racks/{pivot}/bundles/{id}"),
+            Some(json!({"addCableIds": ["cb", "cf"], "removeCableIds": ["ca"]})),
+        )
+        .await;
+    assert_eq!(r.status, StatusCode::OK, "{:?}", r.body);
+    for (conn, want) in [("cp", true), ("ca", false), ("cb", true), ("cf", false)] {
+        assert_eq!(
+            bundle_of(pool, conn).await.as_deref() == Some(id.as_str()),
+            want,
+            "{conn}"
+        );
+    }
+}

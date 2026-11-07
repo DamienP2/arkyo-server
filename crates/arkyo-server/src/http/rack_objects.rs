@@ -23,7 +23,10 @@
 //!
 //! Bundle members are `RackConnection.bundleId`: `cableIds` (POST) and
 //! `addCableIds` attach the cables **of this rack** among the given ids,
-//! the others are ignored as in arkyo (`updateMany where {rackId, id in}`);
+//! the others are ignored as in arkyo (`updateMany where {rackId, id in}`;
+//! arkyo-server: correction d'un défaut d'arkyo, for a location's virtual
+//! rack, the cables of every rack of the location: « Créer un faisceau »
+//! of the location view);
 //! `removeCableIds` only detaches the bundle's own cables. No
 //! `connection_updated` event, as in arkyo. Deleting a bundle frees its
 //! cables (`ON DELETE SET NULL`), deleting a cable or its slot removes the
@@ -59,6 +62,7 @@ use sqlx::SqliteConnection;
 use super::parametres::{
     begin, bind, db_error, parse_body, row_map, validate, Field, Kind, Obj, Table,
 };
+use super::rack_connections::LOCATION_RACKS;
 use super::{client_id, error, require, AppState, CurrentUser};
 use crate::audit;
 use crate::events::EventMeta;
@@ -467,7 +471,10 @@ pub(super) async fn remove_row(
 
 /// `RackConnection.updateMany({where: {rackId, id in ids, [bundleId]},
 /// data: {bundleId: to}})`: only this rack's cables (and, when `only_of`
-/// is set, only that bundle's members) move.
+/// is set, only that bundle's members) move. arkyo-server: correction d'un
+/// défaut d'arkyo — for a location's virtual rack, the cables of the
+/// location's racks ([`LOCATION_RACKS`]): the location view posts them to
+/// the pivot's bundle, arkyo dropped them silently.
 async fn set_members(
     conn: &mut SqliteConnection,
     rack: &str,
@@ -486,7 +493,7 @@ async fn set_members(
     };
     let sql = format!(
         r#"UPDATE "RackConnection" SET "bundleId" = ?
-           WHERE "rackId" = ? AND "id" IN ({marks}){only}"#
+           WHERE "rackId" IN ({LOCATION_RACKS}) AND "id" IN ({marks}){only}"#
     );
     let mut q = sqlx::query(&sql).bind(to).bind(rack);
     for id in ids {

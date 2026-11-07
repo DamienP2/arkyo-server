@@ -559,8 +559,10 @@ async fn phase4c_synoptic_end_to_end() {
     }
 
     // ── 2bis. Bundle (« Créer un faisceau », on the pivot) ──────────────
-    // The location view posts the selected ids to the pivot's route: only
-    // the pivot's own cables join (arkyo: `updateMany where {rackId}`).
+    // The location view posts the selected ids to the pivot's route.
+    // arkyo-server: correction d'un défaut d'arkyo, the cables of the
+    // location's containers join too (arkyo: `updateMany where {rackId}`,
+    // only the pivot's own cables).
     let bundle = o
         .ok(
             "POST",
@@ -570,13 +572,31 @@ async fn phase4c_synoptic_end_to_end() {
         )
         .await;
     let bundle = id_of(&bundle);
-    let members: Vec<String> =
+    let members = async || -> BTreeSet<String> {
         sqlx::query_scalar(r#"SELECT "id" FROM "RackConnection" WHERE "bundleId" = ?"#)
             .bind(&bundle)
             .fetch_all(pool)
             .await
-            .unwrap();
-    assert_eq!(members, vec![c_free.clone()]);
+            .unwrap()
+            .into_iter()
+            .collect()
+    };
+    assert_eq!(
+        members().await,
+        BTreeSet::from([c_free.clone(), c_r1.clone()])
+    );
+    // PATCH: a cable of another container joins, one leaves.
+    o.ok(
+        "PATCH",
+        &format!("/api/racks/{v_plateau}/bundles/{bundle}"),
+        Some(json!({ "addCableIds": [r2_cables[0], c_same], "removeCableIds": [c_r1] })),
+        StatusCode::OK,
+    )
+    .await;
+    assert_eq!(
+        members().await,
+        BTreeSet::from([c_free.clone(), r2_cables[0].clone(), c_same.clone()])
+    );
 
     let payload = o.ok("GET", &location_url, None, StatusCode::OK).await;
     let ids = |key: &str| -> BTreeSet<String> {
@@ -904,7 +924,7 @@ async fn phase4c_synoptic_end_to_end() {
             &bundle
         )
         .await,
-        1
+        2
     );
 
     // ── 7. The cable-model guard (409) ──────────────────────────────────
