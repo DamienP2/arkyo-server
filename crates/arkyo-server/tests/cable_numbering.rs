@@ -400,22 +400,27 @@ async fn renumber_is_stable_on_second_run() {
     assert_eq!(c.labels().await, with_new);
 }
 
-/// Parity: without `onlyUnlabelled`, the labels currently held by the
-/// renumbered cables count as taken (`allExistingLabels`), so the numbers
-/// move on (arkyo:renumber/route.ts:369-373, inventory annex A §1.18).
+/// arkyo-server: correction d'un défaut d'arkyo. Without `onlyUnlabelled`,
+/// arkyo counted the labels currently held by the renumbered cables as
+/// taken (`allExistingLabels`, renumber/route.ts:369-373, inventory annex
+/// A §1.18), so a second full run moved every number on. Here only the
+/// labels of the other cables are taken: a full re-run is stable.
 #[tokio::test]
-async fn full_rerun_skips_labels_already_taken() {
+async fn full_rerun_is_stable() {
     let c = ctx().await;
     let body = json!({"orderedIds": ["c1", "c2"]});
     c.renumber(body.clone()).await;
-    assert_eq!(
-        c.labels().await[..2],
-        pairs(&[("c1", "BAIE-S10001"), ("c2", "BAIE-S10002")])
-    );
+    let expected = pairs(&[("c1", "BAIE-S10001"), ("c2", "BAIE-S10002")]);
+    assert_eq!(c.labels().await[..2], expected);
     c.renumber(body).await;
+    assert_eq!(c.labels().await[..2], expected);
+    // A label held by a cable outside the pass is still skipped.
+    c.renumber(json!({"manualLabels": [{"id": "c7", "label": "BAIE-S10001"}]}))
+        .await;
+    c.renumber(json!({"orderedIds": ["c1", "c2"]})).await;
     assert_eq!(
         c.labels().await[..2],
-        pairs(&[("c1", "BAIE-S10003"), ("c2", "BAIE-S10004")])
+        pairs(&[("c1", "BAIE-S10002"), ("c2", "BAIE-S10003")])
     );
 }
 

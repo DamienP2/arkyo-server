@@ -29,9 +29,11 @@
 //! - one counter per `prefix:dirDigit`. `partial` seeds the counters from
 //!   the labels outside `orderedIds`, `onlyUnlabelled` keeps the labelled
 //!   cables and seeds from them (last digits of the label minus the first
-//!   one, the direction). A label already held by any cable of the rack
-//!   (including the renumbered ones themselves) or given in this pass is
-//!   skipped (up to 10,000 tries);
+//!   one, the direction). A label already held by a cable of the rack or
+//!   given in this pass is skipped (up to 10,000 tries). arkyo-server:
+//!   correction d'un défaut d'arkyo — without `onlyUnlabelled`, the
+//!   current labels of the renumbered cables themselves are not taken
+//!   (arkyo counted them, so a full re-run moved every number on);
 //! - the zone of a slot (geometric lookup in arkyo) is not computed: arkyo
 //!   passes it to `computeCableLabel`, which ignores it.
 //!
@@ -674,7 +676,19 @@ async fn numbering(
         }
     }
 
-    let existing: HashSet<&str> = conns.iter().filter_map(labelled).collect();
+    // arkyo-server: correction d'un défaut d'arkyo — en numérotation
+    // complète, les libellés actuels des câbles renumérotés ne sont pas
+    // « pris » (sinon une seconde passe décale tous les numéros).
+    let renumbered: HashSet<&str> = if auto.only_unlabelled {
+        HashSet::new()
+    } else {
+        auto.ordered_ids.iter().map(String::as_str).collect()
+    };
+    let existing: HashSet<&str> = conns
+        .iter()
+        .filter(|c| !renumbered.contains(c.id.as_str()))
+        .filter_map(labelled)
+        .collect();
     let mut given: HashSet<String> = HashSet::new();
     let mut done: HashSet<&str> = HashSet::new();
     let mut updates = Vec::new();
