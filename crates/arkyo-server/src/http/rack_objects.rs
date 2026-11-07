@@ -299,25 +299,83 @@ handlers!(
     remove_bundle
 );
 
-// ── shared flow ─────────────────────────────────────────────────────────────
+// ── shared flow (also used by rack_objects2) ───────────────────────────────
 
-/// The object `id` of rack `rack`, `None` when absent or of another rack.
-async fn fetch(
+/// The row `id` of `table` in rack `rack`, `None` when absent or of another
+/// rack.
+pub(super) async fn fetch_row(
     conn: &mut SqliteConnection,
-    spec: &Spec,
+    table: &Table,
     rack: &str,
     id: &str,
 ) -> Result<Option<Obj>, Response> {
     let row = sqlx::query(&format!(
         r#"SELECT * FROM "{}" WHERE "id" = ? AND "rackId" = ?"#,
-        spec.table.name
+        table.name
     ))
     .bind(id)
     .bind(rack)
     .fetch_optional(conn)
     .await
     .map_err(db_error)?;
-    Ok(row.map(|r| row_map(&r, &spec.table)))
+    Ok(row.map(|r| row_map(&r, table)))
+}
+
+/// `INSERT` of `id`, `rackId`, the timestamps and the validated fields.
+pub(super) async fn insert_row(
+    conn: &mut SqliteConnection,
+    table: &Table,
+    id: &str,
+    rack: &str,
+    obj: &Obj,
+) -> Result<(), sqlx::Error> {
+    let now = now_iso();
+    let cols: String = obj.keys().map(|k| format!(r#", "{k}""#)).collect();
+    let marks: String = obj.keys().map(|_| ", ?").collect();
+    let sql = format!(
+        r#"INSERT INTO "{}" ("id", "rackId", "createdAt", "updatedAt"{cols})
+           VALUES (?, ?, ?, ?{marks})"#,
+        table.name
+    );
+    let mut q = sqlx::query(&sql).bind(id).bind(rack).bind(&now).bind(&now);
+    for v in obj.values() {
+        q = bind(q, v);
+    }
+    q.execute(conn).await?;
+    Ok(())
+}
+
+/// Prisma `update` of row `id` with the sent fields (and `updatedAt`).
+pub(super) async fn update_row(
+    conn: &mut SqliteConnection,
+    table: &Table,
+    id: &str,
+    obj: &Obj,
+) -> Result<(), sqlx::Error> {
+    let sets: String = obj.keys().map(|k| format!(r#", "{k}" = ?"#)).collect();
+    let sql = format!(
+        r#"UPDATE "{}" SET "updatedAt" = ?{sets} WHERE "id" = ?"#,
+        table.name
+    );
+    let mut q = sqlx::query(&sql).bind(now_iso());
+    for v in obj.values() {
+        q = bind(q, v);
+    }
+    q.bind(id).execute(conn).await?;
+    Ok(())
+}
+
+/// `auditLog.create({userId, action, entityType: table, entityId: id})`.
+pub(super) async fn audit_row(
+    conn: &mut SqliteConnection,
+    me: &User,
+    action: &str,
+    table: &Table,
+    id: &str,
+) -> Result<(), Response> {
+    audit::log(conn, &me.id, action, table.name, id, None, None, None)
+        .await
+        .map_err(db_error)
 }
 
 /// A duplicate client-supplied `id`: 409 (arkyo: P2002, implicit 500).
@@ -329,6 +387,78 @@ pub(super) fn insert_error(e: sqlx::Error) -> Response {
     }
     db_error(e)
 }
+
+/// `{type: kind, <key>: value}` of the rack bus.
+pub(super) fn rack_payload(kind: &str, key: &str, value: Value) -> Value {
+    let mut m = Obj::new();
+    m.insert("type".into(), json!(kind));
+    m.insert(key.into(), value);
+    Value::Object(m)
+}
+
+/// `{rackId, itemId, clientId}` of the app bus.
+pub(super) fn meta(rack: &str, id: &str, client: Option<String>) -> EventMeta {
+    EventMeta {
+        rack_id: Some(rack.to_string()),
+        item_id: Some(id.to_string()),
+        client_id: client,
+        ..EventMeta::default()
+    }
+}
+
+/// How one per-rack object is deleted and announced.
+pub(super) struct Removal<'a> {
+    pub table: &'a Table,
+    /// 404 message.
+    pub not_found: &'a str,
+    /// Audit action (`rackZone.delete`).
+    pub audit: &'a str,
+    /// Rack-bus type and key (`zone_removed`, `zoneId`).
+    pub rack_type: &'a str,
+    pub rack_key: &'a str,
+    /// App-bus entity (`rackZone`).
+    pub entity: &'a str,
+}
+
+/// `DELETE`: `delete({where: {id, rackId}})` (404 when absent or of another
+/// rack), audit, `{ok: true}`, then both buses. The foreign keys of 0004 do
+/// the rest.
+pub(super) async fn remove_row(
+    st: &AppState,
+    me: &User,
+    rack: &str,
+    id: &str,
+    headers: &HeaderMap,
+    r: &Removal<'_>,
+) -> Result<Response, Response> {
+    // arkyo-server: garde serveur alignée sur l'UI (design:write).
+    require(me, &st.pool, Domain::Design, Level::Write).await?;
+    let client = client_id::read(headers);
+
+    let mut tx = begin(&st.pool).await?;
+    let done = sqlx::query(&format!(
+        r#"DELETE FROM "{}" WHERE "id" = ? AND "rackId" = ?"#,
+        r.table.name
+    ))
+    .bind(id)
+    .bind(rack)
+    .execute(&mut *tx)
+    .await
+    .map_err(db_error)?;
+    if done.rows_affected() == 0 {
+        return Err(error(StatusCode::NOT_FOUND, r.not_found));
+    }
+    audit_row(&mut tx, me, r.audit, r.table, id).await?;
+    tx.commit().await.map_err(db_error)?;
+
+    st.events
+        .publish_rack(rack, rack_payload(r.rack_type, r.rack_key, json!(id)));
+    st.events
+        .publish_meta(r.entity, "deleted", Some(id), meta(rack, id, client));
+    Ok(Json(json!({ "ok": true })).into_response())
+}
+
+// ── zones, labels, bundles ──────────────────────────────────────────────────
 
 /// `RackConnection.updateMany({where: {rackId, id in ids, [bundleId]},
 /// data: {bundleId: to}})`: only this rack's cables (and, when `only_of`
@@ -372,21 +502,9 @@ fn ids_of(obj: &mut Obj, name: &str) -> Vec<Value> {
     }
 }
 
-/// `{type: "<noun>_<what>", <key>: value}` of the rack bus.
-fn rack_payload(spec: &Spec, what: &str, key: &str, value: Value) -> Value {
-    let mut m = Obj::new();
-    m.insert("type".into(), json!(format!("{}_{what}", spec.noun)));
-    m.insert(key.into(), value);
-    Value::Object(m)
-}
-
-pub(super) fn meta(rack: &str, id: &str, client: Option<String>) -> EventMeta {
-    EventMeta {
-        rack_id: Some(rack.to_string()),
-        item_id: Some(id.to_string()),
-        client_id: client,
-        ..EventMeta::default()
-    }
+/// `<noun>_<what>` of the rack bus.
+fn rack_type(spec: &Spec, what: &str) -> String {
+    format!("{}_{what}", spec.noun)
 }
 
 async fn list(st: &AppState, spec: &Spec, rack: &str) -> Result<Response, Response> {
@@ -432,40 +550,22 @@ async fn create(
     if found.is_none() {
         return Err(error(StatusCode::NOT_FOUND, "Not found"));
     }
-    let now = now_iso();
-    let cols: String = obj.keys().map(|k| format!(r#", "{k}""#)).collect();
-    let marks: String = obj.keys().map(|_| ", ?").collect();
-    let sql = format!(
-        r#"INSERT INTO "{}" ("id", "rackId", "createdAt", "updatedAt"{cols})
-           VALUES (?, ?, ?, ?{marks})"#,
-        spec.table.name
-    );
-    let mut q = sqlx::query(&sql).bind(&id).bind(rack).bind(&now).bind(&now);
-    for v in obj.values() {
-        q = bind(q, v);
-    }
-    q.execute(&mut *tx).await.map_err(insert_error)?;
+    insert_row(&mut tx, &spec.table, &id, rack, &obj)
+        .await
+        .map_err(insert_error)?;
     set_members(&mut tx, rack, &members, Some(&id), None).await?;
-    audit::log(
-        &mut tx,
-        &me.id,
-        &format!("{}.create", spec.entity),
-        spec.table.name,
-        &id,
-        None,
-        None,
-        None,
-    )
-    .await
-    .map_err(db_error)?;
-    let row = fetch(&mut tx, spec, rack, &id)
+    let action = format!("{}.create", spec.entity);
+    audit_row(&mut tx, me, &action, &spec.table, &id).await?;
+    let row = fetch_row(&mut tx, &spec.table, rack, &id)
         .await?
         .ok_or_else(|| db_error(sqlx::Error::RowNotFound))?;
     tx.commit().await.map_err(db_error)?;
 
     let row = Value::Object(row);
-    st.events
-        .publish_rack(rack, rack_payload(spec, "added", spec.noun, row.clone()));
+    st.events.publish_rack(
+        rack,
+        rack_payload(&rack_type(spec, "added"), spec.noun, row.clone()),
+    );
     st.events
         .publish_meta(spec.entity, "created", Some(&id), meta(rack, &id, client));
     Ok(Json(row).into_response())
@@ -488,45 +588,30 @@ async fn update(
     let detach = ids_of(&mut obj, "removeCableIds");
 
     let mut tx = begin(&st.pool).await?;
-    if fetch(&mut tx, spec, rack, id).await?.is_none() {
+    if fetch_row(&mut tx, &spec.table, rack, id).await?.is_none() {
         return Err(error(StatusCode::NOT_FOUND, spec.not_found));
     }
     // Prisma `update` with the sent fields; a bundle without `name` nor
     // `color` is only read (bundles/[bundleId]/route.ts:36-39).
     if !obj.is_empty() {
-        let sets: String = obj.keys().map(|k| format!(r#", "{k}" = ?"#)).collect();
-        let sql = format!(
-            r#"UPDATE "{}" SET "updatedAt" = ?{sets} WHERE "id" = ?"#,
-            spec.table.name
-        );
-        let mut q = sqlx::query(&sql).bind(now_iso());
-        for v in obj.values() {
-            q = bind(q, v);
-        }
-        q.bind(id).execute(&mut *tx).await.map_err(db_error)?;
+        update_row(&mut tx, &spec.table, id, &obj)
+            .await
+            .map_err(db_error)?;
     }
     set_members(&mut tx, rack, &add, Some(id), None).await?;
     set_members(&mut tx, rack, &detach, None, Some(id)).await?;
-    audit::log(
-        &mut tx,
-        &me.id,
-        &format!("{}.update", spec.entity),
-        spec.table.name,
-        id,
-        None,
-        None,
-        None,
-    )
-    .await
-    .map_err(db_error)?;
-    let row = fetch(&mut tx, spec, rack, id)
+    let action = format!("{}.update", spec.entity);
+    audit_row(&mut tx, me, &action, &spec.table, id).await?;
+    let row = fetch_row(&mut tx, &spec.table, rack, id)
         .await?
         .ok_or_else(|| db_error(sqlx::Error::RowNotFound))?;
     tx.commit().await.map_err(db_error)?;
 
     let row = Value::Object(row);
-    st.events
-        .publish_rack(rack, rack_payload(spec, "updated", spec.noun, row.clone()));
+    st.events.publish_rack(
+        rack,
+        rack_payload(&rack_type(spec, "updated"), spec.noun, row.clone()),
+    );
     st.events
         .publish_meta(spec.entity, "updated", Some(id), meta(rack, id, client));
     Ok(Json(row).into_response())
@@ -540,41 +625,13 @@ async fn remove(
     id: &str,
     headers: &HeaderMap,
 ) -> Result<Response, Response> {
-    // arkyo-server: garde serveur alignée sur l'UI (design:write).
-    require(me, &st.pool, Domain::Design, Level::Write).await?;
-    let client = client_id::read(headers);
-
-    let mut tx = begin(&st.pool).await?;
-    let done = sqlx::query(&format!(
-        r#"DELETE FROM "{}" WHERE "id" = ? AND "rackId" = ?"#,
-        spec.table.name
-    ))
-    .bind(id)
-    .bind(rack)
-    .execute(&mut *tx)
-    .await
-    .map_err(db_error)?;
-    if done.rows_affected() == 0 {
-        return Err(error(StatusCode::NOT_FOUND, spec.not_found));
-    }
-    audit::log(
-        &mut tx,
-        &me.id,
-        &format!("{}.delete", spec.entity),
-        spec.table.name,
-        id,
-        None,
-        None,
-        None,
-    )
-    .await
-    .map_err(db_error)?;
-    tx.commit().await.map_err(db_error)?;
-
-    let key = format!("{}Id", spec.noun);
-    st.events
-        .publish_rack(rack, rack_payload(spec, "removed", &key, json!(id)));
-    st.events
-        .publish_meta(spec.entity, "deleted", Some(id), meta(rack, id, client));
-    Ok(Json(json!({ "ok": true })).into_response())
+    let removal = Removal {
+        table: &spec.table,
+        not_found: spec.not_found,
+        audit: &format!("{}.delete", spec.entity),
+        rack_type: &rack_type(spec, "removed"),
+        rack_key: &format!("{}Id", spec.noun),
+        entity: spec.entity,
+    };
+    remove_row(st, me, rack, id, headers, &removal).await
 }

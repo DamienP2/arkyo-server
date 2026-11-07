@@ -60,9 +60,11 @@ use sqlx::SqliteConnection;
 use super::parametres::{
     begin, bind, db_error, parse_body, row_map, validate, Field, Kind, Obj, Table,
 };
-use super::rack_objects::{insert_error, meta};
+use super::rack_objects::{
+    audit_row, fetch_row, insert_error, insert_row, meta, rack_payload, remove_row, update_row,
+    Removal,
+};
 use super::{client_id, error, require, AppState, CurrentUser};
-use crate::audit;
 use crate::catalogue::enrich::fetch_catalog_adapter_map;
 use crate::ids::{new_id, now_iso};
 use crate::users::User;
@@ -198,83 +200,6 @@ async fn slot_exists(conn: &mut SqliteConnection, slot: &str) -> Result<bool, Re
     Ok(found.is_some())
 }
 
-/// The row `id` of `table` in rack `rack`, `None` when absent or of
-/// another rack.
-async fn fetch(
-    conn: &mut SqliteConnection,
-    table: &Table,
-    rack: &str,
-    id: &str,
-) -> Result<Option<Obj>, Response> {
-    let row = sqlx::query(&format!(
-        r#"SELECT * FROM "{}" WHERE "id" = ? AND "rackId" = ?"#,
-        table.name
-    ))
-    .bind(id)
-    .bind(rack)
-    .fetch_optional(conn)
-    .await
-    .map_err(db_error)?;
-    Ok(row.map(|r| row_map(&r, table)))
-}
-
-/// `INSERT` of `id`, `rackId`, the timestamps and the validated fields.
-async fn insert(
-    conn: &mut SqliteConnection,
-    table: &Table,
-    id: &str,
-    rack: &str,
-    obj: &Obj,
-) -> Result<(), sqlx::Error> {
-    let now = now_iso();
-    let cols: String = obj.keys().map(|k| format!(r#", "{k}""#)).collect();
-    let marks: String = obj.keys().map(|_| ", ?").collect();
-    let sql = format!(
-        r#"INSERT INTO "{}" ("id", "rackId", "createdAt", "updatedAt"{cols})
-           VALUES (?, ?, ?, ?{marks})"#,
-        table.name
-    );
-    let mut q = sqlx::query(&sql).bind(id).bind(rack).bind(&now).bind(&now);
-    for v in obj.values() {
-        q = bind(q, v);
-    }
-    q.execute(conn).await?;
-    Ok(())
-}
-
-/// Prisma `update` with the sent fields (and `updatedAt`).
-async fn update_row(
-    conn: &mut SqliteConnection,
-    table: &Table,
-    id: &str,
-    obj: &Obj,
-) -> Result<(), sqlx::Error> {
-    let sets: String = obj.keys().map(|k| format!(r#", "{k}" = ?"#)).collect();
-    let sql = format!(
-        r#"UPDATE "{}" SET "updatedAt" = ?{sets} WHERE "id" = ?"#,
-        table.name
-    );
-    let mut q = sqlx::query(&sql).bind(now_iso());
-    for v in obj.values() {
-        q = bind(q, v);
-    }
-    q.bind(id).execute(conn).await?;
-    Ok(())
-}
-
-/// `auditLog.create({userId, action, entityType, entityId})`.
-async fn log(
-    conn: &mut SqliteConnection,
-    me: &User,
-    action: &str,
-    table: &Table,
-    id: &str,
-) -> Result<(), Response> {
-    audit::log(conn, &me.id, action, table.name, id, None, None, None)
-        .await
-        .map_err(db_error)
-}
-
 /// A taken `(slotId, portIndex)`: 409 (arkyo: P2002 → 409 at `POST`).
 fn port_error(e: sqlx::Error) -> Response {
     if let sqlx::Error::Database(d) = &e {
@@ -283,14 +208,6 @@ fn port_error(e: sqlx::Error) -> Response {
         }
     }
     db_error(e)
-}
-
-/// `{type, <key>: value}` of the rack bus.
-fn rack_payload(kind: &str, key: &str, value: Value) -> Value {
-    let mut m = Obj::new();
-    m.insert("type".into(), json!(kind));
-    m.insert(key.into(), value);
-    Value::Object(m)
 }
 
 // ── external ports ──────────────────────────────────────────────────────────
@@ -347,11 +264,11 @@ async fn run_create_port(
         return Err(error(StatusCode::NOT_FOUND, SLOT_404));
     }
     let id = new_id();
-    insert(&mut tx, &PORT, &id, rack, &obj)
+    insert_row(&mut tx, &PORT, &id, rack, &obj)
         .await
         .map_err(port_error)?;
-    log(&mut tx, me, "externalPort.create", &PORT, &id).await?;
-    let row = fetch(&mut tx, &PORT, rack, &id)
+    audit_row(&mut tx, me, "externalPort.create", &PORT, &id).await?;
+    let row = fetch_row(&mut tx, &PORT, rack, &id)
         .await?
         .ok_or_else(|| db_error(sqlx::Error::RowNotFound))?;
     tx.commit().await.map_err(db_error)?;
@@ -396,7 +313,7 @@ async fn run_update_port(
     let obj = validate(&parse_body(&body)?, &PORT_PATCH)?;
 
     let mut tx = begin(&st.pool).await?;
-    if fetch(&mut tx, &PORT, rack, id).await?.is_none() {
+    if fetch_row(&mut tx, &PORT, rack, id).await?.is_none() {
         return Err(error(StatusCode::NOT_FOUND, PORT_404));
     }
     // Any existing slot, even of another rack: the location view drags a
@@ -411,8 +328,8 @@ async fn run_update_port(
     update_row(&mut tx, &PORT, id, &obj)
         .await
         .map_err(port_error)?;
-    log(&mut tx, me, "externalPort.update", &PORT, id).await?;
-    let row = fetch(&mut tx, &PORT, rack, id)
+    audit_row(&mut tx, me, "externalPort.update", &PORT, id).await?;
+    let row = fetch_row(&mut tx, &PORT, rack, id)
         .await?
         .ok_or_else(|| db_error(sqlx::Error::RowNotFound))?;
     tx.commit().await.map_err(db_error)?;
@@ -433,24 +350,16 @@ pub async fn remove_port(
     Path((rack, id)): Path<(String, String)>,
     headers: HeaderMap,
 ) -> Response {
-    remove(&st, &me, &rack, &id, &headers, &REMOVE_PORT)
+    remove_row(&st, &me, &rack, &id, &headers, &REMOVE_PORT)
         .await
         .unwrap_or_else(|r| r)
 }
 
 // ── shared DELETE ───────────────────────────────────────────────────────────
 
-/// How one object is deleted and announced.
-struct Removal {
-    table: &'static Table,
-    not_found: &'static str,
-    audit: &'static str,
-    rack_type: &'static str,
-    rack_key: &'static str,
-    entity: &'static str,
-}
-
-static REMOVE_PORT: Removal = Removal {
+/// `rack_objects::remove_row`; the foreign keys of 0004 do the rest (an
+/// adapter's cables, and with them their bundle membership).
+static REMOVE_PORT: Removal<'static> = Removal {
     table: &PORT,
     not_found: PORT_404,
     audit: "externalPort.delete",
@@ -459,7 +368,7 @@ static REMOVE_PORT: Removal = Removal {
     entity: "external_port",
 };
 
-static REMOVE_ADAPTER: Removal = Removal {
+static REMOVE_ADAPTER: Removal<'static> = Removal {
     table: &ADAPTER,
     not_found: ADAPTER_404,
     audit: "synopticAdapter.delete",
@@ -467,44 +376,6 @@ static REMOVE_ADAPTER: Removal = Removal {
     rack_key: "adapterId",
     entity: "synopticAdapter",
 };
-
-/// `delete({where: {id, rackId}})`, audit, `{ok: true}`. The foreign keys
-/// of 0004 do the rest (an adapter's cables, and with them their bundle
-/// membership).
-async fn remove(
-    st: &AppState,
-    me: &User,
-    rack: &str,
-    id: &str,
-    headers: &HeaderMap,
-    spec: &Removal,
-) -> Result<Response, Response> {
-    // arkyo-server: garde serveur alignée sur l'UI (design:write).
-    require(me, &st.pool, Domain::Design, Level::Write).await?;
-    let client = client_id::read(headers);
-
-    let mut tx = begin(&st.pool).await?;
-    let done = sqlx::query(&format!(
-        r#"DELETE FROM "{}" WHERE "id" = ? AND "rackId" = ?"#,
-        spec.table.name
-    ))
-    .bind(id)
-    .bind(rack)
-    .execute(&mut *tx)
-    .await
-    .map_err(db_error)?;
-    if done.rows_affected() == 0 {
-        return Err(error(StatusCode::NOT_FOUND, spec.not_found));
-    }
-    log(&mut tx, me, spec.audit, spec.table, id).await?;
-    tx.commit().await.map_err(db_error)?;
-
-    st.events
-        .publish_rack(rack, rack_payload(spec.rack_type, spec.rack_key, json!(id)));
-    st.events
-        .publish_meta(spec.entity, "deleted", Some(id), meta(rack, id, client));
-    Ok(Json(json!({ "ok": true })).into_response())
-}
 
 // ── panel rows ──────────────────────────────────────────────────────────────
 
@@ -610,7 +481,7 @@ async fn run_upsert_panel_row(
         .map_err(db_error)?;
     let row = row_map(&row, &PANEL_ROW);
     let id = row["id"].as_str().unwrap_or_default().to_string();
-    log(&mut tx, me, "rackSlotPanelRow.upsert", &PANEL_ROW, &id).await?;
+    audit_row(&mut tx, me, "rackSlotPanelRow.upsert", &PANEL_ROW, &id).await?;
     tx.commit().await.map_err(db_error)?;
 
     st.events.publish_rack(
@@ -663,7 +534,7 @@ async fn fetch_adapter(
     rack: &str,
     id: &str,
 ) -> Result<Value, Response> {
-    let row = fetch(conn, &ADAPTER, rack, id)
+    let row = fetch_row(conn, &ADAPTER, rack, id)
         .await?
         .ok_or_else(|| db_error(sqlx::Error::RowNotFound))?;
     Ok(enrich(conn, vec![row]).await?.remove(0))
@@ -753,11 +624,11 @@ async fn run_create_adapter(
             .await
             .map_err(db_error)?;
     obj.insert("label".into(), json!(format!("#ADP{}", existing + 1)));
-    insert(&mut tx, &ADAPTER, &id, rack, &obj)
+    insert_row(&mut tx, &ADAPTER, &id, rack, &obj)
         .await
         .map_err(insert_error)?;
     let created = fetch_adapter(&mut tx, rack, &id).await?;
-    log(&mut tx, me, "synopticAdapter.create", &ADAPTER, &id).await?;
+    audit_row(&mut tx, me, "synopticAdapter.create", &ADAPTER, &id).await?;
     tx.commit().await.map_err(db_error)?;
 
     st.events.publish_rack(
@@ -800,7 +671,7 @@ async fn run_update_adapter(
 
     let mut tx = begin(&st.pool).await?;
     // arkyo-server: cherché dans ce rack (arkyo : `where {id}` seul).
-    if fetch(&mut tx, &ADAPTER, rack, id).await?.is_none() {
+    if fetch_row(&mut tx, &ADAPTER, rack, id).await?.is_none() {
         return Err(error(StatusCode::NOT_FOUND, ADAPTER_404));
     }
     check_attached(&mut tx, rack, &obj).await?;
@@ -830,7 +701,7 @@ pub async fn remove_adapter(
     headers: HeaderMap,
 ) -> Response {
     // arkyo-server: cherché dans ce rack (arkyo : `where {id}` seul).
-    remove(&st, &me, &rack, &id, &headers, &REMOVE_ADAPTER)
+    remove_row(&st, &me, &rack, &id, &headers, &REMOVE_ADAPTER)
         .await
         .unwrap_or_else(|r| r)
 }
