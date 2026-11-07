@@ -86,14 +86,14 @@ Chacun est commenté `// arkyo-server: interface Strata` et n'a aucun effet en C
 
 | Fichier | Accroche |
 | --- | --- |
-| `app/(app)/app-layout.tsx` | `interface === "strata"` → rend `<StrataAppShell>` (topbar et navigation Strata) autour du même `<Outlet/>`, dans les mêmes providers |
+| `app/(app)/app-layout.tsx` | `interface === "strata"` → `StrataTopbar` et `StrataSideNav` à la place de `Topbar` et `Sidebar`, dans la même coquille : `<main id="main-content"><Outlet/></main>` garde sa place, une bascule en direct ne remonte pas la page ; un échec passager de `/api/site` garde la dernière interface connue |
 | `app/(fullscreen)/fullscreen-layout.tsx` | `InterfaceProvider` seulement |
 | `components/editor-shell/editor-shell.tsx` | en Strata, délègue la disposition à `<StrataEditorShell {...slots}/>` (mêmes slots) |
 | `_editor/project-global-topbar.tsx` | en Strata, rend `<StrataProjectTopbar>` avec les mêmes props |
 | `components/layout/topbar.tsx` | `export` des menus internes (notifications, langue, profil, badge de rôle) pour que la topbar Strata les réutilise |
 | `admin/systeme/systeme-page.tsx` | section « Interface » (§4.4) |
 | `admin/equipment/[id]/equipment-editor.tsx` | en Strata, panneau « Faces et schéma » au-dessus de l'onglet Connectique |
-| `project-editor.tsx` (`getEditorSlots`) | en Strata : onglet Bibliothèque du dock gauche (rack), face de l'équipement dans l'inspecteur, dock bas (§6.3), vue Connectique |
+| `project-editor.tsx` (`getEditorSlots`) | en Strata : onglet Bibliothèque du dock gauche (rack), face de l'équipement dans l'inspecteur (rack et inventaire), dock bas (§6.3), vue Connectique ; état d'enregistrement transmis à la topbar Strata (enrobage de `globalTopbar`) |
 | `app/globals.css` | bloc `[data-interface="strata"]` (`--rail-width`, `--topbar-height`) et variables `--strata-face-*` |
 | `admin/catalogue/_components/{equipment,cables,adapters}-list-panel.tsx` | en Strata et en vue grille, rendu des grilles dessinées |
 | `components/editor-shell/editor-shell.tsx` (type) | champ optionnel `strata?: { leftDockTabs; bottomDock }` dans `EditorShellSlots` |
@@ -101,7 +101,7 @@ Chacun est commenté `// arkyo-server: interface Strata` et n'a aucun effet en C
 Toute autre modification d'un fichier copié est refusée en relecture.
 
 ### 5.3 Code neuf (`web/src/strata/`)
-- `shell/` : `StrataAppShell`, `StrataTopbar`, `StrataSideNav`, `StrataProjectTopbar`, `StrataEditorShell`, `BottomDock`.
+- `shell/` : `StrataTopbar`, `StrataSideNav`, `StrataProjectTopbar`, `StrataEditorShell`, `BottomDock`.
 - `drawings/` : composants React des dessins techniques, portés de la maquette (`catalogue.js`) et alimentés par les vraies données du catalogue :
   - `EquipmentFace` (face avant/arrière à l'échelle, ports groupés par entrée de connectique, pictogrammes de `ConnectorIcon`, ports reliés, survol, sélection) ;
   - `BlockDiagram` (schéma de principe) ;
@@ -123,7 +123,7 @@ Toute autre modification d'un fichier copié est refusée en relecture.
 - **Barre latérale de bibliothèque**, 240 px, à la place du rail. Elle montre les sections de l'onglet actif :
   - Projets → Tableau de bord, Prestation, Intégration ;
   - Modèles → Contenants, Panels, Dossiers ;
-  - Catalogue → Équipements, Câbles, Adaptateurs, puis Référentiels (renvoi vers Paramètres) ;
+  - Catalogue → une entrée Catalogue, puis Référentiels (renvoi vers Paramètres) ; les onglets Équipements, Cordons et Adaptateurs restent ceux de la page, dans la topbar (`useTopbarTabs`) ;
   - Administration → Espace, Utilisateurs, Paramètres, Système.
 - Les pages existantes s'affichent dans la zone principale. `--rail-width` vaut 240 px et `--topbar-height` 46 px dans la coquille Strata, pour que les en-têtes fixes (`AdminTabLayout`) restent à leur place.
 

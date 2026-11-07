@@ -4,7 +4,7 @@ Ce fichier liste ce que l'interface Strata activable a laissé en suspens : limi
 
 ## À brancher dans les phases suivantes
 
-- **Dock Contrôles du synoptique (4c).** Le dock bas lit `useTopbarActions().validationReport`. Quand la phase 4c publiera ce rapport pour le synoptique, brancher l'onglet Contrôles du dock du synoptique (aujourd'hui seul le rack l'alimente).
+- **Dock Contrôles du synoptique (4c).** `StrataEditorShell` affiche déjà l'onglet Contrôles en synoptique dès que `useTopbarActions().validationReport` est publié. Non testé de bout en bout tant que l'onglet Synoptique est un bouchon : à vérifier quand la phase 4c le reprend.
 - **État d'enregistrement dans la topbar.** Il n'y remonte que pour les onglets rendus par `getEditorSlots`. Les autres onglets le gardent dans la barre contextuelle de la colonne centrale.
 
 ## Limites connues
@@ -18,6 +18,8 @@ Ce fichier liste ce que l'interface Strata activable a laissé en suspens : limi
 - **Faces latérales.** Leurs ports sont comptés mais non dessinés.
 - **« À traiter » de l'accueil.** Il liste les fiches techniques incomplètes : le serveur n'expose pas d'alertes de validation.
 - **Évènements sans `rackId`.** `onAppEvent` les ignore ; tous les publieurs n'ont pas été vérifiés.
+- **Bascule en plein écran.** Dans l'éditeur projet, une bascule d'interface en direct remplace `EditorShell` par `StrataEditorShell` (ou l'inverse) : canevas et docks sont remontés. L'état du projet, porté au-dessus du shell, est conservé. Hors plein écran, la page ouverte n'est pas remontée.
+- **Rechargement de `canvas-data`.** Quand la carte de face de l'inventaire ou la lentille Connectique est ouverte, `canvas-data` (qui contient tout le catalogue) est relu à chaque évènement du rack.
 
 ## À trancher par Damien
 

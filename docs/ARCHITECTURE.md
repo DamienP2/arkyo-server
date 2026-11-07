@@ -94,19 +94,19 @@ Le site choisit son interface dans Administration › Système. **Classique** es
 
 | Fichier | Accroche |
 | --- | --- |
-| `app/(app)/app-layout.tsx` | provider ; en Strata, `StrataAppShell` autour du même `<Outlet/>` |
+| `app/(app)/app-layout.tsx` | provider ; en Strata, `StrataTopbar` et `StrataSideNav` à la place de `Topbar` et `Sidebar`, `<Outlet/>` à la même place (une bascule ne remonte pas la page) ; dernière interface connue si `/api/site` échoue |
 | `app/(fullscreen)/fullscreen-layout.tsx` | provider seulement |
 | `components/editor-shell/editor-shell.tsx` | en Strata, délègue à `StrataEditorShell` avec les mêmes slots ; type `EditorShellSlots` : champ optionnel `strata?: { leftDockTabs; bottomDock }` |
 | `_editor/project-global-topbar.tsx` | en Strata, `StrataProjectTopbar` avec les mêmes props |
 | `components/layout/topbar.tsx` | exports des menus internes (notifications, langue, profil, rôle) |
 | `admin/systeme/systeme-page.tsx` | section « Interface » |
 | `admin/equipment/[id]/equipment-editor.tsx` | panneau « Faces et schéma » au-dessus de la Connectique |
-| `project-editor.tsx` (`getEditorSlots`) | bibliothèque en dock gauche, face de l'équipement dans l'inspecteur, dock bas, vue Connectique |
+| `project-editor.tsx` (`getEditorSlots`) | bibliothèque en dock gauche, face de l'équipement dans l'inspecteur (rack et inventaire), dock bas, vue Connectique ; état d'enregistrement transmis à la topbar Strata |
 | `app/globals.css` | bloc `[data-interface="strata"]` et variables `--strata-face-*` (clair et sombre) |
 | `admin/catalogue/_components/{equipment,cables,adapters}-list-panel.tsx` | grilles dessinées en vue grille |
 
 - **Code neuf, `web/src/strata/`.**
-  - `shell/` : `StrataAppShell`, `StrataTopbar`, `StrataSideNav`, `StrataProjectTopbar`, `StrataEditorShell`, `BottomDock`, état d'enregistrement.
+  - `shell/` : `StrataTopbar`, `StrataSideNav`, `StrataProjectTopbar`, `StrataEditorShell`, `BottomDock`, état d'enregistrement.
   - `drawings/` : `EquipmentFace`, `BlockDiagram`, `CableDrawing`, `AdapterDrawing`, `RackElevation`, `Gauge` ; calcul de disposition des faces dans `face-layout.ts`.
   - `pages/` : `StrataHome` (accueil) et grilles du catalogue (équipements, cordons, adaptateurs).
   - `library/` : `LibraryDock`, bibliothèque glissable du dock gauche.
