@@ -170,6 +170,9 @@ describe("/admin/systeme : interface", () => {
     fireEvent.click(await screen.findByRole("radio", { name: /Strata/ }));
     const dialog = await screen.findByRole("dialog");
     fireEvent.click(within(dialog).getByRole("button", { name: "Changer" }));
+    await waitFor(() =>
+      expect(sentBody(fetchSpy, "PUT", "/api/system/interface")).toEqual({ interface: "strata" }),
+    );
     emitAppEvent({ domain: "config", action: "updated" });
     await waitFor(() => expect(siteCalls()).toBeGreaterThan(before));
     await waitFor(() => expect(document.documentElement.dataset.interface).toBe("strata"));
