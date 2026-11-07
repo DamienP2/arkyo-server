@@ -50,3 +50,4 @@ Revue finale : `.superpowers/sdd/2026-11-08-phase-4c-synoptique/final-review.md`
   - `ring-black/10` dans la légende des signaux, presque invisible en sombre.
   - Commentaire d'habillage mal placé dans `validation-panel.tsx:76`.
   - Avertissements `INEFFECTIVE_DYNAMIC_IMPORT` du build, dont `synoptic-vector.ts`.
+M-16 (deferred): container moved to another location leaves its cables on the old location's virtual rack
