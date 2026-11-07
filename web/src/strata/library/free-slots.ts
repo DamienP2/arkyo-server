@@ -50,6 +50,8 @@ export function dropRefused(cell: DropCell, heightU: number, slots: readonly Slo
     if (snapped != null) u = snapped;
   }
   u = Math.min(u, Math.max(1, totalU - h + 1));
+  // Boucle de collision copiée de `handleDragEnd` (`rack-placement-canvas.tsx`,
+  // bloc « Validation drop ») : slots de premier niveau, posés, de la face visée.
   return slots.some(
     (s) =>
       !s.parentSlotId &&

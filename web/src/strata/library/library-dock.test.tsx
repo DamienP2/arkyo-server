@@ -136,7 +136,7 @@ function renderDock(racks: LibraryRack[], items: Equipment[] = [ATEM, CONSOLE, R
 const posts = () => fetchMock.mock.calls.filter(([, init]) => (init as RequestInit | undefined)?.method === "POST");
 
 describe("LibraryDock", () => {
-  test("déposer sur un U occupé n'envoie aucune requête et affiche « Pas assez d'U libres à partir de U12 »", async () => {
+  test("un dépôt sur un U occupé est signalé par la bibliothèque (« Pas assez d'U libres à partir de U12 »), qui n'envoie rien elle-même", async () => {
     renderDock([{ id: "r1", name: "Baie A", totalU: 42, slots: [slot("a", 12, 1)] }]);
     expect(dnd.monitor?.onDragEnd).toBeTypeOf("function");
     dnd.monitor!.onDragEnd!({
@@ -176,6 +176,34 @@ describe("LibraryDock", () => {
       widthFraction: "FULL",
       column: 0,
     });
+  });
+
+  test("Placer : même avertissement de profondeur que le dépôt sur le canevas, placement autorisé", async () => {
+    const deep = equipment("eq9", "Serveur long", { depthMm: 500 });
+    renderDock([{ id: "r1", name: "Baie A", totalU: 42, slots: [], depthMm: 600, cableSafetyDepthMm: 150 }], [deep]);
+    const card = screen.getByRole("listitem", { name: "Serveur long" });
+    fireEvent.click(within(card).getByRole("button", { name: "Placer" }));
+    fireEvent.click(within(within(card).getByRole("group", { name: "U libres pour Serveur long" })).getByRole("button", { name: "U1" }));
+    await waitFor(() => expect(posts()).toHaveLength(1));
+    // Texte du toast de `rack-placement-canvas.tsx` (« Validation drop »).
+    expect(
+      await screen.findByText(
+        '⚠️ "Serveur long" (500 mm + 150 mm câbles = 650 mm) dépasse la profondeur utile (450 mm). Placement autorisé.',
+      ),
+    ).toBeInTheDocument();
+  });
+
+  test("Placer : sans profondeur de contenant, celle par défaut du canevas (600 mm)", async () => {
+    const deep = equipment("eq9", "Serveur long", { depthMm: 520 });
+    renderDock([{ id: "r1", name: "Baie A", totalU: 42, slots: [], depthMm: null, cableSafetyDepthMm: 100 }], [deep]);
+    const card = screen.getByRole("listitem", { name: "Serveur long" });
+    fireEvent.click(within(card).getByRole("button", { name: "Placer" }));
+    fireEvent.click(within(within(card).getByRole("group", { name: "U libres pour Serveur long" })).getByRole("button", { name: "U1" }));
+    expect(
+      await screen.findByText(
+        '⚠️ "Serveur long" (520 mm + 100 mm câbles = 620 mm) dépasse la profondeur utile (500 mm). Placement autorisé.',
+      ),
+    ).toBeInTheDocument();
   });
 
   test("filtre par recherche, catégorie, signal", async () => {

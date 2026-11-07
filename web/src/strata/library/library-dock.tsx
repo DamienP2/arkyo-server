@@ -13,7 +13,8 @@
  *   que le canvas refusera faute de place est signalé ici, sans requête.
  * - « Placer » : les trois premiers U libres de chaque contenant affiché ; le
  *   choix envoie le même `POST`. Le canvas reçoit le slot par son flux temps
- *   réel (`useRackSync`).
+ *   réel (`useRackSync`). Un équipement trop profond est signalé comme sur le
+ *   canvas (`depthWarning`), sans bloquer.
  *
  * Branché par `withLibraryDock` dans `getEditorSlots` (project-editor.tsx),
  * comme onglet du dock gauche de `StrataEditorShell` ; ignoré en Classique.
@@ -31,14 +32,37 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingState } from "@/components/ui/loading-state";
 import { Input } from "@/components/ui/input";
 import { Library } from "@/components/ui/icons";
+import { RACK_DEPTH_DEFAULT } from "@/components/synoptique/lib/constants";
 import { apiFetch } from "@/lib/client-id";
 import { cn } from "@/lib/utils";
 import { drawingConnectorTypes, drawingSignals, parseConnectors, useCatalogueLookup } from "../catalogue-model";
 import { dropRefused, freeStartUs } from "./free-slots";
 import { LIBRARY_DRAG_PREFIX, LibraryItem, type PlacerChoice } from "./library-item";
 
-/** Contenant cible de la bibliothèque : ses slots à jour. */
-export type LibraryRack = { id: string; name: string; totalU: number; slots: Slot[] };
+/** Contenant cible de la bibliothèque : ses slots à jour, sa profondeur et la réserve de câbles. */
+export type LibraryRack = {
+  id: string;
+  name: string;
+  totalU: number;
+  slots: Slot[];
+  depthMm?: number | null;
+  /** Réserve de câbles arrière (`cableSafetyDepthMm` de `canvas-data`). */
+  cableSafetyDepthMm?: number;
+};
+
+/**
+ * Avertissement de profondeur d'un équipement posé par « Placer » : même
+ * calcul et même texte que le dépôt sur le canevas (`handleDragEnd` de
+ * `rack-placement-canvas.tsx`, « Validation drop »), non bloquant.
+ */
+export function depthWarning(eq: Equipment, rack: LibraryRack | undefined): string | null {
+  const eqDepth = eq.depthMm;
+  if (!rack || !eqDepth) return null;
+  const safety = rack.cableSafetyDepthMm ?? 0;
+  const usableDepth = Math.max(0, (rack.depthMm ?? RACK_DEPTH_DEFAULT) - safety);
+  if (eqDepth <= usableDepth) return null;
+  return `⚠️ "${eq.name}" (${eqDepth} mm + ${safety} mm câbles = ${eqDepth + safety} mm) dépasse la profondeur utile (${usableDepth} mm). Placement autorisé.`;
+}
 
 /** Nombre de U libres proposés par « Placer », par contenant. */
 const PLACER_CHOICES = 3;
@@ -114,7 +138,7 @@ export function LibraryDock({
   const [category, setCategory] = useState<string | null>(null);
   const [signal, setSignal] = useState<string | null>(null);
   const [placerId, setPlacerId] = useState<string | null>(null);
-  const [message, setMessage] = useState<{ text: string; error: boolean } | null>(null);
+  const [message, setMessage] = useState<{ text: string; error: boolean; warning?: boolean } | null>(null);
   const [busy, setBusy] = useState(false);
   // Slots posés par « Placer », gardés jusqu'à leur retour par le canvas :
   // le serveur ne contrôle pas les collisions, un second choix sur le même U
@@ -235,14 +259,22 @@ export function LibraryDock({
         const slot = (await res.json()) as Slot;
         setPlaced((prev) => [...prev, { ...slot, rackId: choice.rackId } as Slot]);
         setPlacerId(null);
-        setMessage({ text: `${eq.name} placé en U${choice.startU}`, error: false });
+        const warning = depthWarning(
+          eq,
+          liveRacks.find((r) => r.id === choice.rackId),
+        );
+        setMessage(
+          warning
+            ? { text: warning, error: false, warning: true }
+            : { text: `${eq.name} placé en U${choice.startU}`, error: false },
+        );
       } catch {
         setMessage({ text: "Erreur lors du placement.", error: true });
       } finally {
         setBusy(false);
       }
     },
-    [view],
+    [view, liveRacks],
   );
 
   if (equipment === null) return <LoadingState className="py-10" />;
@@ -285,7 +317,11 @@ export function LibraryDock({
         className={cn(
           "flex-none px-2 text-[11.5px] empty:hidden",
           message && "py-1.5",
-          message?.error ? "text-[var(--danger-text)]" : "text-[var(--muted-foreground)]",
+          message?.error
+            ? "text-[var(--danger-text)]"
+            : message?.warning
+              ? "text-[var(--warning-text)]"
+              : "text-[var(--muted-foreground)]",
         )}
       >
         {message?.text}
@@ -345,6 +381,8 @@ export function libraryDockProps(src: LibraryDockSource): {
         name: d.rack.name,
         totalU: d.rack.totalU,
         slots: src.locationLiveSlots[d.rack.id] ?? d.rack.slots,
+        depthMm: d.rack.depthMm,
+        cableSafetyDepthMm: d.cableSafetyDepthMm,
       })),
       view: src.locationView,
     };
@@ -353,7 +391,16 @@ export function libraryDockProps(src: LibraryDockSource): {
   return {
     equipment: data?.allEquipment ?? null,
     racks: data
-      ? [{ id: data.rack.id, name: data.rack.name, totalU: data.rack.totalU, slots: src.liveSlots ?? data.rack.slots }]
+      ? [
+          {
+            id: data.rack.id,
+            name: data.rack.name,
+            totalU: data.rack.totalU,
+            slots: src.liveSlots ?? data.rack.slots,
+            depthMm: data.rack.depthMm,
+            cableSafetyDepthMm: data.cableSafetyDepthMm,
+          },
+        ]
       : [],
     view: src.visibleViews.has("FRONT") ? "FRONT" : ([...src.visibleViews][0] ?? "FRONT"),
   };
