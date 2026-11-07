@@ -73,6 +73,7 @@ import {
   type RackCanvasData,
   type LocationCanvasData,
 } from "../rack/rack-tab-client";
+import { withLibraryDock } from "@/strata/library/library-dock"; // arkyo-server: interface Strata
 import {
   RackTabLeftToolbar,
   type RackRenderMode,
@@ -1375,7 +1376,8 @@ function getEditorSlots(args: {
         }
       />
     );
-    return {
+    // arkyo-server: interface Strata — onglets « Outils » et « Bibliothèque » du dock gauche (champ `strata`, ignoré en Classique).
+    return withLibraryDock({
       globalTopbar,
       contextualTopbar: rackContextualTopbar,
       leftToolbar: (
@@ -1488,7 +1490,7 @@ function getEditorSlots(args: {
           }}
         />
       ),
-    };
+    }, { scope: isLocationScope ? "location" : "container", selectedRackId: rackSelectedRackId, canvasData: rackCanvasData, liveSlots: rackLiveSlots, locationData: rackLocationData, locationLiveSlots: rackLocationLiveSlots, visibleViews: rackVisibleViews, locationView: effectiveLocationView }); // arkyo-server: interface Strata
   }
 
   // Note : l'onglet "synoptique" est traité hors de `getEditorSlots` car il
