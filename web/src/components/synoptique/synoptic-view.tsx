@@ -8187,8 +8187,11 @@ export const SynopticView = forwardRef<SynopticViewHandle, Props>(function Synop
         setTool("select");
       }
       if (k === "v") {
-        prevToolRef.current = "move";
-        setTool("move");
+        // arkyo-server: correction d'un défaut d'arkyo — quand le parent pilote
+        // l'outil (onToolChange), V = « Sélection » comme le shell ; sinon boucle infinie.
+        const t = onToolChangeRef.current ? "select" : "move";
+        prevToolRef.current = t;
+        setTool(t);
       }
       if (k === "t") {
         prevToolRef.current = toolRef.current !== "label" ? toolRef.current : prevToolRef.current;

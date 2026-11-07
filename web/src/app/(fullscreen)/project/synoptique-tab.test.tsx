@@ -630,7 +630,7 @@ describe("onglet Synoptique", () => {
       expectInSchema((post.body as Record<string, Record<string, unknown>>)[side], ENDPOINT);
     }
     await skipCableModel();
-    // Retour à la sélection par la barre d'outils (le raccourci V boucle en vue lieu : voir le dernier test).
+    // Retour à la sélection par la barre d'outils (le raccourci V : voir le dernier test).
     fireEvent.click(screen.getByTitle("Sélection (V)"));
 
     // Sélection d'un bloc emplacement → panneau « Emplacement » → ouvrir la vue du lieu.
@@ -742,7 +742,7 @@ describe("onglet Synoptique", () => {
       synopticCalls(fetchSpy).some((c) => c.method === "POST" && c.path === "/api/tenant/projects/p1/synoptic/connections"),
     ).toBe(false);
     await skipCableModel();
-    // Retour à la sélection par la barre d'outils (le raccourci V boucle en vue lieu : voir le dernier test).
+    // Retour à la sélection par la barre d'outils (le raccourci V : voir le dernier test).
     fireEvent.click(screen.getByTitle("Sélection (V)"));
 
     // Style de tracé depuis le panneau du câble : la liaison inter-contenants
@@ -888,13 +888,13 @@ describe("onglet Synoptique", () => {
     expect(consoleError).not.toHaveBeenCalled();
   });
 
-  // Défaut d'arkyo (reproduit tel quel, signalé) : en vue lieu, la touche V
-  // vaut « Sélection » pour la barre d'outils du shell et « Déplacer » pour
+  // arkyo-server : correction d'un défaut d'arkyo. En vue lieu, la touche V
+  // valait « Sélection » pour la barre d'outils du shell et « Déplacer » pour
   // la `SynopticView` ; avec `onToolChange` branché, le pont d'outil du
-  // tab-client et la vue se renvoient l'outil sans fin (« Maximum update
-  // depth exceeded »). La vue Générale ne passe pas `onToolChange` et n'est
-  // pas touchée.
-  test.fails("v_shortcut_in_location_view_settles_on_select", async () => {
+  // tab-client et la vue se renvoyaient l'outil sans fin (« Maximum update
+  // depth exceeded »). La vue suit désormais le shell quand le parent pilote
+  // l'outil. La vue Générale ne passe pas `onToolChange` et n'est pas touchée.
+  test("v_shortcut_in_location_view_settles_on_select", async () => {
     await openTab("l1");
     act(() => {
       fireEvent.keyDown(window, { key: "c" });
@@ -903,6 +903,9 @@ describe("onglet Synoptique", () => {
       fireEvent.keyDown(window, { key: "v" });
     });
     await waitFor(() => expect(screen.getByTitle("Sélection (V)")).toBeInTheDocument());
+    // L'outil retenu par le shell est bien « Sélection ».
+    await waitFor(() => expect(screen.getByTitle("Sélection (V)").className).toContain("text-[var(--accent-strong)]"));
+    expect(consoleError).not.toHaveBeenCalled();
   });
 
   test("project_sync_refetches_on_server_events_only", async () => {
