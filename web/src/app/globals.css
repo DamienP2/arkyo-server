@@ -147,13 +147,17 @@ body {
   --rail-icon: #5f6584;
   --rail-icon-active: #3346c9;
   --rail-active-bg: rgba(79, 99, 230, 0.1);
-  /* arkyo-server: interface Strata — dessins techniques (faces d'équipement) :
-     fond, trait et encres du châssis. */
-  --strata-face-bg: #f7f8fb;
-  --strata-face-line: #cdd2e1;
-  --strata-face-ink: #141726;
-  --strata-face-ink-2: #4b5170;
-  --strata-face-ink-3: #5f6584;
+  /* arkyo-server: interface Strata — dessins techniques (faces d'équipement,
+     élévation de rack) : châssis, trait, encres, fond du rack et sélection.
+     Une face est un rendu du matériel : sombre dans les deux thèmes (mêmes
+     valeurs dans .dark), comme la maquette approuvée. */
+  --strata-face-bg: #1d2030;
+  --strata-face-line: #3d4258;
+  --strata-face-ink: #e6e8f2;
+  --strata-face-ink-2: #a3a8bf;
+  --strata-face-ink-3: #8a90ad;
+  --strata-face-well: #07080c;
+  --strata-face-accent: #8fa3ff;
 
   /* ── Tokens couleurs métier (centralisés) ─────────────────────────
      Utilisés dans tout le module supervisor pour les rôles, plans,
@@ -225,12 +229,14 @@ body {
   --rail-icon: #8a90ad;
   --rail-icon-active: #e6e8f2;
   --rail-active-bg: rgba(143, 163, 255, 0.16);
-  /* arkyo-server: interface Strata — dessins techniques (faces d'équipement) */
-  --strata-face-bg: #0f1118;
-  --strata-face-line: #323750;
-  --strata-face-ink: #c3c7d6;
+  /* arkyo-server: interface Strata — dessins techniques : mêmes valeurs qu'en clair */
+  --strata-face-bg: #1d2030;
+  --strata-face-line: #3d4258;
+  --strata-face-ink: #e6e8f2;
   --strata-face-ink-2: #a3a8bf;
   --strata-face-ink-3: #8a90ad;
+  --strata-face-well: #07080c;
+  --strata-face-accent: #8fa3ff;
 
   /* ── Tokens couleurs métier — variantes dark légèrement ajustées
      pour conserver le contraste sur fond sombre. */
