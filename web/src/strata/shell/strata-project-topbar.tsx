@@ -58,7 +58,16 @@ import type { ProjectTabId, TabSubItem } from "@/app/(fullscreen)/project/[id]/_
 import { cn } from "@/lib/utils";
 import { LENS_PARAM, LENS_TAB, lensOf, type StrataLens } from "../lenses/strata-lens";
 import { StrataSaveBadge, useStrataSaveStatus } from "./save-status";
-import { SEG_BAR, SEG_TAB, SEG_TAB_OFF, SEG_TAB_ON } from "./seg-tabs";
+import {
+  SEG_BAR,
+  SEG_TAB,
+  SEG_TAB_OFF,
+  SEG_TAB_ON,
+  TOPBAR_ICON_BTN,
+  TOPBAR_TAB,
+  TOPBAR_TAB_OFF,
+  TOPBAR_TAB_ON,
+} from "./seg-tabs";
 import { useStrataLensSlot } from "./strata-editor-shell";
 
 /** Lentilles de l'onglet Conception, dans l'ordre de la pill d'arkyo. */
@@ -244,14 +253,8 @@ function TabLink({
   );
 }
 
-const TAB =
-  "inline-flex items-center gap-1.5 rounded-[6px] px-3 py-[5px] text-[13px] font-medium whitespace-nowrap transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]";
-const TAB_ON = "bg-[var(--muted)] text-[var(--foreground)]";
-const TAB_OFF = "text-[var(--muted-foreground)] hover:text-[var(--foreground)]";
 const BTN =
   "inline-flex h-7 shrink-0 items-center gap-1.5 rounded-md border border-[var(--border)] px-2.5 text-[12px] font-medium text-[var(--muted-foreground)] outline-none transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--muted)] hover:text-[var(--foreground)] focus-visible:ring-2 focus-visible:ring-[var(--ring)]";
-const ICON_BTN =
-  "inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-[var(--muted-foreground)] transition-colors hover:bg-[var(--muted)] hover:text-[var(--foreground)]";
 
 /** Barre de lentilles (Conception) ou de Livraison, en tête de la colonne centrale. */
 function SectionBar({ nav, section }: { nav: TabNav; section: Section }) {
@@ -445,7 +448,7 @@ export function StrataProjectTopbar({
         {SECTIONS.map(({ id, label, icon: Icon }) => {
           const on = id === section;
           return (
-            <TabLink key={id} id={targetOf(id)} on={on} go={nav.go} className={cn(TAB, on ? TAB_ON : TAB_OFF)}>
+            <TabLink key={id} id={targetOf(id)} on={on} go={nav.go} className={cn(TOPBAR_TAB, on ? TOPBAR_TAB_ON : TOPBAR_TAB_OFF)}>
               <Icon className="h-4 w-4" />
               {label}
             </TabLink>
@@ -480,7 +483,7 @@ export function StrataProjectTopbar({
           onClick={onClose}
           title="Fermer l'édition"
           aria-label="Fermer l'édition"
-          className={cn(ICON_BTN, "ml-1")}
+          className={cn(TOPBAR_ICON_BTN, "ml-1")}
         >
           <X className="h-4 w-4" />
         </button>

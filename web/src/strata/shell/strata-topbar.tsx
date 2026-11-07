@@ -24,6 +24,7 @@ import { useTenantMembership } from "@/lib/tenant-membership-context";
 import { useTopbarTabs } from "@/lib/topbar-tabs-context";
 import { cn } from "@/lib/utils";
 import { navFilter, primaryItems, sectionOf, STRATA_NAV, type StrataNavItem, type StrataSection } from "./nav-model";
+import { TOPBAR_ICON_BTN, TOPBAR_TAB, TOPBAR_TAB_OFF, TOPBAR_TAB_ON } from "./seg-tabs";
 
 /** "demo studio" → "Demo Studio", comme le nom du site de la topbar Classique. */
 function toTitleCase(input: string): string {
@@ -36,13 +37,6 @@ function toTitleCase(input: string): string {
     )
     .join("");
 }
-
-const TAB =
-  "inline-flex items-center gap-1.5 rounded-[6px] px-3 py-[5px] text-[13px] font-medium whitespace-nowrap transition-colors";
-const TAB_ON = "bg-[var(--muted)] text-[var(--foreground)]";
-const TAB_OFF = "text-[var(--muted-foreground)] hover:text-[var(--foreground)]";
-const ICON_BTN =
-  "flex h-7 w-7 items-center justify-center rounded-md text-[var(--muted-foreground)] transition-colors hover:bg-[var(--muted)] hover:text-[var(--foreground)]";
 
 /** Onglet « Administration ▾ » : menu des pages d'administration visibles. */
 function AdminMenu({ section, items, active }: { section: StrataSection; items: StrataNavItem[]; active: boolean }) {
@@ -75,7 +69,7 @@ function AdminMenu({ section, items, active }: { section: StrataSection; items: 
         aria-haspopup="menu"
         aria-expanded={open}
         aria-current={active ? "page" : undefined}
-        className={cn(TAB, active ? TAB_ON : TAB_OFF)}
+        className={cn(TOPBAR_TAB, active ? TOPBAR_TAB_ON : TOPBAR_TAB_OFF)}
       >
         <Icon className="h-4 w-4" />
         {section.label}
@@ -163,7 +157,7 @@ export function StrataTopbar() {
               key={section.id}
               href={first.href}
               aria-current={active ? "page" : undefined}
-              className={cn(TAB, active ? TAB_ON : TAB_OFF)}
+              className={cn(TOPBAR_TAB, active ? TOPBAR_TAB_ON : TOPBAR_TAB_OFF)}
             >
               <Icon className="h-4 w-4" />
               {section.label}
@@ -183,7 +177,7 @@ export function StrataTopbar() {
       <div className="flex shrink-0 items-center gap-1.5">
         <PresenceAvatars className="mr-1" />
         {mounted && (
-          <button onClick={() => setTheme(isDark ? "light" : "dark")} className={ICON_BTN} aria-label="Thème">
+          <button onClick={() => setTheme(isDark ? "light" : "dark")} className={TOPBAR_ICON_BTN} aria-label="Thème">
             {isDark ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
           </button>
         )}
