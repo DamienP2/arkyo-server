@@ -383,6 +383,27 @@ const COPIED_FILES = [
   "components/synoptique/lib/scene-descriptor.ts",
   "components/synoptique/lib/snapshot-sync.ts",
   "lib/services/audit-format.ts",
+  // Phase 4c (Task 9) : composants du synoptique 1/2. `synoptic-cable-model-picker`
+  // est avancé de la Task 10 (importé par les panneaux câble et multi-câbles).
+  "components/synoptique/components/synoptic-adapter-properties-panel.tsx",
+  "components/synoptique/components/synoptic-cable-properties-panel.tsx",
+  "components/synoptique/components/synoptic-external-properties-panel.tsx",
+  "components/synoptique/components/synoptic-label-properties-panel.tsx",
+  "components/synoptique/components/synoptic-multi-cable-properties-panel.tsx",
+  "components/synoptique/components/synoptic-multi-external-properties-panel.tsx",
+  "components/synoptique/components/synoptic-multi-node-properties-panel.tsx",
+  "components/synoptique/components/synoptic-node-properties-panel.tsx",
+  "components/synoptique/components/synoptic-zone-properties-panel.tsx",
+  "components/synoptique/components/synoptic-label-toolbar.tsx",
+  "components/synoptique/components/synoptic-label-input.tsx",
+  "components/synoptique/components/synoptic-zone-color-picker.tsx",
+  "components/synoptique/components/synoptic-incompat-tooltip.tsx",
+  "components/synoptique/components/synoptic-drawing-hint.tsx",
+  "components/synoptique/components/synoptic-toasts.tsx",
+  "components/synoptique/components/synoptic-empty-info-dialog.tsx",
+  "components/synoptique/components/synoptic-decable-dialog.tsx",
+  "components/synoptique/components/synoptic-clear-labels-dialog.tsx",
+  "components/synoptique/components/synoptic-cable-model-picker.tsx",
 ];
 
 /** Fichiers posés sur la topbar ou le rail : ils suivent le thème (variante « Clair A »). */
@@ -1079,6 +1100,36 @@ const ALLOW_HEX: AllowMap = {
   ],
   "components/synoptique/components/synoptic-adapter-node.tsx": [
     { line: /const color = ct\?\.color \?\? "#9ca3af";/, reason: CONN },
+  ],
+  // Phase 4c (Task 9) : composants du synoptique 1/2.
+  "components/synoptique/components/synoptic-label-properties-panel.tsx": [
+    {
+      line: /^\s*"#[0-9a-f]{6}",$|value=\{label\.pillBg \?\? "#fde68a"\}/,
+      reason:
+        "pastilles proposées pour la couleur du texte d'un label et de sa pillule (choisies par l'utilisateur), " +
+        "et repli de la pillule sur la première : couleur métier",
+    },
+  ],
+  "components/synoptique/components/synoptic-zone-properties-panel.tsx": [
+    {
+      line: /^\s*"#[0-9a-f]{6}",$/,
+      reason: "pastilles proposées pour la couleur d'une zone (choisie par l'utilisateur) : couleur métier",
+    },
+  ],
+  "components/synoptique/components/synoptic-label-toolbar.tsx": [
+    {
+      line: /^\s*"#[0-9a-f]{6}",$/,
+      reason: "pastilles de la barre flottante d'un label (couleur du texte choisie par l'utilisateur) : couleur métier",
+    },
+  ],
+  "components/synoptique/components/synoptic-label-input.tsx": [
+    { line: /boxShadow: "0 2px 12px rgba\(0,0,0,0\.15\)",/, reason: "ombre portée de la saisie sur le canvas : pas une couleur d'interface" },
+  ],
+  "components/synoptique/components/synoptic-node-properties-panel.tsx": [
+    {
+      line: /const hex = catColorMap\[cat\] \?\? "#94a3b8";/,
+      reason: "couleur de la catégorie d'équipement (pilule) et son repli : couleur métier",
+    },
   ],
   "components/synoptique/components/synoptic-adapter-picker.tsx": [
     {
