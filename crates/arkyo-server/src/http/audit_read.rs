@@ -16,7 +16,8 @@
 //! (`lib/services/audit-format.ts`).
 //!
 //! arkyo-server:
-//! - garde serveur `projects:read` (arkyo : session seule) ;
+//! - audit projet : garde serveur `projects:read` (arkyo : session seule) ;
+//!   audit de rack : session seule, comme arkyo (éditeur de rack de conception) ;
 //! - un `limit` non numérique (ou fractionnaire) donne 400 « Paramètres
 //!   invalides » (arkyo : `take: NaN`, erreur Prisma, 500) ;
 //! - à date égale, l'ordre d'insertion départage (Postgres : indéfini).
@@ -129,14 +130,13 @@ pub async fn project(
 
 pub async fn rack(
     State(st): State<AppState>,
-    CurrentUser(me): CurrentUser,
+    // Session seule (extracteur), comme arkyo et les autres lectures par rack :
+    // le panneau d'audit sert aussi dans l'éditeur de rack de l'espace
+    // conception (rôles `design:*` sans droit sur les projets).
+    _session: CurrentUser,
     Path(rack_id): Path<String>,
     Query(query): Query<Vec<(String, String)>>,
 ) -> Response {
-    // arkyo-server: garde serveur alignée sur l'UI (projects:read).
-    if let Err(r) = require(&me, &st.pool, Domain::Projects, Level::Read).await {
-        return r;
-    }
     let take = match limit(&query, 100.0) {
         Ok(n) => n,
         Err(r) => return r,

@@ -796,12 +796,15 @@ async fn audit_union_and_limit() {
     let none = login(&e.app, "n@b.fr").await;
     add_user(&e.pool, "c@b.fr", "consultation", false).await;
     let ct = login(&e.app, "c@b.fr").await;
+    let r = send(&e, &none, "GET", "/api/tenant/projects/p1/audit", None).await;
+    assert_eq!(
+        (r.status, r.body),
+        (StatusCode::FORBIDDEN, json!({"error": "Accès refusé"}))
+    );
+    // Audit de rack : session seule, comme arkyo (éditeur de rack de conception).
+    let r = send(&e, &none, "GET", "/api/racks/ra/audit", None).await;
+    assert_eq!(r.status, StatusCode::OK);
     for u in ["/api/tenant/projects/p1/audit", "/api/racks/ra/audit"] {
-        let r = send(&e, &none, "GET", u, None).await;
-        assert_eq!(
-            (r.status, r.body),
-            (StatusCode::FORBIDDEN, json!({"error": "Accès refusé"}))
-        );
         let r = send(&e, &ct, "GET", u, None).await;
         assert_eq!(r.status, StatusCode::OK, "{u}");
     }
