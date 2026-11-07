@@ -428,6 +428,9 @@ const COPIED_FILES = [
   "app/(fullscreen)/project/[id]/synoptique/_components/general-info-panel.tsx",
   "app/(fullscreen)/project/[id]/synoptique/_components/general-properties-panels.tsx",
   "app/(fullscreen)/project/[id]/synoptique/_components/synoptique-rack-selector.tsx",
+  // Phase 4c (Task 13) : exports de l'onglet Synoptique.
+  "app/(fullscreen)/project/[id]/_components/project-view-export.tsx",
+  "app/(fullscreen)/project/[id]/_components/export-live-page.tsx",
 ];
 
 /** Fichiers posés sur la topbar ou le rail : ils suivent le thème (variante « Clair A »). */
@@ -1271,6 +1274,21 @@ const ALLOW_HEX: AllowMap = {
       reason:
         "pastilles proposées pour la couleur de la grille et des repères (choisie par l'utilisateur) et repli, " +
         "comme synoptic-general-panel : couleur métier",
+    },
+  ],
+  // Phase 4c (Task 13) : exports de l'onglet Synoptique.
+  "app/(fullscreen)/project/[id]/_components/project-view-export.tsx": [
+    {
+      line: /^\s*background: "#ffffff",$/,
+      reason: "fond blanc de la vue capturée en image (PNG, JPG, PDF du cartouche) : rendu des exports",
+    },
+  ],
+  "app/(fullscreen)/project/[id]/_components/export-live-page.tsx": [
+    {
+      line: /^\s*background: "#ffffff",$|^\s*"0 1px 2px rgba\(15,17,26,0\.06\), 0 8px 28px rgba\(15,17,26,0\.10\)",$/,
+      reason:
+        "feuille de papier de l'aperçu vivant : fond blanc du document (rendu des exports) et son ombre de feuille, " +
+        "comme la feuille du composeur Rack (rack-export-composer.tsx)",
     },
   ],
   "lib/print/export-with-cartouche.ts": [

@@ -870,14 +870,13 @@ describe("onglet Synoptique", () => {
     expect(right.getByText("Un adaptateur est posé mais n'est connecté à aucun câble.")).toBeInTheDocument();
     expect(right.getByRole("button", { name: /Tous/ })).toHaveTextContent(String(report.issues.length));
 
-    // « Exporter » (pied du panneau) : panneau d'export superposé, bouchon
-    // jusqu'à la Task 13 (exports du synoptique).
+    // « Exporter » (pied du panneau) : modal d'export partagé (Task 13, détail
+    // dans synoptique-export.test.tsx).
     fireEvent.click(screen.getByTitle("Exporter"));
-    expect(await right.findByText("Exporter le synoptique")).toBeInTheDocument();
-    expect(right.getByText("Bientôt disponible")).toBeInTheDocument();
-    const exportHeader = right.getByText("Exporter le synoptique").parentElement as HTMLElement;
-    fireEvent.click(within(exportHeader).getByRole("button", { name: "Fermer" }));
-    await waitFor(() => expect(right.queryByText("Exporter le synoptique")).toBeNull());
+    const exportDialog = await screen.findByRole("dialog");
+    expect(within(exportDialog).getByText("Exporter le synoptique")).toBeInTheDocument();
+    fireEvent.click(within(exportDialog).getAllByRole("button", { name: "Fermer" })[0]);
+    await waitFor(() => expect(screen.queryByText("Exporter le synoptique")).toBeNull());
 
     // Retour à la vue Générale : le rapport du lieu disparaît, remplacé par
     // celui de la vue Générale (ses blocs et liaisons inter-emplacements).
