@@ -219,6 +219,7 @@ pub fn router(state: AppState) -> Router {
         )
         .route("/upload/from-url", post(upload::from_url))
         .route("/system", get(system::info))
+        .route("/system/interface", put(system::set_interface))
         .route("/system/update", get(system::update_info))
         .route("/system/update/settings", put(system::update_settings))
         .route("/system/update/check", post(system::update_check))
