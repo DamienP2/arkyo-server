@@ -3,7 +3,8 @@
 /**
  * Barre latérale de bibliothèque de l'interface Strata (largeur
  * `--rail-width`, 240 px en Strata) : entrées de la section de l'onglet actif,
- * filtrées par les permissions du rail Classique, puis les renvois.
+ * filtrées par les permissions du rail Classique, puis les renvois ; la
+ * version en bas, comme le rail.
  */
 
 import Link from "next/link";
@@ -69,6 +70,11 @@ export function StrataSideNav({ counts }: { counts?: Record<string, number> }) {
           </>
         )}
       </nav>
+
+      {/* Version, comme en bas du rail Classique (`sidebar.tsx`). */}
+      <div className="mt-auto pt-3 text-center text-[10px] font-bold tracking-widest text-[var(--text-tertiary)] uppercase">
+        v0.1.0
+      </div>
     </aside>
   );
 }

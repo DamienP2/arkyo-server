@@ -4,12 +4,14 @@
  * `interface: "strata"`. La coquille Classique reste celle d'arkyo.
  */
 
+import { useEffect } from "react";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { afterEach, beforeAll, describe, expect, test } from "vitest";
-import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { OWNER_PERMS, renderApp, resetApp, signedInApi, TECH_PERMS, type Api } from "@/tests/app-harness";
-import { sectionOf, STRATA_NAV } from "@/strata/shell/nav-model";
+import { isItemActive, sectionOf, STRATA_NAV } from "@/strata/shell/nav-model";
+import { InterfaceProvider } from "@/strata/interface-context";
 
 const strataApi = (perms: unknown = OWNER_PERMS, extra: Api = {}): Api => ({
   ...signedInApi(perms, "Régie A", "strata"),
@@ -104,6 +106,24 @@ describe("modèle de navigation Strata", () => {
     expect(sectionOf("/admin/parametres")).toBe("administration");
     expect(sectionOf("/admin/users")).toBe("administration");
   });
+
+  test("entrée active sur les sous-pages, comme le rail Classique", () => {
+    const item = (href: string) => STRATA_NAV.flatMap((s) => s.items).find((i) => i.href === href)!;
+    const prestation = item("/projects?tab=prestation");
+    const integration = item("/projects?tab=integration");
+    // Sous-page sans `?tab=` : entrée par défaut ; avec `?tab=` : celui-ci tranche.
+    expect(isItemActive(prestation, "/projects/p1", null)).toBe(true);
+    expect(isItemActive(integration, "/projects/p1", null)).toBe(false);
+    expect(isItemActive(integration, "/projects/p1", "integration")).toBe(true);
+    expect(isItemActive(item("/templates?tab=panels"), "/templates/x", "panels")).toBe(true);
+    expect(isItemActive(item("/templates?tab=racks"), "/racks/r1", null)).toBe(true);
+    // Une seule entrée Catalogue, active sur toutes ses pages.
+    const catalogue = STRATA_NAV.find((s) => s.id === "catalogue")!.items[0];
+    expect(catalogue).toMatchObject({ href: "/admin/catalogue", perm: { domain: "catalog", level: "admin" } });
+    expect(isItemActive(catalogue, "/admin/catalogue", "cordons")).toBe(true);
+    expect(isItemActive(catalogue, "/admin/catalogue/equipment/e1", null)).toBe(true);
+    expect(isItemActive(catalogue, "/admin/parametres", null)).toBe(false);
+  });
 });
 
 describe("coquille Strata", () => {
@@ -114,10 +134,7 @@ describe("coquille Strata", () => {
     expect(within(nav).getByRole("link", { name: "Projets" })).toHaveAttribute("href", "/dashboard");
     expect(within(nav).getByRole("link", { name: "Projets" })).toHaveAttribute("aria-current", "page");
     expect(within(nav).getByRole("link", { name: "Modèles" })).toHaveAttribute("href", "/templates?tab=racks");
-    expect(within(nav).getByRole("link", { name: "Catalogue" })).toHaveAttribute(
-      "href",
-      "/admin/catalogue?tab=equipment",
-    );
+    expect(within(nav).getByRole("link", { name: "Catalogue" })).toHaveAttribute("href", "/admin/catalogue");
     expect(within(nav).getByRole("button", { name: "Administration" })).toBeInTheDocument();
     // Nom du site, badge de rôle et menus de la topbar Classique réutilisés.
     expect(within(header).getByText("Régie A")).toBeInTheDocument();
@@ -138,6 +155,11 @@ describe("coquille Strata", () => {
       "href",
       "/projects?tab=integration",
     );
+    // Version en bas, même texte que le rail Classique.
+    const railVersion = readFileSync(resolve(__dirname, "../../components/layout/sidebar.tsx"), "utf8").match(
+      /^\s*(v\d+\.\d+\.\d+)\s*$/m,
+    )![1];
+    expect(within(aside).getByText(railVersion)).toBeInTheDocument();
     // Pas de rail Classique.
     expect(within(aside).queryByText("Dashboard")).toBeNull();
     expect(document.querySelector("main#main-content")).not.toBeNull();
@@ -170,8 +192,23 @@ describe("coquille Strata", () => {
     // catalog:read < admin, ni members ni settings : ni Catalogue, ni Administration.
     expect(within(nav).queryByRole("link", { name: "Catalogue" })).toBeNull();
     expect(within(nav).queryByRole("button", { name: "Administration" })).toBeNull();
-    expect(screen.queryByText("Système")).toBeNull();
-    expect(screen.queryByText("Utilisateurs")).toBeNull();
+  });
+
+  test("filtre par permission : le menu Administration ne liste que les pages permises", async () => {
+    // members:admin sans settings:admin ni catalog:admin.
+    renderApp(
+      "/dashboard",
+      strataApi({
+        ...TECH_PERMS,
+        permissions: { ...TECH_PERMS.permissions, members: "admin" },
+      }),
+    );
+    const header = await strataHeader();
+    fireEvent.click(within(header).getByRole("button", { name: "Administration" }));
+    const menu = await within(header).findByRole("menu");
+    expect(within(menu).getByRole("menuitem", { name: "Utilisateurs" })).toHaveAttribute("href", "/admin/users");
+    expect(within(menu).queryByRole("menuitem", { name: "Système" })).toBeNull();
+    expect(within(menu).getAllByRole("menuitem").map((a) => a.textContent)).toEqual(["Utilisateurs"]);
   });
 
   test("onglets de page rendus dans la topbar", async () => {
@@ -202,17 +239,14 @@ describe("coquille Strata", () => {
     const nav = within(header).getByRole("navigation", { name: "Navigation principale" });
     expect(within(nav).getByRole("link", { name: "Catalogue" })).toHaveAttribute("aria-current", "page");
 
+    // La barre latérale ne double pas les onglets de la page : une entrée
+    // Catalogue, puis le renvoi Référentiels.
     const aside = await shellPart("aside");
-    expect(within(aside).getByRole("link", { name: "Équipements" })).toHaveAttribute(
-      "href",
-      "/admin/catalogue?tab=equipment",
-    );
-    expect(within(aside).getByRole("link", { name: "Câbles" })).toHaveAttribute("href", "/admin/catalogue?tab=cables");
-    expect(within(aside).getByRole("link", { name: "Adaptateurs" })).toHaveAttribute(
-      "href",
-      "/admin/catalogue?tab=adapters",
-    );
-    expect(within(aside).getByRole("link", { name: "Référentiels" })).toHaveAttribute("href", "/admin/parametres");
+    expect(within(aside).getAllByRole("link").map((a) => [a.textContent, a.getAttribute("href")])).toEqual([
+      ["Catalogue", "/admin/catalogue"],
+      ["Référentiels", "/admin/parametres"],
+    ]);
+    expect(within(aside).getByRole("link", { name: "Catalogue" })).toHaveAttribute("aria-current", "page");
   });
 
   test("/admin/systeme s'affiche dans la coquille Strata", async () => {
@@ -252,6 +286,24 @@ describe("coquille Strata", () => {
     expect(within(aside).getByText("Dashboard")).toBeInTheDocument();
     expect(screen.queryByRole("navigation", { name: "Navigation principale" })).toBeNull();
     expect(document.body.textContent).not.toContain("// arkyo-server");
+  });
+});
+
+describe("data-interface avant la première image", () => {
+  test("posé avant les effets des composants de la coquille", () => {
+    let seen: string | undefined;
+    function Probe() {
+      useEffect(() => {
+        seen = document.documentElement.dataset.interface;
+      }, []);
+      return null;
+    }
+    render(
+      <InterfaceProvider value="strata">
+        <Probe />
+      </InterfaceProvider>,
+    );
+    expect(seen).toBe("strata");
   });
 });
 

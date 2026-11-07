@@ -4,8 +4,8 @@
  *
  * Les routes et les permissions sont exactement celles du rail Classique
  * (`components/layout/sidebar.tsx`) : `strata-app-shell.test.tsx` le vérifie.
- * Aucune route n'est retirée ; s'ajoutent les onglets du catalogue (`?tab=`
- * lu par `CatalogueClient`) et le renvoi « Référentiels » vers Paramètres.
+ * Aucune route n'est retirée ; s'y ajoute le renvoi « Référentiels » vers
+ * Paramètres dans l'onglet Catalogue.
  */
 
 import type { ComponentType, CSSProperties } from "react";
@@ -13,7 +13,6 @@ import type { TenantDomain, TenantLevel } from "@/lib/tenant-permissions";
 import {
   Antenna,
   Building2,
-  Cable,
   Cpu,
   FileStack,
   Folder,
@@ -23,7 +22,6 @@ import {
   Package,
   Settings,
   SlidersHorizontal,
-  Spline,
   Users,
   Wrench,
 } from "@/components/ui/icons";
@@ -120,32 +118,10 @@ export const STRATA_NAV: StrataSection[] = [
     id: "catalogue",
     label: "Catalogue",
     icon: Package,
-    // `?tab=` et ses alias : ceux de `TAB_PARAM` dans `catalogue-client.tsx`.
+    // Une seule entrée : Équipements, Cordons et Adaptateurs sont les onglets
+    // de la page, rendus dans la topbar Strata (`useTopbarTabs`).
     items: [
-      {
-        href: "/admin/catalogue?tab=equipment",
-        label: "Équipements",
-        icon: Package,
-        tabs: ["equipment", "connectors", "connecteurs"],
-        altPrefixes: ["/admin/catalogue/equipment"],
-        perm: CATALOG_ADMIN,
-      },
-      {
-        href: "/admin/catalogue?tab=cables",
-        label: "Câbles",
-        icon: Spline,
-        tabs: ["cables", "cordons"],
-        altPrefixes: ["/admin/catalogue/cables"],
-        perm: CATALOG_ADMIN,
-      },
-      {
-        href: "/admin/catalogue?tab=adapters",
-        label: "Adaptateurs",
-        icon: Cable,
-        tabs: ["adapters", "adaptateurs"],
-        altPrefixes: ["/admin/catalogue/adapters"],
-        perm: CATALOG_ADMIN,
-      },
+      { href: "/admin/catalogue", label: "Catalogue", icon: Package, perm: CATALOG_ADMIN },
       {
         href: "/admin/parametres",
         label: "Référentiels",
@@ -184,8 +160,10 @@ export function sectionOf(pathname: string): StrataSection["id"] {
 export function isItemActive(item: StrataNavItem, pathname: string, tabParam: string | null): boolean {
   const base = item.href.split("?")[0];
   if (item.altPrefixes?.some((p) => startsWithPath(pathname, p))) return true;
-  if (!item.tabs) return startsWithPath(pathname, base);
-  if (pathname !== base) return false;
+  if (!startsWithPath(pathname, base)) return false;
+  if (!item.tabs) return true;
+  // Comme le rail Classique : sur la page et ses sous-pages, `?tab=` tranche,
+  // et sans `?tab=` l'entrée par défaut est active.
   return tabParam ? item.tabs.includes(tabParam) : !!item.defaultTab;
 }
 

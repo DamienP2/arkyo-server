@@ -3,14 +3,16 @@
  * coquille, exposé aux composants et posé en `data-interface` sur `<html>`.
  */
 
-import { createContext, useContext, useEffect, type ReactNode } from "react";
+import { createContext, useContext, useLayoutEffect, type ReactNode } from "react";
 
 export type UiInterface = "classique" | "strata";
 
 const InterfaceContext = createContext<UiInterface>("classique");
 
 export function InterfaceProvider({ value, children }: { value: UiInterface; children: ReactNode }) {
-  useEffect(() => {
+  // Avant la première image : la coquille Strata s'affiche d'emblée avec ses
+  // largeurs (`[data-interface="strata"]`), sans passer par celles du rail.
+  useLayoutEffect(() => {
     document.documentElement.dataset.interface = value;
   }, [value]);
   return <InterfaceContext.Provider value={value}>{children}</InterfaceContext.Provider>;
