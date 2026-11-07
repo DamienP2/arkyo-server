@@ -57,7 +57,8 @@ export function SynopticDecableDialog({
           </button>
           <button
             onClick={onConfirm}
-            className="h-8 rounded-md px-3 text-[12px] font-medium text-white transition-opacity hover:opacity-90"
+            // arkyo-server: habillage Strata (texte du bouton de danger en variable)
+            className="h-8 rounded-md px-3 text-[12px] font-medium text-[var(--destructive-foreground)] transition-opacity hover:opacity-90"
             style={{ background: "var(--destructive)" }}
           >
             Décâbler
