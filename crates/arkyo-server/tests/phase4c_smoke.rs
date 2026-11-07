@@ -481,9 +481,10 @@ async fn phase4c_synoptic_end_to_end() {
         )
         .await;
     let c_free = id_of(&c_free);
-    // A cable between two containers of the same location: the location
-    // view routes it to the project route (`createInProject`), which
-    // refuses it, as in arkyo (both sides copied unchanged).
+    // A cable between two containers of the same location. arkyo's
+    // project route refuses it (« même emplacement »); arkyo-server:
+    // correction d'un défaut d'arkyo, the location view posts it as a
+    // RackConnection of the location's virtual rack (the pivot).
     let r = o
         .req(
             "POST",
@@ -499,6 +500,19 @@ async fn phase4c_synoptic_end_to_end() {
         (r.status, r.body),
         (StatusCode::BAD_REQUEST, json!({ "error": SAME_LOCATION }))
     );
+    let c_same = o
+        .ok(
+            "POST",
+            &format!("/api/racks/{v_plateau}/connections"),
+            Some(cable(
+                slot_end("from", &cams[0], 0),
+                slot_end("to", &mons[1], 0),
+            )),
+            StatusCode::OK,
+        )
+        .await;
+    assert_eq!(c_same["rackId"], v_plateau.as_str());
+    let c_same = id_of(&c_same);
     // Inter-location (general view, `doCreate`): R2 → R3.
     let pc = o
         .ok(
@@ -576,6 +590,7 @@ async fn phase4c_synoptic_end_to_end() {
             r2_cables[0].clone(),
             r2_cables[1].clone(),
             c_free.clone(),
+            c_same.clone(),
         ])
     );
     // Both project cables leave « Plateau »: none is listed here.
@@ -638,7 +653,7 @@ async fn phase4c_synoptic_end_to_end() {
     };
     renumber_location(&payload).await;
     let first = labels(&o.ok("GET", &location_url, None, StatusCode::OK).await);
-    assert_eq!(first.len(), 5);
+    assert_eq!(first.len(), 6);
     assert!(first.values().all(Option::is_some), "{first:?}");
     // One counter per rack: labels are unique within a rack.
     for rack in [&r1, &r2, &v_plateau] {
@@ -673,13 +688,17 @@ async fn phase4c_synoptic_end_to_end() {
             first[&r2_cables[0]].as_deref(),
             first[&r2_cables[1]].as_deref(),
             first[&c_free].as_deref(),
+            first[&c_same].as_deref(),
         ),
         (
             Some("R1-10001"),
             Some("R1-20001"),
             Some("R2-10001"),
             Some("R2-20001"),
-            Some("PLATE-10001")
+            Some("PLATE-10001"),
+            // Between two containers: numbered on the pivot, with the
+            // location's code (as the free equipment).
+            Some("PLATE-20001")
         )
     );
     // Second run, location view then general view (`{}`): nothing moves.
@@ -726,6 +745,7 @@ async fn phase4c_synoptic_end_to_end() {
         ("rackConnection.create", &c_adapter),
         ("rackConnection.createMany", &r2),
         ("rackConnection.create", &c_free),
+        ("rackConnection.create", &c_same),
         ("create_project_connection", &pc),
         ("create_project_connection", &pc_r1),
         ("rackConnection.renumber", &r1),
@@ -780,8 +800,8 @@ async fn phase4c_synoptic_end_to_end() {
         )
         .await;
     assert_eq!(r, json!({ "ok": true }));
-    // Its cable went with it; the other R1 cable stays.
-    for (id, n) in [(&c_adapter, 0), (&c_r1, 1)] {
+    // Its cable went with it; the other R1 cables stay.
+    for (id, n) in [(&c_adapter, 0), (&c_r1, 1), (&c_same, 1)] {
         assert_eq!(
             count_by(
                 pool,
@@ -830,6 +850,16 @@ async fn phase4c_synoptic_end_to_end() {
             "{table}"
         );
     }
+    // The pivot's cable between R1 and R2 went with R1 (slot cascade).
+    assert_eq!(
+        count_by(
+            pool,
+            r#"SELECT COUNT(*) FROM "RackConnection" WHERE "id" = ?"#,
+            &c_same
+        )
+        .await,
+        0
+    );
     for sql in [
         // No cable points at a gone slot, adapter, component or bundle.
         r#"SELECT COUNT(*) FROM "RackConnection" WHERE

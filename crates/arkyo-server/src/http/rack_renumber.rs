@@ -19,8 +19,10 @@
 //! - rack segment = `normZoneOrRack(cableCode, 5) ?? normZoneOrRack(name, 4)`;
 //! - signal of a cable: the connector entry at the port index of its `from`
 //!   slot, else of its `to` slot (`getConnectorInfo`: entries flattened by
-//!   `quantity`). Only the slots of this rack are read; adapters and
-//!   components give nothing. Prefix and suffix: the signal type's
+//!   `quantity`). The slots of this rack are read, and (arkyo-server:
+//!   correction d'un défaut d'arkyo) those of other racks referenced by
+//!   its cables (cable of a location's virtual rack between two of its
+//!   containers); adapters and components give nothing. Prefix and suffix: the signal type's
 //!   (trimmed), else its function's, else `""`;
 //! - direction digit: `3` when either end is `BIDI`, else `sideMap[id]`
 //!   (`left` → `1`, default; `right` → `2`);
@@ -575,11 +577,18 @@ async fn numbering(
     let rack_code = norm_code(cable_code.as_deref(), 5).or_else(|| norm_code(Some(name), 4));
 
     // ── catalogue: connectors of the rack's slots, signal types ─────────────
+    // arkyo-server: correction d'un défaut d'arkyo — les slots d'un autre
+    // rack visés par les câbles du rack (câble du rack virtuel d'un lieu
+    // entre deux contenants) sont lus aussi : sinon ni signal ni préfixe.
     let slots: Vec<(String, Option<String>)> = sqlx::query_as(
         r#"SELECT s."id", e."connectors" FROM "RackSlot" s
            LEFT JOIN "TenantEquipment" e ON e."id" = s."catalogEquipmentId"
-           WHERE s."rackId" = ?"#,
+           WHERE s."rackId" = ?
+              OR s."id" IN (SELECT "fromSlotId" FROM "RackConnection" WHERE "rackId" = ?
+                            UNION SELECT "toSlotId" FROM "RackConnection" WHERE "rackId" = ?)"#,
     )
+    .bind(rack)
+    .bind(rack)
     .bind(rack)
     .fetch_all(&mut *tx)
     .await

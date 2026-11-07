@@ -70,8 +70,9 @@ struct Ctx {
 /// Rack A: slots `s1`, `s2` (`e1`), adapter `a1`; connections, in creation
 /// order, `c1` s1#0→s2#0 (SDI), `c2` s1#1→s2#1 (SDI), `c3` s1#2→s2#2 (AES),
 /// `c4` s1#3→s2#3 (ETH, BIDI), `c5` s1#4→s2#4 (unknown signal), `c6` from
-/// `a1` (adapter: no signal), `c7` from `sb`#0 (slot of rack B: not read,
-/// as in arkyo) to `s2` without port.
+/// `a1` (adapter: no signal), `c7` from `sb`#0 (slot of rack B: read,
+/// SDI; arkyo-server: correction d'un défaut d'arkyo, the slots of another
+/// rack referenced by the rack's cables are read) to `s2` without port.
 async fn ctx() -> Ctx {
     let e = env().await;
     add_user(&e.pool, "o@b.fr", "owner", false).await;
@@ -348,7 +349,7 @@ async fn renumber_is_stable_on_second_run() {
         ("c4", "BAIE-E30001"),
         ("c5", "BAIE-10001"),
         ("c6", "BAIE-10002"),
-        ("c7", "BAIE-10003"),
+        ("c7", "BAIE-S10002"),
     ]);
     assert_eq!(c.labels().await, expected);
     // The response: every connection of the rack (row form of the GET).
@@ -390,7 +391,7 @@ async fn renumber_is_stable_on_second_run() {
     c.renumber(json!({"orderedIds": ordered, "onlyUnlabelled": true}))
         .await;
     let mut with_new = expected.clone();
-    with_new.push(("c8".into(), Some("BAIE-S10002".into())));
+    with_new.push(("c8".into(), Some("BAIE-S10003".into())));
     assert_eq!(c.labels().await, with_new);
 
     // Same labels on a third run, with the full order.
@@ -528,7 +529,7 @@ async fn partial_seeds_counters_from_other_labels() {
             ("c4", ""),
             ("c5", "BAIE-10008"),
             ("c6", "BAIE-10007"),
-            ("c7", "BAIE-10009"),
+            ("c7", "BAIE-S10043"),
         ])
     );
 }

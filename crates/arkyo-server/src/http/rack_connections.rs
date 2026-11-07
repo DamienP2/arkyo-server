@@ -52,7 +52,11 @@
 //!   l'annulation recrée ce câble par le `POST` en lot ;
 //! - un corps `{connections: …}` invalide est refusé (400, `fieldErrors.
 //!   connections`) : arkyo retombait sur le schéma unitaire et créait une
-//!   connexion vide.
+//!   connexion vide ;
+//! - correction d'un défaut d'arkyo : le rack virtuel d'un lieu porte les
+//!   câbles entre deux contenants du lieu (`location-canvas.tsx`) ; ses
+//!   composants peuvent donc être ceux de n'importe quel rack du lieu
+//!   ([`LOCATION_RACKS`]).
 //!
 //! The port index itself is not checked against the equipment's connectors,
 //! as in arkyo (virtual rows and component ports are resolved by the
@@ -252,9 +256,17 @@ fn parse_create(body: &Value) -> Result<(Vec<Obj>, bool), Response> {
     }
 }
 
+/// The racks whose cables a rack may hold (one bind: the host rack): the
+/// rack itself and, when it is a location's virtual rack, every rack of
+/// that location. arkyo-server: correction d'un défaut d'arkyo (câble
+/// entre deux contenants d'un même lieu, porté par le rack virtuel).
+pub(crate) const LOCATION_RACKS: &str = r#"SELECT r."id" FROM "Rack" r JOIN "Rack" h ON h."id" = ?
+    WHERE r."id" = h."id" OR (h."isVirtual" = 1 AND r."locationId" = h."locationId")"#;
+
 /// `findInvalidComponentItemId` (route.ts:54-71): the first component id
 /// (string values, in order) that is unknown, of another rack or not a
-/// component, as arkyo's 400.
+/// component, as arkyo's 400. arkyo-server: « another rack » is one outside
+/// [`LOCATION_RACKS`] (the location's racks for a virtual host rack).
 async fn check_components(
     conn: &mut SqliteConnection,
     rack: &str,
@@ -270,6 +282,16 @@ async fn check_components(
             }
         }
     }
+    if seen.is_empty() {
+        return Ok(());
+    }
+    // arkyo-server: correction d'un défaut d'arkyo — rack hôte virtuel :
+    // les composants des racks de son lieu sont acceptés.
+    let allowed: Vec<String> = sqlx::query_scalar(LOCATION_RACKS)
+        .bind(rack)
+        .fetch_all(&mut *conn)
+        .await
+        .map_err(db_error)?;
     for id in seen {
         let row: Option<(String, Option<String>)> = sqlx::query_as(
             r#"SELECT "rackId", "hostItemId" FROM "RackInventoryItem" WHERE "id" = ?"#,
@@ -278,7 +300,7 @@ async fn check_components(
         .fetch_optional(&mut *conn)
         .await
         .map_err(db_error)?;
-        if !matches!(row, Some((r, Some(_))) if r == rack) {
+        if !matches!(row, Some((r, Some(_))) if r == rack || allowed.contains(&r)) {
             return Err(error(
                 StatusCode::BAD_REQUEST,
                 &format!(

@@ -820,6 +820,73 @@ async fn component_port_validation() {
     );
 }
 
+/// arkyo-server: correction d'un défaut d'arkyo (C-1 de la 4c). The cable
+/// between two containers of a location is a connection of the location's
+/// virtual rack: its components may belong to any rack of that location,
+/// never to a rack of another location; a real rack keeps its own.
+#[tokio::test]
+async fn virtual_rack_accepts_components_of_its_location() {
+    let c = ctx().await;
+    let pool = &c.e.pool;
+    let pivot: String = sqlx::query_scalar(r#"SELECT "id" FROM "Rack" WHERE "isVirtual" = 1"#)
+        .fetch_one(pool)
+        .await
+        .unwrap();
+    let mut rack = c.e.events.subscribe_rack(&pivot);
+    let url = format!("/api/racks/{pivot}/connections");
+    let k = c
+        .ok(
+            "POST",
+            &url,
+            json!({"fromSlotId": "s1", "fromComponentItemId": "c1", "fromConnectorIndex": 0,
+                   "toSlotId": "sb", "toComponentItemId": "cb", "toConnectorIndex": 0}),
+        )
+        .await;
+    assert_eq!(k["rackId"], json!(pivot));
+    assert_eq!(
+        (&k["fromComponentItemId"], &k["toComponentItemId"]),
+        (&json!("c1"), &json!("cb"))
+    );
+    next_rack(&mut rack).await;
+
+    // A component of a container of another location: refused.
+    let r = c
+        .send(
+            "POST",
+            &format!("{LIST}/{}/locations", c.project),
+            Some(json!({"name": "Régie"})),
+        )
+        .await;
+    let far_loc = r.body["id"].as_str().unwrap().to_string();
+    let r = c
+        .send(
+            "POST",
+            &format!("{LIST}/{}/racks", c.project),
+            Some(json!({"racks": [{"name": "Baie C", "locationId": far_loc}]})),
+        )
+        .await;
+    let far = r.body["racks"][0]["id"].as_str().unwrap().to_string();
+    for (id, host) in [("hf", "NULL"), ("cf", "'hf'")] {
+        exec(
+            pool,
+            &format!(
+                r#"INSERT INTO "RackInventoryItem" ("id","rackId","hostItemId","createdAt","updatedAt") VALUES ('{id}','{far}',{host},?,?)"#
+            ),
+        )
+        .await;
+    }
+    c.refused(
+        &mut rack,
+        "POST",
+        &url,
+        Some(json!({"fromSlotId": "s1", "fromComponentItemId": "c1",
+                    "toSlotId": "sb", "toComponentItemId": "cf"})),
+        StatusCode::BAD_REQUEST,
+        component_error("cf"),
+    )
+    .await;
+}
+
 // ── invalid endpoints ──────────────────────────────────────────────────────
 
 #[tokio::test]

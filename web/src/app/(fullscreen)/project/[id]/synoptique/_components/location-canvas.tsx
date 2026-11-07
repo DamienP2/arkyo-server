@@ -676,7 +676,8 @@ export const LocationCanvas = forwardRef<
     async function createOne(p: CablingCreatePayload): Promise<DbConnection> {
       const { fromRack, toRack } = resolveRacks(p);
       if (fromRack && toRack && fromRack !== toRack) {
-        return createInProject(p, fromRack, toRack);
+        // arkyo-server: correction d'un défaut d'arkyo — deux contenants d'un même lieu : la route projet refuse (400 « même emplacement ») ; le câble direct est une RackConnection du rack virtuel du lieu (garde phase 3 d'arkyo)
+        return createInRack(pivotRackId, p);
       }
       return createInRack(fromRack ?? toRack ?? pivotRackId, p);
     }
@@ -718,7 +719,10 @@ export const LocationCanvas = forwardRef<
         for (const p of payloads) {
           const { fromRack, toRack } = resolveRacks(p);
           if (fromRack && toRack && fromRack !== toRack) {
-            cross.push(p);
+            // arkyo-server: correction d'un défaut d'arkyo — deux contenants d'un même lieu : la route projet refuse (400 « même emplacement ») ; le câble direct est une RackConnection du rack virtuel du lieu (garde phase 3 d'arkyo)
+            const pivotList = intra.get(pivotRackId);
+            if (pivotList) pivotList.push(p);
+            else intra.set(pivotRackId, [p]);
             continue;
           }
           const rid = fromRack ?? toRack ?? pivotRackId;

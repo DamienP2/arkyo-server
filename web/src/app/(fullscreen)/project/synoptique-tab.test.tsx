@@ -665,20 +665,7 @@ describe("onglet Synoptique", () => {
       });
     const { fetchSpy } = await openTab("l1", {
       "POST /api/racks/r1/connections": echoPost(LOCATION.connections[0], "rc2"),
-      "POST /api/tenant/projects/p1/synoptic/connections": (init) => {
-        const b = JSON.parse(String(init?.body)) as {
-          from: { rackId: string; slotId: string; connectorIndex: number };
-          to: { rackId: string; slotId: string; connectorIndex: number };
-        };
-        return {
-          body: projectConnection(
-            "pc2",
-            [b.from.rackId, b.from.slotId, b.from.connectorIndex],
-            [b.to.rackId, b.to.slotId, b.to.connectorIndex],
-            null,
-          ),
-        };
-      },
+      "POST /api/racks/v1/connections": echoPost({ ...LOCATION.connections[0], rackId: "v1" }, "rc3"),
     });
 
     // Nœuds : les vrais slots des contenants du lieu, pastille du contenant.
@@ -724,27 +711,36 @@ describe("onglet Synoptique", () => {
     for (const k of Object.keys(intra.body as object)) expect(RC_CREATE_KEYS).toContain(k);
     await skipCableModel();
 
-    // Câble entre deux contenants du lieu → ProjectConnection (`from` / `to` complets).
+    // Câble entre deux contenants du lieu → RackConnection du contenant
+    // virtuel du lieu (pivot `v1`). arkyo-server : correction d'un défaut
+    // d'arkyo, la route projet refuse deux contenants d'un même lieu (400).
     fireEvent.click(screen.getByText("SDI 4"));
     fireEvent.click(screen.getByText("ENTRÉE 2"));
     await waitFor(() =>
-      expect(
-        synopticCalls(fetchSpy).some((c) => c.method === "POST" && c.path === "/api/tenant/projects/p1/synoptic/connections"),
-      ).toBe(true),
+      expect(synopticCalls(fetchSpy).some((c) => c.method === "POST" && c.path === "/api/racks/v1/connections")).toBe(true),
     );
-    const cross = synopticCalls(fetchSpy).find(
-      (c) => c.method === "POST" && c.path === "/api/tenant/projects/p1/synoptic/connections",
-    )!;
+    const cross = synopticCalls(fetchSpy).find((c) => c.method === "POST" && c.path === "/api/racks/v1/connections")!;
     expect(cross.body).toEqual({
-      from: { rackId: "r1", slotId: "s1", connectorIndex: 3 },
-      to: { rackId: "r2", slotId: "s3", connectorIndex: 1 },
+      fromSlotId: "s1",
+      fromConnectorIndex: 3,
+      fromAdapterId: null,
+      fromAdapterSide: null,
+      fromAdapterPortIndex: null,
+      fromComponentItemId: null,
+      toSlotId: "s3",
+      toConnectorIndex: 1,
+      toAdapterId: null,
+      toAdapterSide: null,
+      toAdapterPortIndex: null,
+      toComponentItemId: null,
       color: "#22c55e",
       cableStyle: "ortho",
+      waypoints: null,
     });
-    expectInSchema(cross.body as Record<string, unknown>, PC_CREATE);
-    for (const side of ["from", "to"] as const) {
-      expectInSchema((cross.body as Record<string, Record<string, unknown>>)[side], ENDPOINT);
-    }
+    for (const k of Object.keys(cross.body as object)) expect(RC_CREATE_KEYS).toContain(k);
+    expect(
+      synopticCalls(fetchSpy).some((c) => c.method === "POST" && c.path === "/api/tenant/projects/p1/synoptic/connections"),
+    ).toBe(false);
     await skipCableModel();
     // Retour à la sélection par la barre d'outils (le raccourci V boucle en vue lieu : voir le dernier test).
     fireEvent.click(screen.getByTitle("Sélection (V)"));
