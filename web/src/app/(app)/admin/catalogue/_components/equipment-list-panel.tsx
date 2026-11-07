@@ -93,6 +93,8 @@ import {
 import { useCatalogueSync } from "./use-catalogue-sync";
 // arkyo-server: useProposalSync retiré (propositions à Arkyo).
 import { LoadingState } from "@/components/ui/loading-state";
+import { useInterface } from "@/strata/interface-context"; // arkyo-server: interface Strata
+import { StrataCatalogueGrid } from "@/strata/pages/strata-catalogue-grid"; // arkyo-server: interface Strata
 
 // ── Types locaux ──────────────────────────────────────────────────────────────
 
@@ -202,6 +204,7 @@ function Toggle({
 
 export function EquipmentListPanel() {
   const router = useRouter();
+  const isStrata = useInterface() === "strata"; // arkyo-server: interface Strata
   const confirm = useConfirm();
   const toast = useToast();
   // arkyo-server: `canAccess` (plan) retiré.
@@ -1040,6 +1043,13 @@ export function EquipmentListPanel() {
               defaultSort={{ key: "name", dir: "asc" }}
               onBulkDelete={handleBulkDelete}
               onVisibleOrderChange={setOrderedSelectableIds}
+            />
+          ) : isStrata ? (
+            // arkyo-server: interface Strata (grille dessinée, même liste filtrée)
+            <StrataCatalogueGrid
+              items={filtered}
+              hrefOf={(it) => `/admin/catalogue/equipment/${it.id}`}
+              renderActions={renderItemActions}
             />
           ) : (
             <div className="space-y-7">

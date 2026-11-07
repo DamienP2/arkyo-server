@@ -47,6 +47,8 @@ import {
 } from "./_editor/connectivity-tab";
 import { EquipmentIcon } from "@/components/ui/equipment-icon";
 import { DistributionTab } from "./_editor/distribution-tab";
+import { useInterface } from "@/strata/interface-context"; // arkyo-server: interface Strata
+import { FacesPanel } from "@/strata/faces-panel"; // arkyo-server: interface Strata
 
 /**
  * Contexte tenant — quand fourni, l'éditeur passe en "mode tenant" :
@@ -146,6 +148,7 @@ export function EquipmentEditor({
   const router = useRouter();
   const toast = useToast();
   const confirm = useConfirm();
+  const isStrata = useInterface() === "strata"; // arkyo-server: interface Strata
   const isEdit = !!equipment;
   const isTenantMode = tenantContext?.isTenantMode === true;
   // Supervisor : un équipement importé du catalogue Arkyo reste en lecture
@@ -1004,6 +1007,10 @@ export function EquipmentEditor({
           </div>
         )}
 
+        {/* arkyo-server: interface Strata (panneau « Faces et schéma » au-dessus de la connectique) */}
+        {activeTab === "connectivity" && isStrata && (
+          <FacesPanel form={form} lookup={{ brands, connectorTypes, signals, functions }} />
+        )}
         {/* Connectique — full height layout */}
         {activeTab === "connectivity" && (
           <div className="h-full w-full">
