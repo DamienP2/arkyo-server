@@ -415,6 +415,10 @@ const COPIED_FILES = [
   "components/synoptique/components/synoptic-renumber-dialog.tsx",
   "components/synoptique/components/validation-panel.tsx",
   "components/synoptique/components/audit-panel.tsx",
+  // Phase 4c (Task 11) : dépendances de synoptic-view.tsx absentes jusqu'ici.
+  "lib/export/svg-inline-styles.ts",
+  "lib/pdf/synoptic-cards.ts",
+  "lib/services/cable-length.ts",
 ];
 
 /** Fichiers posés sur la topbar ou le rail : ils suivent le thème (variante « Clair A »). */
@@ -1165,6 +1169,26 @@ const ALLOW_HEX: AllowMap = {
         "segments de l'aperçu de numérotation, comme numbering-tab : --arkyo-blue(-light) est déjà remappée sur la " +
         "palette Strata (globals.css, clair et sombre) : le repli n'est jamais utilisé",
     },
+  ],
+  // Phase 4c (Task 11) : dépendances de synoptic-view.tsx.
+  "lib/export/svg-inline-styles.ts": [
+    {
+      line: /^ \* +de clic des câbles \(contour `rgba\(0,0,0,0\)` de 20 px\)/,
+      reason: "commentaire : contour transparent des zones de clic des câbles, retiré de l'export vectoriel",
+    },
+  ],
+  "lib/pdf/synoptic-cards.ts": [
+    {
+      line: /^\s*(surface|header|headerPanel|border|badgeBg): "#[0-9a-f]{6}",$/,
+      reason: "palette imprimée des cartes d'équipement du PDF vectoriel (« même grammaire que le cartouche technique ») : rendu des PDF",
+    },
+    {
+      line: /^const (DIR_IN|DIR_OUT|IDLE_LINE) = "#[0-9a-f]{6}";$/,
+      reason:
+        "flèches d'entrée (rouge) et de sortie (vert) des ports, pastille non câblée : mêmes couleurs que synoptic-node, " +
+        "rendu des plans et des PDF",
+    },
+    { line: /^ \* lire\. Lire la couleur CALCULÉE d'un élément donne toujours du `rgb\(\)`\.$/, reason: "commentaire, pas une couleur" },
   ],
   "lib/print/export-with-cartouche.ts": [
     { line: /"#ffffff"/, reason: "fond blanc de la feuille et de la zone de dessin du PDF : rendu des PDF" },
