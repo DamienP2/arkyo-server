@@ -50,11 +50,11 @@ export const TECH_PERMS = {
 };
 
 /** API d'un utilisateur connecté, sur un site nommé `siteName`. */
-export function signedInApi(perms: unknown = OWNER_PERMS, siteName = "Régie A"): Api {
+export function signedInApi(perms: unknown = OWNER_PERMS, siteName = "Régie A", iface = "classique"): Api {
   return {
     "GET /api/auth/session": { body: OWNER_SESSION },
     "GET /api/tenant/me/permissions": { body: perms },
-    "GET /api/site": { body: { name: siteName } },
+    "GET /api/site": { body: { name: siteName, interface: iface } },
     // Tableau de bord (`/dashboard`, cible des redirections) : aucun projet, aucune tâche.
     "GET /api/projects": { body: [] },
     "GET /api/notifications/count": { body: { count: 0 } },

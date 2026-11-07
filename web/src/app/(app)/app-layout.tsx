@@ -32,11 +32,12 @@ import { TenantPlanProvider } from "@/lib/tenant-plan-context";
 import { TenantPermissionsProvider } from "@/components/tenant-permissions-context";
 import type { TenantPermissions } from "@/lib/tenant-permissions";
 import type { MemberRole } from "@/lib/prisma/main-client";
+import { InterfaceProvider, type UiInterface } from "@/strata/interface-context"; // arkyo-server: interface Strata
 
 const MEMBER_ROLES: readonly MemberRole[] = ["OWNER", "CHEF_PROJET", "TECHNICIEN", "CONSULTATION"];
 
 export type ShellGate =
-  | { kind: "ok"; permissions: TenantPermissions; siteName: string }
+  | { kind: "ok"; permissions: TenantPermissions; siteName: string; interface: UiInterface } // arkyo-server: interface Strata
   | { kind: "auth" }
   | { kind: "password" };
 
@@ -56,9 +57,14 @@ export async function loadShell(): Promise<ShellGate> {
   }
   const permissions = res.ok ? ((await res.json()) as TenantPermissions) : null;
   let siteName = "";
+  let iface: UiInterface = "classique"; // arkyo-server: interface Strata
   try {
     const site = await fetch("/api/site", { headers: { Accept: "application/json" } });
-    if (site.ok) siteName = ((await site.json()) as { name?: string }).name ?? "";
+    if (site.ok) {
+      const body = (await site.json()) as { name?: string; interface?: string }; // arkyo-server: interface Strata
+      siteName = body.name ?? ""; // arkyo-server: interface Strata
+      iface = body.interface === "strata" ? "strata" : "classique"; // arkyo-server: interface Strata
+    }
   } catch {
     // Nom du site facultatif : la topbar n'affiche alors que le lockup.
   }
@@ -70,6 +76,7 @@ export async function loadShell(): Promise<ShellGate> {
       permissions: { projects: "none", design: "none", catalog: "none", members: "none", settings: "none" },
     },
     siteName,
+    interface: iface, // arkyo-server: interface Strata
   };
 }
 
@@ -159,7 +166,9 @@ export default function AppLayout() {
           role={role}
         >
           <TenantPermissionsProvider initialPermissions={gate.permissions}>
-            {layoutContent}
+            <InterfaceProvider value={gate.interface}> {/* arkyo-server: interface Strata */}
+              {layoutContent}
+            </InterfaceProvider> // arkyo-server: interface Strata
           </TenantPermissionsProvider>
         </TenantMembershipProvider>
       </TenantPlanProvider>
