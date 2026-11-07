@@ -437,6 +437,10 @@ export function RackExportComposer({
   const commitLayout = useCallback(
     (next: RackExportLayout) => {
       if (sameLayout(layoutRef.current, next)) return;
+      // arkyo-server: amorçage perdu à la première ouverture (défaut d'arkyo) :
+      // le ref suit l'écriture sans attendre le rendu, pour que l'effet de la
+      // feuille parte de la composition publiée.
+      layoutRef.current = next;
       onLayoutChange(next);
     },
     [onLayoutChange],
@@ -520,10 +524,14 @@ export function RackExportComposer({
 
   const addItem = useCallback(
     (item: RackExportItem) => {
-      onLayoutChange({
+      // arkyo-server: amorçage perdu à la première ouverture (défaut d'arkyo) :
+      // le ref suit l'écriture, l'effet de la feuille du même commit lit l'amorce.
+      const next = {
         ...layoutRef.current,
         items: [...layoutRef.current.items, item],
-      });
+      };
+      layoutRef.current = next;
+      onLayoutChange(next);
       setSelectedIds([item.id]);
       pendingPlacement.current.add(item.id);
     },
@@ -622,7 +630,11 @@ export function RackExportComposer({
   const prevPageRef = useRef<{ w: number; h: number } | null>(null);
   const pendingFit = useRef<Set<string>>(new Set());
   useEffect(() => {
-    const declared = layoutPage(layout);
+    // arkyo-server: amorçage perdu à la première ouverture (défaut d'arkyo) :
+    // `layout` (rendu) précède l'amorce posée dans le même commit, le ref la
+    // porte ; `layout` reste en dépendance pour déclencher l'effet.
+    const current = layoutRef.current;
+    const declared = layoutPage(current);
     const from = declared ?? prevPageRef.current;
     const pageChanged =
       !!from &&
@@ -637,10 +649,10 @@ export function RackExportComposer({
     //
     // La condition s'éteint d'elle-même : le passage qui adopte estampille la
     // feuille, et `declared` est vrai au suivant.
-    const adopt = pageChanged || (!declared && layout.items.length > 0);
+    const adopt = pageChanged || (!declared && current.items.length > 0);
 
     const scaled =
-      pageChanged && from ? rescaleLayout(layout, from, page) : layout;
+      pageChanged && from ? rescaleLayout(current, from, page) : current;
     if (adopt) {
       for (const i of scaled.items) pendingFit.current.add(i.id);
     }

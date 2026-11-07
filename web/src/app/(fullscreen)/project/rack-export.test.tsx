@@ -189,13 +189,10 @@ function api(extra: Api = {}): Api {
 const LAYOUT_KEY = "export:rack:p1:layout";
 
 /**
- * Composition mémorisée d'une session précédente : la face avant de Baie 1.
- *
- * Sans elle, la première ouverture part d'une feuille vide. C'est la parité
- * arkyo : l'amorçage (`seed`) pose bien le contenant, mais l'effet « la
- * composition suit la feuille » estampille, dans le même commit, la
- * composition d'avant l'amorçage, et sa publication l'écrase. À partir de la
- * deuxième ouverture (feuille déjà estampillée), l'amorçage tient.
+ * Composition mémorisée d'une session précédente : la face avant de Baie 1,
+ * d'id connu (`o1`). Une composition restaurée prime : l'amorçage (`seed`)
+ * n'est posé que sur une feuille vide (voir `composer_builds_pages_from_views`,
+ * étape 1).
  */
 const RESTORED = { items: [{ id: "o1", kind: "rack", rackId: "r1", views: ["FRONT"], x: 20, y: 20, w: 60 }] };
 const restoreLayout = () => window.localStorage.setItem(LAYOUT_KEY, JSON.stringify(RESTORED));
@@ -478,8 +475,29 @@ describe("exports de l'onglet Rack", () => {
     const page = document.querySelector<HTMLElement>("[data-rack-page]")!;
     expect(page).not.toBeNull();
 
-    // 1. Première ouverture : feuille vide, estampillée au papier (A4 paysage).
-    await waitFor(() => expect(storedLayout()).toEqual({ items: [], page: { w: 297, h: 210 } }));
+    // 1. Première ouverture : l'amorçage pose le contenant affiché (Baie 1),
+    //    sur la feuille estampillée au papier (A4 paysage), dans la zone utile.
+    //    arkyo-server: défaut d'arkyo corrigé, l'amorce y était écrasée.
+    await waitFor(() =>
+      expect(storedLayout()).toEqual({
+        items: [expect.objectContaining({ kind: "rack", rackId: "r1" })],
+        page: { w: 297, h: 210 },
+      }),
+    );
+    await waitFor(() => expect(captureNodes()).toHaveLength(1), FIRST_LOAD);
+    const seedZone = standardComposerZone({ w: 297, h: 210 });
+    await waitFor(() => {
+      const s = storedLayout()!.items[0] as unknown as { x: number; y: number; w: number };
+      const h = (s.w * 300) / 400;
+      expect(s.x).toBeGreaterThanOrEqual(seedZone.x - 0.01);
+      expect(s.y).toBeGreaterThanOrEqual(seedZone.y - 0.01);
+      expect(s.x + s.w).toBeLessThanOrEqual(seedZone.x + seedZone.w + 0.01);
+      expect(s.y + h).toBeLessThanOrEqual(seedZone.y + seedZone.h + 0.01);
+    });
+    // L'amorce est sélectionnée (`addItem`) : la supprimer rend la feuille
+    // vide, d'où partent les étapes suivantes.
+    fireEvent.click(within(dialog).getByRole("button", { name: /Supprimer/ }));
+    await waitFor(() => expect(storedLayout()!.items).toHaveLength(0));
     expect(captureNodes()).toHaveLength(0);
     expect(within(dialog).getByText("Vues", { selector: "p" })).toBeInTheDocument();
 
@@ -550,7 +568,9 @@ describe("exports de l'onglet Rack", () => {
     await waitFor(() => expect(within(dialog).getByRole("button", { name: /Télécharger/ })).toBeEnabled());
     fireEvent.click(within(dialog).getByRole("button", { name: /Télécharger/ }));
     await waitFor(() => expect(downloads).toHaveLength(1), { timeout: 5000 });
-    expect(raster.captures.map((c) => c.el)).toEqual(captureNodes());
+    const nodes = captureNodes();
+    expect(raster.captures).toHaveLength(nodes.length);
+    raster.captures.forEach((c, i) => expect(c.el).toBe(nodes[i]));
     const text = await pdfText(downloads[0].blob);
     expect(text.match(/\/Type \/Page\b/g)).toHaveLength(1);
     expect(text).toMatch(/\/MediaBox \[0 0 841\.88\d* 595\.27\d*\]/);
