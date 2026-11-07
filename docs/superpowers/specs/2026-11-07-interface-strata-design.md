@@ -94,6 +94,9 @@ Chacun est commenté `// arkyo-server: interface Strata` et n'a aucun effet en C
 | `admin/systeme/systeme-page.tsx` | section « Interface » (§4.4) |
 | `admin/equipment/[id]/equipment-editor.tsx` | en Strata, panneau « Faces et schéma » au-dessus de l'onglet Connectique |
 | `project-editor.tsx` (`getEditorSlots`) | en Strata : onglet Bibliothèque du dock gauche (rack), face de l'équipement dans l'inspecteur, dock bas (§6.3), vue Connectique |
+| `app/globals.css` | bloc `[data-interface="strata"]` (`--rail-width`, `--topbar-height`) et variables `--strata-face-*` |
+| `admin/catalogue/_components/{equipment,cables,adapters}-list-panel.tsx` | en Strata et en vue grille, rendu des grilles dessinées |
+| `components/editor-shell/editor-shell.tsx` (type) | champ optionnel `strata?: { leftDockTabs; bottomDock }` dans `EditorShellSlots` |
 
 Toute autre modification d'un fichier copié est refusée en relecture.
 
