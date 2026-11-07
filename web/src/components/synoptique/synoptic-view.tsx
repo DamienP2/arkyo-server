@@ -10398,7 +10398,8 @@ export const SynopticView = forwardRef<SynopticViewHandle, Props>(function Synop
                         cx={h.cx}
                         cy={h.cy}
                         r={HANDLE_R}
-                        fill="white"
+                        // arkyo-server: habillage Strata (fond de poignée de sélection : --surface)
+                        fill="var(--surface)"
                         stroke={zone.color}
                         strokeWidth={2}
                         style={{ cursor: h.cursor }}
@@ -10798,7 +10799,8 @@ export const SynopticView = forwardRef<SynopticViewHandle, Props>(function Synop
                       cx={h.cx}
                       cy={h.cy}
                       r={5}
-                      fill="white"
+                      // arkyo-server: habillage Strata (fond de poignée de sélection : --surface)
+                      fill="var(--surface)"
                       stroke="var(--accent)"
                       strokeWidth={1.5}
                       style={{ cursor: h.cursor, pointerEvents: "all" }}
@@ -12195,7 +12197,8 @@ export const SynopticView = forwardRef<SynopticViewHandle, Props>(function Synop
                     adapterDrag.snap.portIndex,
                   );
                   if (!c) return null;
-                  const color = adapterDrag.snapIncompat ? "#ef4444" : "#22c55e";
+                  // arkyo-server: habillage Strata (accroche incompatible / compatible : --danger / --success)
+                  const color = adapterDrag.snapIncompat ? "var(--danger)" : "var(--success)";
                   return (
                     <g>
                       <circle cx={c.x} cy={c.y} r={9} fill={color} opacity={0.35} />
@@ -12951,7 +12954,8 @@ export const SynopticView = forwardRef<SynopticViewHandle, Props>(function Synop
                           width={14}
                           height={14}
                           rx={3}
-                          fill="white"
+                          // arkyo-server: habillage Strata (fond de poignée de sélection : --surface)
+                          fill="var(--surface)"
                           stroke={color}
                           strokeWidth={1.5}
                           opacity={0.95}
@@ -13246,7 +13250,8 @@ export const SynopticView = forwardRef<SynopticViewHandle, Props>(function Synop
                         if (!pos) return null;
                         const snapping = !!endpointDrag.snap;
                         const incompat = snapping && endpointDrag.snapIncompat;
-                        const snapColor = incompat ? "#ef4444" : "#10b981";
+                        // arkyo-server: habillage Strata (accroche incompatible / compatible : --danger / --success)
+                        const snapColor = incompat ? "var(--danger)" : "var(--success)";
                         return (
                           <g style={{ pointerEvents: "none" }}>
                             <circle
