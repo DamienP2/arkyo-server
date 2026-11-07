@@ -8,6 +8,8 @@ import {
   SHELL_TOPBAR_CTX_H,
   SHELL_SLIDEOVER_W,
 } from "@/components/synoptique/lib/constants";
+import { useInterface } from "@/strata/interface-context"; // arkyo-server: interface Strata
+import { StrataEditorShell } from "@/strata/shell/strata-editor-shell"; // arkyo-server: interface Strata
 
 export interface EditorShellSlots {
   globalTopbar: ReactNode;
@@ -23,12 +25,17 @@ export interface EditorShellSlots {
    * standard de l'app (`--topbar-height`).
    */
   globalTopbarHeight?: number;
+  // arkyo-server: interface Strata — onglets du dock gauche et dock bas, ignorés en Classique.
+  strata?: { leftDockTabs?: { id: string; label: string; node: ReactNode }[]; bottomDock?: ReactNode };
 }
 
 export function EditorShell(slots: EditorShellSlots) {
   const rightW = useWorkspace((s) => s.rightPanelWidth);
   const slideOver = useWorkspace((s) => s.slideOver);
   const topbarH = slots.globalTopbarHeight ?? SHELL_TOPBAR_GLOBAL_H;
+  // arkyo-server: interface Strata — disposition en docks, mêmes slots.
+  const ui = useInterface();
+  if (ui === "strata") return <StrataEditorShell {...slots} />;
   return (
     <div
       className="bg-background text-foreground fixed right-0 bottom-0 left-0 z-50 flex flex-col overflow-hidden"

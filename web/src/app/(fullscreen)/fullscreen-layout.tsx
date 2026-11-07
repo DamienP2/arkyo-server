@@ -24,7 +24,7 @@ export default function FullscreenLayout() {
   // arkyo-server: permissions du layout pour la garde des pages plein écran
   // (`ClientPage`, à la place de `requireTenantPermissionPage` côté serveur).
   return (
-    <InterfaceProvider value={gate.interface}> {/* arkyo-server: interface Strata */}
+    <InterfaceProvider value={gate.interface}>{/* arkyo-server: interface Strata */}
     <TenantPermissionsProvider initialPermissions={gate.permissions}>
       <PresenceProvider>
         <Outlet />
