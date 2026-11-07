@@ -587,9 +587,10 @@ describe("composants de canvas et dialogues", () => {
     expect(onColor).toHaveBeenCalledWith("lbl-1", "#ef4444");
     expect(onZoneColor).toHaveBeenCalledWith("zone-1", "#ef4444");
     expect(screen.getAllByText("Supprimer")).toHaveLength(2);
-    // Le placeholder d'arkyo est écrit `"Libellé…"` dans un attribut
-    // JSX, où les échappements ne sont pas interprétés : on cible la valeur.
-    const input = screen.getByDisplayValue("Entrées caméras");
+    // arkyo-server : correction d'un défaut d'arkyo, le placeholder s'affiche
+    // « Libellé… » (et non ses séquences d'échappement).
+    const input = screen.getByPlaceholderText("Libellé…");
+    expect(input).toHaveValue("Entrées caméras");
     fireEvent.keyDown(input, { key: "Enter" });
     expect(onConfirm).toHaveBeenCalledWith("lbl-1", "Entrées caméras");
     expectNoConsoleError();

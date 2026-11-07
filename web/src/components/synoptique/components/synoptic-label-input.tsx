@@ -44,7 +44,8 @@ export function SynopticLabelInput({
       key={lbl.id}
       autoFocus
       defaultValue={lbl.text}
-      placeholder="Libell\u00e9\u2026"
+      // arkyo-server: correction d'un défaut d'arkyo — attribut JSX entre guillemets : les échappements s'affichaient tels quels
+      placeholder={"Libell\u00e9\u2026"}
       onBlur={(e) => handleConfirm(e.target.value)}
       onKeyDown={(e) => {
         if (e.key === "Enter") {
