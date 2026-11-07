@@ -69,6 +69,12 @@ pub enum Kind {
     /// `z.array(slotSchema)` of the print templates (`key`, `label`,
     /// `type` in TEXT/VARIABLE/LOGO, optional `defaultValue`, `sample`).
     Slots,
+    /// `z.array(z.object({ x: z.number(), y: z.number() }))` (cable
+    /// waypoints); other keys of a point are dropped.
+    Points,
+    /// `z.array(z.object({ color: z.string().max(16), text:
+    /// z.string().max(60) }))` (cable tags); other keys are dropped.
+    Tags,
     /// `z.string().min(1, min_msg).max(max, max_msg).regex(^[A-Z0-9_]+$,
     /// regex_msg)` (`max` is `usize::MAX` when there is no upper bound).
     UpperKey {
@@ -173,7 +179,13 @@ fn expected(kind: &Kind) -> &'static str {
         | Kind::IntRange(..)
         | Kind::IntPos => "number",
         Kind::Bool => "boolean",
-        Kind::StrArr | Kind::NumArr | Kind::AnyArr | Kind::IdArr { .. } | Kind::Slots => "array",
+        Kind::StrArr
+        | Kind::NumArr
+        | Kind::AnyArr
+        | Kind::IdArr { .. }
+        | Kind::Slots
+        | Kind::Points
+        | Kind::Tags => "array",
         Kind::Enum(..) => "string",
         Kind::Any => "unknown",
     }
@@ -240,6 +252,60 @@ fn check_slot(it: &Value, errs: &mut Vec<String>) {
                 js_type(other)
             )),
         }
+    }
+}
+
+/// One element of a `z.array(z.object(shape))`: each `(key, max)` is a
+/// `z.number()` when `max` is `None`, a `z.string().max(n)` otherwise.
+fn check_shape(it: &Value, shape: &[(&str, Option<usize>)], errs: &mut Vec<String>) {
+    let Value::Object(o) = it else {
+        errs.push(format!(
+            "Invalid input: expected object, received {}",
+            js_type(Some(it))
+        ));
+        return;
+    };
+    for (name, max) in shape {
+        match (o.get(*name), max) {
+            (Some(Value::Number(_)), None) => {}
+            (Some(Value::String(s)), Some(max)) => {
+                if s.chars().count() > *max {
+                    errs.push(format!(
+                        "Too big: expected string to have <={max} characters"
+                    ));
+                }
+            }
+            (other, max) => errs.push(format!(
+                "Invalid input: expected {}, received {}",
+                if max.is_some() { "string" } else { "number" },
+                js_type(other)
+            )),
+        }
+    }
+}
+
+/// The parsed value of a valid field: Zod strips the unknown keys of the
+/// objects of [`Kind::Points`] and [`Kind::Tags`].
+fn output(kind: &Kind, v: &Value) -> Value {
+    let keys: &[&str] = match kind {
+        Kind::Points => &["x", "y"],
+        Kind::Tags => &["color", "text"],
+        _ => return v.clone(),
+    };
+    match v {
+        Value::Array(items) => Value::Array(
+            items
+                .iter()
+                .map(|it| {
+                    Value::Object(
+                        keys.iter()
+                            .filter_map(|k| it.get(*k).map(|x| ((*k).to_string(), x.clone())))
+                            .collect(),
+                    )
+                })
+                .collect(),
+        ),
+        other => other.clone(),
     }
 }
 
@@ -470,6 +536,16 @@ fn check(kind: &Kind, v: &Value) -> Vec<String> {
                 check_slot(it, &mut errs);
             }
         }
+        (Kind::Points, Value::Array(items)) => {
+            for it in items {
+                check_shape(it, &[("x", None), ("y", None)], &mut errs);
+            }
+        }
+        (Kind::Tags, Value::Array(items)) => {
+            for it in items {
+                check_shape(it, &[("color", Some(16)), ("text", Some(60))], &mut errs);
+            }
+        }
         _ => errs.push(type_error(kind, Some(v))),
     }
     errs
@@ -530,7 +606,7 @@ pub fn validate_flat(body: &Value, fields: &[Field]) -> Result<Obj, Flat> {
             Some(v) => {
                 let e = check(&f.kind, v);
                 if e.is_empty() {
-                    out.insert(f.name.into(), v.clone());
+                    out.insert(f.name.into(), output(&f.kind, v));
                 } else {
                     errs.entry(f.name.into()).or_default().extend(e);
                 }

@@ -41,7 +41,7 @@ use sqlx::sqlite::SqliteRow;
 use sqlx::{Column, Row, SqliteConnection, SqlitePool};
 
 pub use valid::{
-    failure, flat_json, js_type, validate, validate_flat, Def, Field, Kind, KEY, LABEL, NAME,
+    failure, flat_json, js_type, validate, validate_flat, Def, Field, Flat, Kind, KEY, LABEL, NAME,
 };
 
 use super::{error, require, server_error, AppState};
