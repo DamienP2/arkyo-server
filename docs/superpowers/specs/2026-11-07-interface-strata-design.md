@@ -54,7 +54,7 @@ L'introduction (« Il s'agit d'un recodage, pas d'une refonte ») devient : « I
 
 ### 4.1 Stockage
 - Clé `ui.interface` dans la table `AppConfig` existante, avec la valeur `classique` ou `strata`. Une clé absente vaut `classique`.
-- Pas de migration. La clé passe dans les sauvegardes et restaurations, comme les autres lignes d'`AppConfig`. Une version plus ancienne ignore la clé, conformément à la règle des migrations additives.
+- Pas de migration. La clé fait partie de la base : elle survit aux sauvegardes et restaurations de la base entière. Comme `site.*`, elle n'entre pas dans l'export de sauvegarde au format arkyo (catalogue et numérotation), dont le format reste identique à arkyo. Une version plus ancienne ignore la clé, conformément à la règle des migrations additives.
 
 ### 4.2 API (seul ajout côté serveur)
 - `GET /api/site` renvoie en plus `"interface": "classique" | "strata"`. La route reste authentifiée et n'exige aucune permission ; la coquille la lit déjà au démarrage (`loadShell()`).
