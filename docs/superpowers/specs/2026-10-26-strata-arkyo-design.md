@@ -152,7 +152,7 @@ En phase 1, seuls les fichiers déjà copiés sont concernés : design system, l
      - liens → accent.
 4. **Contraste du thème clair.** La palette du §3.2 est ajustée là où elle échoue à 4,5:1. Le rendu reste celui de la maquette validée :
    - texte tertiaire `#5f6584` au lieu de `#6b7190` (5,0:1 sur panneau 3) ;
-   - succès `#15803d` et alerte `#b45309` quand ils servent de texte (5,0:1 sur blanc) ;
+   - succès `#157d3c`, alerte `#a04a08` et danger `#b41139` quand ils servent de texte (≥ 4,6:1 sur les teintes des badges, ajustement de la phase 4c) ;
    - `#16a34a` et `#d97706` restent pour les pastilles et les fonds doux.
 
    Le sombre est conforme tel quel : l'accent sur panneau 3 atteint 6,6:1, et le texte sur accent 7,7:1.

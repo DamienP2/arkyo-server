@@ -13,7 +13,7 @@
 ## Global Constraints
 
 - **Ergonomie inchangée.** Aucune modification de structure, d'ordre des éléments, de navigation ou de comportement. On ne change que couleurs, police, tailles et rayons des contrôles, et textes de marque.
-- **Valeurs exactes.** Toutes les couleurs viennent des tableaux §3.1 (sombre) et §3.2 (clair) de la spec, avec les ajustements de contraste du §9.4 : tertiaire clair `#5f6584`, succès texte clair `#15803d`, alerte texte clair `#b45309`.
+- **Valeurs exactes.** Toutes les couleurs viennent des tableaux §3.1 (sombre) et §3.2 (clair) de la spec, avec les ajustements de contraste du §9.4 : tertiaire clair `#5f6584`, succès texte clair `#157d3c`, alerte texte clair `#a04a08`, danger texte clair `#b41139` (ajustés en phase 4c).
 - **Couleurs métier inchangées** : `--arkyo-signal-*`, `--role-*`, palette d'avatars de présence, couleurs de connecteurs et câbles, couleurs choisies par l'utilisateur.
 - **Contraste.** Texte d'interface ≥ 4,5:1, grands textes et icônes ≥ 3:1, dans les deux thèmes.
 - **Fichiers copiés d'arkyo.** Ils peuvent désormais être modifiés pour l'habillage. Chaque modification est commentée `// arkyo-server: habillage Strata` (ou `/* … */` en CSS). Ne jamais reformater un fichier copié.
@@ -74,9 +74,9 @@ README.md, docs/*.md, CLAUDE.md         nom et règle d'habillage
   | `--accent-soft` | `rgba(79,99,230,.10)` | `rgba(143,163,255,.16)` |
   | `--accent-strong` | `#3346c9` | `#bfcaff` |
   | `--success` | `#16a34a` | `#22c55e` |
-  | `--success-text` | `#15803d` | `#22c55e` |
+  | `--success-text` | `#157d3c` | `#22c55e` |
   | `--warning` | `#d97706` | `#f5a524` |
-  | `--warning-text` | `#b45309` | `#f5a524` |
+  | `--warning-text` | `#a04a08` | `#f5a524` |
   | `--danger` | `#e11d48` | `#ff3b5c` |
 
 - [ ] **Step 1 : Écrire les tests**
