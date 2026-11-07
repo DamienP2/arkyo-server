@@ -13,9 +13,10 @@ use serde_json::{json, Value};
 use sqlx::{Row, SqliteConnection};
 
 use super::{
-    arkyo_personal, db_error, fold, list_rows, row_map, str_of, Def, Field, Fut, Hooks, Kind,
-    NoHooks, Obj, Res, Table, NAME,
+    arkyo_personal, db_error, fold, list_rows, refuse_if_used, row_map, str_of, Def, Field, Fut,
+    Hooks, Kind, Obj, Res, Table, NAME,
 };
+use crate::catalogue::in_use;
 use crate::http::parametres::conflict;
 use crate::http::{AppState, CurrentUser};
 
@@ -132,6 +133,26 @@ impl Hooks for H {
             Ok(())
         })
     }
+
+    /// arkyo-server: correction d'un défaut d'arkyo (4c, décision 2), un
+    /// modèle de câble encore référencé par une connexion (rack ou projet)
+    /// n'est pas supprimé (arkyo le supprimait sans contrôle et comptait ces
+    /// connexions sur le câble, voir `catalogue::in_use::cable_model`).
+    fn in_use<'a>(
+        &'a self,
+        conn: &'a mut SqliteConnection,
+        id: &'a str,
+    ) -> Fut<'a, Result<(), Response>> {
+        Box::pin(async move {
+            refuse_if_used(
+                in_use::cable_model(conn, id).await,
+                |n, _| {
+                    format!("Ce modèle de câble est utilisé par {n} connexion(s) et ne peut pas être supprimé.")
+                },
+                true,
+            )
+        })
+    }
 }
 
 pub async fn list(State(st): State<AppState>, _u: CurrentUser) -> Response {
@@ -165,13 +186,12 @@ pub async fn update(
     super::patch_row(&st, &u, &RES, &H, &id, body).await
 }
 
-/// arkyo deletes without a usage check for cable models.
 pub async fn delete(
     State(st): State<AppState>,
     CurrentUser(u): CurrentUser,
     Path(id): Path<String>,
 ) -> Response {
-    super::remove(&st, &u, &RES, &NoHooks, &id).await
+    super::remove(&st, &u, &RES, &H, &id).await
 }
 
 // ── GET /cable-models ───────────────────────────────────────────────────────

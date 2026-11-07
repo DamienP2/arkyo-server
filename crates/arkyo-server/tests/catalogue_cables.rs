@@ -557,17 +557,44 @@ async fn use_in(pool: &SqlitePool, table: &str, id: &str) {
 #[tokio::test]
 async fn delete_in_use_409() {
     let c = ctx().await;
+    // arkyo-server (4c, décision 2): `catalogCableModelId` holds a
+    // `TenantCableModel.id`, so the connections guard the cable model
+    // (`/api/tenant/parametres/cabling`), not the catalogue cable.
+    let r = call(
+        &c.e.app,
+        "POST",
+        "/api/tenant/parametres/cabling",
+        LOCAL,
+        Some(&c.tok),
+        Some(json!({"name": "Used model"})),
+    )
+    .await;
+    assert_eq!(r.status, StatusCode::CREATED, "{:?}", r.body);
+    let model = r.body["id"].as_str().unwrap().to_string();
+    use_in(&c.e.pool, "ProjectConnection", &model).await;
+    use_in(&c.e.pool, "RackConnection", &model).await;
+    let model_url = format!("/api/tenant/parametres/cabling/{model}");
+    let d = call(&c.e.app, "DELETE", &model_url, LOCAL, Some(&c.tok), None).await;
+    assert_eq!(d.status, StatusCode::CONFLICT);
+    assert_eq!(
+        d.body,
+        json!({
+            "error": "Ce modèle de câble est utilisé par 2 connexion(s) et ne peut pas être supprimé.",
+            "count": 2,
+            "breakdown": {"rackConnections": 1, "projectConnections": 1}
+        })
+    );
+    // A catalogue cable is never counted, even with its id in
+    // `catalogCableModelId` (arkyo counted it there).
     let cable = c.create("cables", json!({"name": "Used"})).await["id"]
         .as_str()
         .unwrap()
         .to_string();
-    use_in(&c.e.pool, "ProjectConnection", &cable).await;
     use_in(&c.e.pool, "RackConnection", &cable).await;
     let d = c.req("DELETE", &format!("/cables/{cable}"), None).await;
-    assert_eq!(d.status, StatusCode::CONFLICT);
     assert_eq!(
-        d.body,
-        json!({"error": "Utilisé dans 2 connexion(s) — suppression impossible", "usageCount": 2})
+        (d.status, d.body),
+        (StatusCode::OK, json!({"success": true}))
     );
 
     let ad = c.create("adapters", json!({"name": "Used"})).await["id"]
@@ -600,13 +627,20 @@ async fn delete_in_use_409() {
         (d.status, d.body["usageCount"].clone()),
         (StatusCode::CONFLICT, json!(2))
     );
-    // nothing was deleted
-    for (kind, id) in [("cables", &cable), ("adapters", &ad), ("adapters", &inv)] {
+    // nothing else was deleted
+    for id in [&ad, &inv] {
         assert_eq!(
-            c.req("GET", &format!("/{kind}/{id}"), None).await.status,
+            c.req("GET", &format!("/adapters/{id}"), None).await.status,
             StatusCode::OK
         );
     }
+    let models: i64 =
+        sqlx::query_scalar(r#"SELECT COUNT(*) FROM "TenantCableModel" WHERE "id" = ?"#)
+            .bind(&model)
+            .fetch_one(&c.e.pool)
+            .await
+            .unwrap();
+    assert_eq!(models, 1);
 }
 
 #[tokio::test]
@@ -692,7 +726,9 @@ async fn duplicate_and_bulk_delete() {
     let r2 = c.req("POST", "/adapters/nope/duplicate", None).await;
     assert_eq!(r2.body, json!({"error": "Adaptateur introuvable"}));
 
-    // bulk delete: failures are isolated, one audit row for the batch
+    // bulk delete: failures are isolated, one audit row for the batch.
+    // arkyo-server (4c, décision 2): a cable id in `catalogCableModelId`
+    // does not hold the cable any more.
     let used = c.create("cables", json!({"name": "U"})).await["id"]
         .as_str()
         .unwrap()
@@ -706,15 +742,11 @@ async fn duplicate_and_bulk_delete() {
         )
         .await;
     assert_eq!(r.status, StatusCode::OK, "{:?}", r.body);
-    assert_eq!(r.body["deleted"], 1);
+    assert_eq!(r.body["deleted"], 2);
     let failed = r.body["failed"].as_array().unwrap();
-    assert_eq!(failed.len(), 2);
-    assert_eq!(failed[0]["id"], used.as_str());
-    assert_eq!(
-        failed[0]["reason"],
-        "Utilisé dans 1 connexion(s) — suppression impossible"
-    );
-    assert_eq!(failed[1]["reason"], "Cordon personnel introuvable");
+    assert_eq!(failed.len(), 1);
+    assert_eq!(failed[0]["id"], "ghost");
+    assert_eq!(failed[0]["reason"], "Cordon personnel introuvable");
     assert_eq!(audit_count(&c.e.pool, "BULK_DELETE", "batch").await, 1);
     let r = c
         .req("POST", "/cables/bulk-delete", Some(json!({"ids": []})))
@@ -725,16 +757,26 @@ async fn duplicate_and_bulk_delete() {
         json!(["Too small: expected array to have >=1 items"])
     );
 
+    let used_ad = c.create("adapters", json!({"name": "U"})).await["id"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    use_in(&c.e.pool, "SynopticAdapter", &used_ad).await;
     let r = c
         .req(
             "POST",
             "/adapters/bulk-delete",
-            Some(json!({"ids": [aid, "ghost"]})),
+            Some(json!({"ids": [aid, used_ad, "ghost"]})),
         )
         .await;
     assert_eq!(r.body["deleted"], 1);
+    assert_eq!(r.body["failed"][0]["id"], used_ad.as_str());
     assert_eq!(
         r.body["failed"][0]["reason"],
+        "Utilisé dans 1 synoptique(s) ou inventaire(s) — suppression impossible"
+    );
+    assert_eq!(
+        r.body["failed"][1]["reason"],
         "Adaptateur personnel introuvable"
     );
     assert_eq!(audit_count(&c.e.pool, "BULK_DELETE", "batch").await, 2);

@@ -4,7 +4,7 @@
 //! the container's inventory (equipment merged, panel, adapter, accessory,
 //! host and a component in it), transfers (whole item and partial), the
 //! container saved as a template then cloned back into the project, the
-//! editor data, the usage guard of the cable and the adapter, then the
+//! editor data, the usage guard of the cable model and the adapter, then the
 //! deletion of the location and of the project without any orphan.
 //!
 //! Request bodies are the ones the front sends:
@@ -20,9 +20,10 @@
 //! (`handleSelectTemplate`) and `_components/item-properties-panel.tsx`
 //! (item `DELETE`). The editor is read as `[id]/page.tsx` reads it.
 //!
-//! The cable and the synoptic adapter are used by `RackConnection` and
-//! `SynopticAdapter`, which only the rack editor writes (phases 4b to 4d):
-//! those two rows are inserted in SQL.
+//! The cable model and the synoptic adapter are used by `RackConnection`
+//! and `SynopticAdapter`, which only the rack editor writes (phases 4b to
+//! 4d): those two rows are inserted in SQL. `catalogCableModelId` holds a
+//! `TenantCableModel.id` (4c, décision 2).
 mod common;
 use std::collections::BTreeSet;
 
@@ -35,6 +36,7 @@ const PROJECTS: &str = "/api/tenant/projects";
 const EQUIPMENT: &str = "/api/tenant/catalogue/equipment";
 const CABLES: &str = "/api/tenant/catalogue/cables";
 const ADAPTERS: &str = "/api/tenant/catalogue/adapters";
+const CABLE_MODELS: &str = "/api/tenant/parametres/cabling";
 const BRANDS: &str = "/api/tenant/parametres/brands";
 const NOW: &str = "2026-11-06T10:00:00.000Z";
 
@@ -643,7 +645,16 @@ async fn phase4a_project_editor_inventory_end_to_end() {
         BTreeSet::from([(free_adapter.clone(), "adapter".to_string(), 1, None)])
     );
 
-    // ── 8. A used cable or adapter is not deleted (409) ─────────────────
+    // ── 8. A used cable model or adapter is not deleted (409) ───────────
+    let model = o
+        .ok(
+            "POST",
+            CABLE_MODELS,
+            Some(json!({ "name": "Coax HD-SDI", "reference": "CX-4A" })),
+            StatusCode::CREATED,
+        )
+        .await;
+    let model = id_of(&model);
     let slot: String =
         sqlx::query_scalar(r#"SELECT "id" FROM "RackSlot" WHERE "inventoryItemId" = ? LIMIT 1"#)
             .bind(&mixer_item)
@@ -658,17 +669,23 @@ async fn phase4a_project_editor_inventory_end_to_end() {
     ] {
         let q = sqlx::query(sql).bind(&rack);
         let q = if sql.contains("RackConnection") {
-            q.bind(&slot).bind(&cable).bind(NOW)
+            q.bind(&slot).bind(&model).bind(NOW)
         } else {
             q.bind(&adapter).bind(NOW).bind(NOW)
         };
         q.execute(pool).await.unwrap();
     }
-    let r = o.req("DELETE", &format!("{CABLES}/{cable}"), None).await;
+    let r = o
+        .req("DELETE", &format!("{CABLE_MODELS}/{model}"), None)
+        .await;
     assert_eq!(r.status, StatusCode::CONFLICT, "{:?}", r.body);
     assert_eq!(
         r.body,
-        json!({ "error": "Utilisé dans 1 connexion(s) — suppression impossible", "usageCount": 1 })
+        json!({
+            "error": "Ce modèle de câble est utilisé par 1 connexion(s) et ne peut pas être supprimé.",
+            "count": 1,
+            "breakdown": { "rackConnections": 1, "projectConnections": 0 }
+        })
     );
     let r = o
         .req("DELETE", &format!("{ADAPTERS}/{adapter}"), None)
@@ -827,9 +844,16 @@ async fn phase4a_project_editor_inventory_end_to_end() {
         .unwrap();
     assert_eq!(fk.len(), 0, "foreign_key_check");
 
-    // The template still uses the equipment; the cable is free again.
+    // The template still uses the equipment; the cable model is free again.
     let r = o.req("DELETE", &format!("{EQUIPMENT}/{mixer}"), None).await;
     assert_eq!(r.status, StatusCode::CONFLICT, "{:?}", r.body);
+    o.ok(
+        "DELETE",
+        &format!("{CABLE_MODELS}/{model}"),
+        None,
+        StatusCode::OK,
+    )
+    .await;
     o.ok("DELETE", &format!("{CABLES}/{cable}"), None, StatusCode::OK)
         .await;
     let library = o

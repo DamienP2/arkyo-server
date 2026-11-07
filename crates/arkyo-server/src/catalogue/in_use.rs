@@ -4,10 +4,10 @@
 //! Each function returns the named counts, in the order of arkyo's
 //! `breakdown`; the route sums them for its message. Only the references
 //! arkyo's routes check are enforced by the routes: brand, connector type,
-//! function, phase, type and category. [`signal_type`] and [`cable_model`]
-//! are provided for completeness and are not called by the delete routes,
-//! because arkyo deletes those without checking (its comments: no FK to
-//! count).
+//! function, phase, type and category, plus the cable model (arkyo-server
+//! correction, see [`cable_model`]). [`signal_type`] is provided for
+//! completeness and is not called by the delete routes, because arkyo
+//! deletes it without checking (its comments: no FK to count).
 //!
 //! EXTENSION POINT (phase 3): the project tables (`ProjectEquipment`,
 //! `ProjectConnection`, …) do not exist yet. Phase 3 adds its own counts to
@@ -205,18 +205,27 @@ pub async fn category(conn: &mut SqliteConnection, id: &str) -> Result<Counts, s
     ])
 }
 
-/// Cable model: `TenantCable.cableModelId`. Not enforced by the delete route
-/// (arkyo deletes directly).
+/// Cable model: the `RackConnection` and `ProjectConnection` rows whose
+/// `catalogCableModelId` is `id`.
+///
+/// arkyo-server: correction d'un défaut d'arkyo (4c, décision 2). Le
+/// synoptique écrit un `TenantCableModel.id` dans `catalogCableModelId`
+/// (`synoptic-cable-model-picker.tsx:48`), mais arkyo comptait ces
+/// connexions à la suppression d'un câble (`assertCableNotInUse`,
+/// `lib/services/tenant-catalogue.ts:189-213`) et supprimait le modèle sans
+/// contrôle : la garde passe du câble au modèle de câble. La référence
+/// `TenantCable.cableModelId` reste sans garde, comme dans arkyo.
 pub async fn cable_model(conn: &mut SqliteConnection, id: &str) -> Result<Counts, sqlx::Error> {
-    Ok(vec![(
-        "cable",
-        count(
-            conn,
-            r#"SELECT COUNT(*) FROM "TenantCable" WHERE "cableModelId" = ?"#,
-            id,
-        )
-        .await?,
-    )])
+    references(
+        conn,
+        id,
+        &[
+            ("rackConnections", "RackConnection"),
+            ("projectConnections", "ProjectConnection"),
+        ],
+        "catalogCableModelId",
+    )
+    .await
 }
 
 /// Counts, per `(key, table)` of `refs`, the rows of the project tables that
@@ -266,19 +275,16 @@ pub async fn equipment(conn: &mut SqliteConnection, id: &str) -> Result<Counts, 
     .await
 }
 
-/// Cable (arkyo `assertCableNotInUse`): `RackConnection` and
-/// `ProjectConnection` rows through `catalogCableModelId`.
-pub async fn cable(conn: &mut SqliteConnection, id: &str) -> Result<Counts, sqlx::Error> {
-    references(
-        conn,
-        id,
-        &[
-            ("rackConnections", "RackConnection"),
-            ("projectConnections", "ProjectConnection"),
-        ],
-        "catalogCableModelId",
-    )
-    .await
+/// Cable (arkyo `assertCableNotInUse`): nothing references a catalogue
+/// cable.
+///
+/// arkyo-server: correction d'un défaut d'arkyo (4c, décision 2). arkyo
+/// comptait ici les connexions dont `catalogCableModelId` valait l'id du
+/// câble, alors que cette colonne contient un `TenantCableModel.id` : la
+/// garde a été déplacée vers [`cable_model`], et un câble du catalogue se
+/// supprime sans contrôle d'usage.
+pub async fn cable(_conn: &mut SqliteConnection, _id: &str) -> Result<Counts, sqlx::Error> {
+    Ok(Counts::new())
 }
 
 /// Adapter (arkyo `assertAdapterNotInUse`): `SynopticAdapter` and

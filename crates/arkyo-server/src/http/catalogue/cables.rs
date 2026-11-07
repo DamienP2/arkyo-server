@@ -82,6 +82,8 @@ static SPEC: Spec = Spec {
     not_found: "Cordon personnel introuvable",
     missing: "Cordon introuvable",
     usage_unit: "connexion(s)",
+    // arkyo-server: garde déplacée vers le modèle de câble (4c, décision 2,
+    // voir `catalogue::in_use::cable`) : plus aucun usage compté ici.
     usage: Usage::Cable,
     create: &CREATE,
     patch: &PATCH,

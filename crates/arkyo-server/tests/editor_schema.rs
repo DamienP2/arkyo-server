@@ -511,12 +511,17 @@ async fn cable_and_adapter_in_use_guards_active() {
     add_user(&e.pool, "o@b.fr", "owner", false).await;
     let tok = login(&e.app, "o@b.fr").await;
     project_fixture(&e.pool).await;
+    // arkyo-server (4c, décision 2): `catalogCableModelId` holds a
+    // `TenantCableModel.id`; the guard is on the cable model.
     let mut ids = Vec::new();
-    for kind in ["cables", "adapters"] {
+    for url in [
+        "/api/tenant/parametres/cabling",
+        "/api/tenant/catalogue/adapters",
+    ] {
         let r = call(
             &e.app,
             "POST",
-            &format!("/api/tenant/catalogue/{kind}"),
+            url,
             LOCAL,
             Some(&tok),
             Some(json!({"name": "Utilisé"})),
@@ -526,6 +531,8 @@ async fn cable_and_adapter_in_use_guards_active() {
         ids.push(r.body["id"].as_str().unwrap().to_string());
     }
     let (cable, adapter) = (&ids[0], &ids[1]);
+    let cable_url = format!("/api/tenant/parametres/cabling/{cable}");
+    let adapter_url = format!("/api/tenant/catalogue/adapters/{adapter}");
 
     for (sql, id) in [
         (
@@ -552,17 +559,23 @@ async fn cable_and_adapter_in_use_guards_active() {
         q.execute(&e.pool).await.unwrap();
     }
 
-    for (kind, id, unit) in [
-        ("cables", cable, "connexion(s)"),
-        ("adapters", adapter, "synoptique(s) ou inventaire(s)"),
+    for (uri, body) in [
+        (
+            &cable_url,
+            json!({
+                "error": "Ce modèle de câble est utilisé par 2 connexion(s) et ne peut pas être supprimé.",
+                "count": 2,
+                "breakdown": {"rackConnections": 1, "projectConnections": 1}
+            }),
+        ),
+        (
+            &adapter_url,
+            json!({"error": "Utilisé dans 2 synoptique(s) ou inventaire(s) — suppression impossible", "usageCount": 2}),
+        ),
     ] {
-        let uri = format!("/api/tenant/catalogue/{kind}/{id}");
-        let d = call(&e.app, "DELETE", &uri, LOCAL, Some(&tok), None).await;
-        assert_eq!(d.status, StatusCode::CONFLICT, "{kind}: {:?}", d.body);
-        assert_eq!(
-            d.body,
-            json!({"error": format!("Utilisé dans 2 {unit} — suppression impossible"), "usageCount": 2})
-        );
+        let d = call(&e.app, "DELETE", uri, LOCAL, Some(&tok), None).await;
+        assert_eq!(d.status, StatusCode::CONFLICT, "{uri}: {:?}", d.body);
+        assert_eq!(d.body, body);
     }
 
     // Once the editor rows are gone, the deletes go through.
@@ -574,10 +587,9 @@ async fn cable_and_adapter_in_use_guards_active() {
     ] {
         exec(&e.pool, &format!(r#"DELETE FROM "{table}""#)).await;
     }
-    for (kind, id) in [("cables", cable), ("adapters", adapter)] {
-        let uri = format!("/api/tenant/catalogue/{kind}/{id}");
-        let d = call(&e.app, "DELETE", &uri, LOCAL, Some(&tok), None).await;
-        assert_eq!(d.status, StatusCode::OK, "{kind}: {:?}", d.body);
+    for uri in [&cable_url, &adapter_url] {
+        let d = call(&e.app, "DELETE", uri, LOCAL, Some(&tok), None).await;
+        assert_eq!(d.status, StatusCode::OK, "{uri}: {:?}", d.body);
     }
 }
 
