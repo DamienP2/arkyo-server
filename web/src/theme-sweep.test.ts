@@ -421,6 +421,13 @@ const COPIED_FILES = [
   "lib/services/cable-length.ts",
   // Phase 4c (Task 11) : vue synoptique.
   "components/synoptique/synoptic-view.tsx",
+  // Phase 4c (Task 12) : onglet Synoptique de l'éditeur projet.
+  "app/(fullscreen)/project/[id]/synoptique/synoptique-tab-client.tsx",
+  "app/(fullscreen)/project/[id]/synoptique/_components/general-canvas.tsx",
+  "app/(fullscreen)/project/[id]/synoptique/_components/location-canvas.tsx",
+  "app/(fullscreen)/project/[id]/synoptique/_components/general-info-panel.tsx",
+  "app/(fullscreen)/project/[id]/synoptique/_components/general-properties-panels.tsx",
+  "app/(fullscreen)/project/[id]/synoptique/_components/synoptique-rack-selector.tsx",
 ];
 
 /** Fichiers posés sur la topbar ou le rail : ils suivent le thème (variante « Clair A »). */
@@ -1243,6 +1250,27 @@ const ALLOW_HEX: AllowMap = {
     {
       line: /^\s*(stroke|fill)="rgba\(0,0,0,0\)"$|style=\{\{ filter: `drop-shadow\(0 1px 3px rgba\(0,0,0,0\.25\)\)` \}\}$/,
       reason: "zones de clic transparentes (câbles, connexions externes, extrémités) et ombre portée d'une poignée : pas une couleur d'interface",
+    },
+  ],
+  // Phase 4c (Task 12) : onglet Synoptique de l'éditeur projet.
+  "app/(fullscreen)/project/[id]/synoptique/synoptique-tab-client.tsx": [
+    {
+      line: /^\s*style=\{\{ background: layer\.color \?\? "#888" \}\}$/,
+      reason: "pastille d'une famille de signal (« Répartition par signal ») et son repli, comme la légende de synoptic-view : couleur métier",
+    },
+  ],
+  "app/(fullscreen)/project/[id]/synoptique/_components/general-properties-panels.tsx": [
+    {
+      line: /^\s*style=\{\{ background: connection\.color \?\? "#71717a" \}\}$/,
+      reason: "pastille de la couleur d'un câble inter-emplacements et son repli (celui de synoptic-view) : couleur métier",
+    },
+  ],
+  "app/(fullscreen)/project/[id]/synoptique/_components/general-info-panel.tsx": [
+    {
+      line: /^\s*"#[0-9a-f]{6}",$|setGridColor\(c \?\? "#808080"\)/,
+      reason:
+        "pastilles proposées pour la couleur de la grille et des repères (choisie par l'utilisateur) et repli, " +
+        "comme synoptic-general-panel : couleur métier",
     },
   ],
   "lib/print/export-with-cartouche.ts": [

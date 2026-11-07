@@ -2,7 +2,8 @@
  * Coquille de l'éditeur projet (arkyo:app/(fullscreen)/project/[id]/
  * _components/project-editor.tsx, `_editor/*`) : onglets (`?tab=` et
  * `localStorage`), dialogue « Caractéristiques », statut, topbar en habillage
- * Strata, et onglets des phases 4c à 6 en bouchon « Bientôt disponible ».
+ * Strata, et onglets des phases 5 et 6 en bouchon « Bientôt disponible »
+ * (l'onglet Synoptique, 4c, est la copie d'arkyo : `synoptique-tab.test.tsx`).
  *
  * La copie d'arkyo est rendue telle quelle par le chargeur réel
  * (`/project/:id`, `GET /api/tenant/projects/:id/editor`).
@@ -175,9 +176,24 @@ describe("éditeur projet : coquille", () => {
 
     // `?tab=` prime sur le stockage.
     window.localStorage.setItem("project-editor-tab", '"rack"');
-    const second = await open("/project/p1?tab=synoptique");
+    const second = await open("/project/p1?tab=synoptique", {
+      "GET /api/tenant/projects/p1/synoptic/general": {
+        body: {
+          locations: [],
+          racks: [],
+          connections: [],
+          bundles: [],
+          connectorTypes: [],
+          signals: [],
+          signalCategories: [],
+          appConfig: {},
+          project: { id: "p1", name: "Finale Coupe de France" },
+        },
+      },
+    });
     expect(here(second.router)).toBe("/project/p1?tab=synoptique");
-    expect(await screen.findByText("Bientôt disponible")).toBeInTheDocument();
+    // Onglet Synoptique (copie d'arkyo, 4c) : sélecteur de vue sur « Général ».
+    expect(await screen.findByRole("button", { name: /Général/ })).toBeInTheDocument();
     second.unmount();
     vi.restoreAllMocks();
 
@@ -280,8 +296,8 @@ describe("éditeur projet : coquille", () => {
   });
 
   test("phase5_6_tabs_show_coming_soon", async () => {
-    // Phases 5-6 aux chemins d'arkyo, plus Synoptique (4c). L'onglet Rack
-    // (4b) est la copie d'arkyo (`rack-tab.test.tsx`).
+    // Phases 5-6 aux chemins d'arkyo. Les onglets Rack (4b) et Synoptique
+    // (4c) sont les copies d'arkyo (`rack-tab.test.tsx`, `synoptique-tab.test.tsx`).
     for (const tab of [
       "schema",
       "video",
@@ -291,7 +307,6 @@ describe("éditeur projet : coquille", () => {
       "reseau",
       "preparation",
       "recette",
-      "synoptique",
     ]) {
       const { router, fetchSpy, unmount } = await open(`/project/p1?tab=${tab}`);
       expect(await screen.findByText("Bientôt disponible")).toBeInTheDocument();
