@@ -325,9 +325,7 @@ const COPIED_FILES = [
   "components/synoptique/lib/panel-labels.ts",
   "lib/hooks/use-catalog-lookup.ts",
   "lib/services/rack-inventory.ts",
-  // Phase 4b (Task 4) : onglet Rack. Restent des bouchons (décision 1) :
-  // `rack-placement-canvas` (Task 5), `location-placement-canvas` (Task 6)
-  // et `rack-export` (Task 7).
+  // Phase 4b (Task 4) : onglet Rack (canvas et exports : Tasks 5 à 8).
   "app/(fullscreen)/project/[id]/rack/rack-tab-client.tsx",
   "app/(fullscreen)/project/[id]/rack/_components/category-legend.tsx",
   "app/(fullscreen)/project/[id]/rack/_components/rack-drag-eligibility.tsx",
@@ -344,14 +342,17 @@ const COPIED_FILES = [
   "app/(fullscreen)/project/[id]/rack/_components/rack-placement-canvas.tsx",
   // Phase 4b (Task 6) : vue « par emplacement » de l'onglet Rack.
   "app/(fullscreen)/project/[id]/rack/_components/location-placement-canvas.tsx",
-  // Phase 4b (Task 7) : exports de l'onglet Rack 1/2. Le composeur et le
-  // panneau des vues restent des bouchons jusqu'à la Task 8 (décision 1).
+  // Phase 4b (Task 7) : exports de l'onglet Rack 1/2.
   "app/(fullscreen)/project/[id]/_components/export-cartouche-options.tsx",
   "app/(fullscreen)/project/[id]/_components/export-pdf-model-options.tsx",
   "app/(fullscreen)/project/[id]/rack/_components/rack-export.tsx",
   "app/(fullscreen)/project/[id]/rack/_components/rack-export-capture.ts",
   "app/(fullscreen)/project/[id]/rack/_components/rack-export-layout.ts",
   "app/(fullscreen)/project/[id]/rack/_components/rack-export-stage.tsx",
+  // Phase 4b (Task 8) : exports de l'onglet Rack 2/2 (composeur, section VUES).
+  "app/(fullscreen)/project/[id]/rack/_components/rack-export-composer.tsx",
+  "app/(fullscreen)/project/[id]/rack/_components/rack-export-views-panel.tsx",
+  "app/(fullscreen)/project/[id]/rack/_components/rack-export-object-panel.tsx",
   "lib/pdf/synoptic-export.ts",
   "lib/print/export-with-cartouche.ts",
   "lib/print/render-print-layout.ts",
@@ -1026,6 +1027,13 @@ const ALLOW_HEX: AllowMap = {
   ],
   "app/(fullscreen)/project/[id]/rack/_components/rack-export-capture.ts": [
     { line: /^\s*background: opaque \? "#ffffff" : undefined,$/, reason: "fond blanc d'une vue aplatie en JPEG pour le PDF : rendu des exports" },
+  ],
+  // Phase 4b (Task 8) : exports de l'onglet Rack 2/2 (feuille du composeur).
+  "app/(fullscreen)/project/[id]/rack/_components/rack-export-composer.tsx": [
+    {
+      line: /^\s*background: "#ffffff",$|^\s*"0 1px 2px rgba\(15,17,26,0\.06\), 0 8px 28px rgba\(15,17,26,0\.10\)",$/,
+      reason: "feuille de papier du composeur : fond blanc capturé en image (rendu des exports) et son ombre de feuille, comme l'aperçu des planches d'étiquettes",
+    },
   ],
   "lib/pdf/synoptic-export.ts": [
     { line: /"#[0-9a-f]{6}"/, reason: "cadre « dessin technique » et cartouche de secours dessinés par jsPDF : rendu des PDF" },
