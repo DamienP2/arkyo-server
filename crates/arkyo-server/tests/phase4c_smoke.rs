@@ -691,16 +691,25 @@ async fn phase4c_synoptic_end_to_end() {
         "{general_first:?}"
     );
     // One counter per `prefix:dirDigit` for the whole project, rack
-    // segment of the `from` rack. arkyo's project pass does not read the
-    // rack cables' labels: `pc` gets « R2-20001 », as R2's second cable
-    // (parity, reported in the phase 4c follow-up).
+    // segment of the `from` rack. arkyo-server: correction d'un défaut
+    // d'arkyo, the project pass skips the labels of the project's rack
+    // cables: `pc` skips « R2-20001 » (R2's second cable), `pc_r1` takes
+    // the next number.
     assert_eq!(
         (
             general_first[&pc].as_deref(),
             general_first[&pc_r1].as_deref()
         ),
-        (Some("R2-20001"), Some("R1-20002"))
+        (Some("R2-20002"), Some("R1-20003"))
     );
+    // No label twice in the project (rack and project cables).
+    let dup = count(
+        pool,
+        r#"SELECT COUNT(*) - COUNT(DISTINCT "label") FROM (
+             SELECT "label" FROM "RackConnection" UNION ALL SELECT "label" FROM "ProjectConnection")"#,
+    )
+    .await;
+    assert_eq!(dup, 0);
     assert_eq!(
         (
             first[&c_r1].as_deref(),

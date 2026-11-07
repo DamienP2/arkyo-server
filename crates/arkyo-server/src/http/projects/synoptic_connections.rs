@@ -23,7 +23,9 @@
 //!   a cable is its `from` port's, else its `to` port's; direction digit
 //!   `3` when either end is `BIDI`/`BIDIR`, `1` when `from` is `IN`, else
 //!   `2`; rack segment and `numberingOverride` of the `from` rack; a label
-//!   already given in this pass is skipped. `{ok: true, count}`; no
+//!   already given in this pass is skipped (arkyo-server: correction d'un
+//!   défaut d'arkyo, as is a label held by a cable of one of the project's
+//!   racks). `{ok: true, count}`; no
 //!   connection gives `{ok: true, count: 0}` with neither audit nor event.
 //!   The configuration and catalogue helpers are those of the rack
 //!   renumbering ([`super::super::rack_renumber`]).
@@ -690,7 +692,21 @@ async fn numbering(
     let is_bidi = |d: &Option<String>| matches!(d.as_deref(), Some("BIDI" | "BIDIR"));
 
     let mut counters: HashMap<String, i64> = HashMap::new();
-    let mut given: HashSet<String> = HashSet::new();
+    // arkyo-server: correction d'un défaut d'arkyo — les libellés des câbles
+    // des racks du projet (rack virtuel des lieux compris) sont pris : sinon
+    // une liaison projet reçoit l'étiquette d'un câble de rack.
+    let mut given: HashSet<String> = sqlx::query_scalar(
+        r#"SELECT "label" FROM "RackConnection"
+           WHERE "label" IS NOT NULL AND "label" <> ''
+             AND "rackId" IN (SELECT rr."rackId" FROM "RigRack" rr
+                              JOIN "RigConfig" rc ON rc."id" = rr."rigConfigId"
+                              WHERE rc."projectId" = ?)"#,
+    )
+    .bind(project)
+    .fetch_all(&mut *conn)
+    .await?
+    .into_iter()
+    .collect();
     let mut updates = Vec::with_capacity(conns.len());
     for (id, from_rack, from_slot, from_port, to_slot, to_port) in conns {
         let from = info(&from_slot, from_port);
