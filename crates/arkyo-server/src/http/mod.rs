@@ -17,6 +17,7 @@ pub(crate) mod projects;
 mod rack_construction;
 mod rack_events;
 mod rack_objects;
+mod rack_objects2;
 mod rack_slots;
 mod racks;
 mod rigs;
@@ -232,6 +233,7 @@ pub fn router(state: AppState) -> Router {
         .merge(rack_slots::router())
         .merge(rack_construction::router())
         .merge(rack_objects::router())
+        .merge(rack_objects2::router())
         .merge(rigs::router())
         .merge(panels::router())
         .merge(tenant_racks::router())

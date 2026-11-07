@@ -321,7 +321,7 @@ async fn fetch(
 }
 
 /// A duplicate client-supplied `id`: 409 (arkyo: P2002, implicit 500).
-fn insert_error(e: sqlx::Error) -> Response {
+pub(super) fn insert_error(e: sqlx::Error) -> Response {
     if let sqlx::Error::Database(d) = &e {
         if d.is_unique_violation() {
             return error(StatusCode::CONFLICT, "Identifiant déjà utilisé");
@@ -380,7 +380,7 @@ fn rack_payload(spec: &Spec, what: &str, key: &str, value: Value) -> Value {
     Value::Object(m)
 }
 
-fn meta(rack: &str, id: &str, client: Option<String>) -> EventMeta {
+pub(super) fn meta(rack: &str, id: &str, client: Option<String>) -> EventMeta {
     EventMeta {
         rack_id: Some(rack.to_string()),
         item_id: Some(id.to_string()),
