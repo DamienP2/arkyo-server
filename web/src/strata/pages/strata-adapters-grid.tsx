@@ -9,8 +9,7 @@
 
 import { useMemo, type ReactNode } from "react";
 import { AdapterDrawing, type AdapterEndDrawing } from "../drawings/adapter-drawing";
-import type { DrawingGender } from "../drawings/cable-drawing";
-import { useCatalogueLookup, type CatalogueLookup } from "../catalogue-model";
+import { connectorTypeIndex, drawingGender, useCatalogueLookup, type LookupConnectorType } from "../catalogue-model";
 import { CardMeta, StrataCard, StrataGrid } from "./strata-card";
 
 type AdapterEnd = { connectorTypeId: string; gender?: string | null; quantity?: number | null };
@@ -25,10 +24,6 @@ export type StrataAdapterItem = {
   outputs?: readonly AdapterEnd[] | null;
 };
 
-function gender(g: string | null | undefined): DrawingGender {
-  return g === "MALE" || g === "FEMALE" ? g : "NEUTRAL";
-}
-
 /** Nombre de connecteurs d'un côté (quantités comprises, 1 par défaut). */
 function countEnds(ends: readonly AdapterEnd[]): number {
   return ends.reduce((a, e) => {
@@ -41,17 +36,16 @@ function AdapterCard<T extends StrataAdapterItem>({
   item,
   href,
   actions,
-  lookup,
+  types,
 }: {
   item: T;
   href: string;
   actions?: ReactNode;
-  lookup: CatalogueLookup | null;
+  types: ReadonlyMap<string, LookupConnectorType>;
 }) {
-  const types = useMemo(() => new Map((lookup?.connectorTypes ?? []).map((t) => [t.id, t])), [lookup]);
   const toDrawing = (e: AdapterEnd): AdapterEndDrawing => {
     const t = types.get(e.connectorTypeId);
-    return { connectorName: t?.name ?? "—", iconId: t?.iconId ?? null, gender: gender(e.gender), quantity: e.quantity };
+    return { connectorName: t?.name ?? "—", iconId: t?.iconId ?? null, gender: drawingGender(e.gender), quantity: e.quantity };
   };
   const inputs = item.inputs ?? [];
   const outputs = item.outputs ?? [];
@@ -92,10 +86,12 @@ export function StrataAdaptersGrid<T extends StrataAdapterItem>({
   renderActions?: (item: T) => ReactNode;
 }) {
   const lookup = useCatalogueLookup();
+  // Index calculé une fois par grille, partagé par les cartes.
+  const types = useMemo(() => connectorTypeIndex(lookup), [lookup]);
   return (
     <StrataGrid label="Adaptateurs">
       {items.map((it) => (
-        <AdapterCard key={it.id} item={it} href={hrefOf(it)} actions={renderActions?.(it)} lookup={lookup} />
+        <AdapterCard key={it.id} item={it} href={hrefOf(it)} actions={renderActions?.(it)} types={types} />
       ))}
     </StrataGrid>
   );

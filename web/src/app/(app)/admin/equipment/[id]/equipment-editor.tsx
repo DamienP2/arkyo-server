@@ -48,7 +48,7 @@ import {
 import { EquipmentIcon } from "@/components/ui/equipment-icon";
 import { DistributionTab } from "./_editor/distribution-tab";
 import { useInterface } from "@/strata/interface-context"; // arkyo-server: interface Strata
-import { FacesPanel } from "@/strata/faces-panel"; // arkyo-server: interface Strata
+import { FacesPanel, StrataConnectivityLayout } from "@/strata/faces-panel"; // arkyo-server: interface Strata
 
 /**
  * Contexte tenant — quand fourni, l'éditeur passe en "mode tenant" :
@@ -1007,12 +1007,10 @@ export function EquipmentEditor({
           </div>
         )}
 
-        {/* arkyo-server: interface Strata (panneau « Faces et schéma » au-dessus de la connectique) */}
-        {activeTab === "connectivity" && isStrata && (
-          <FacesPanel form={form} lookup={{ brands, connectorTypes, signals, functions }} />
-        )}
         {/* Connectique — full height layout */}
         {activeTab === "connectivity" && (
+          // arkyo-server: interface Strata (panneau « Faces et schéma » au-dessus, la liste des ports garde la hauteur ; Classique : rendu tel quel)
+          <StrataConnectivityLayout enabled={isStrata} panel={<FacesPanel form={form} lookup={{ brands, connectorTypes, signals, functions }} />}>
           <div className="h-full w-full">
             <ConnectivityTab
               form={form}
@@ -1035,6 +1033,7 @@ export function EquipmentEditor({
               isReadOnly={false}
             />
           </div>
+          </StrataConnectivityLayout> // arkyo-server: interface Strata
         )}
 
         {/* SMPTE 2110 — visible uniquement si form.is2110 */}

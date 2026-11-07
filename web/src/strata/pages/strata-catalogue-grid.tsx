@@ -14,6 +14,7 @@
 import { useMemo, type ReactNode } from "react";
 import type { ConnectorEntry } from "@/app/(app)/admin/equipment/[id]/_editor/types";
 import { EquipmentFace } from "../drawings/equipment-face";
+import type { DrawingConnectorType, DrawingSignal } from "../drawings/face-layout";
 import {
   drawingConnectorTypes,
   drawingSignals,
@@ -89,15 +90,17 @@ function EquipmentCard<T extends StrataEquipmentItem>({
   href,
   actions,
   lookup,
+  connectorTypes,
+  signals,
 }: {
   item: T;
   href: string;
   actions?: ReactNode;
   lookup: CatalogueLookup | null;
+  connectorTypes: readonly DrawingConnectorType[];
+  signals: readonly DrawingSignal[];
 }) {
   const connectors = useMemo(() => parseConnectors(item.connectors), [item.connectors]);
-  const connectorTypes = useMemo(() => drawingConnectorTypes(lookup), [lookup]);
-  const signals = useMemo(() => drawingSignals(lookup), [lookup]);
   const ports = totalPorts(connectors);
   const rackable = item.isRackable !== false;
   const meta = [item.brand?.name, item.equipmentCategory?.name ?? item.category, item.type?.name]
@@ -175,10 +178,21 @@ export function StrataCatalogueGrid<T extends StrataEquipmentItem>({
   renderActions?: (item: T) => ReactNode;
 }) {
   const lookup = useCatalogueLookup();
+  // Référentiels des dessins calculés une fois par grille, partagés par les cartes.
+  const connectorTypes = useMemo(() => drawingConnectorTypes(lookup), [lookup]);
+  const signals = useMemo(() => drawingSignals(lookup), [lookup]);
   return (
     <StrataGrid label="Équipements">
       {items.map((it) => (
-        <EquipmentCard key={it.id} item={it} href={hrefOf(it)} actions={renderActions?.(it)} lookup={lookup} />
+        <EquipmentCard
+          key={it.id}
+          item={it}
+          href={hrefOf(it)}
+          actions={renderActions?.(it)}
+          lookup={lookup}
+          connectorTypes={connectorTypes}
+          signals={signals}
+        />
       ))}
     </StrataGrid>
   );

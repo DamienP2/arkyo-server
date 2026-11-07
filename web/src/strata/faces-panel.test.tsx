@@ -257,6 +257,23 @@ describe("fiche équipement, onglet Connectique", () => {
     const rear = within(panel).getByRole("img", { name: "Face arrière HDC-5500" });
     expect(rear.querySelectorAll("[data-port]")).toHaveLength(2);
     expect(within(panel).getByRole("img", { name: "Schéma de principe HDC-5500" })).toBeInTheDocument();
+
+    // Disposition : colonne pleine hauteur ; le panneau garde sa hauteur propre
+    // (contenu plafonné, défilement à lui), l'onglet existant prend le reste et
+    // garde sa seule zone de défilement (liste des ports).
+    const layout = panel.closest("[data-strata-connectivity]") as HTMLElement;
+    expect(layout).not.toBeNull();
+    expect(layout.className.split(" ")).toEqual(expect.arrayContaining(["flex", "h-full", "min-h-0", "flex-col"]));
+    expect(panel.parentElement).toHaveClass("shrink-0");
+    expect(panel.parentElement?.parentElement).toBe(layout);
+    expect(panel.querySelector("[data-faces-body]")).toHaveClass("max-h-[32vh]", "overflow-y-auto");
+    const tab = layout.querySelector(":scope > [data-strata-connectivity-tab]") as HTMLElement;
+    expect(tab).toHaveClass("min-h-0", "flex-1");
+    expect(tab).not.toHaveClass("overflow-y-auto");
+    expect(within(tab).getByRole("button", { name: /Ajouter un groupe de connecteurs/ })).toBeInTheDocument();
+    expect(tab.contains(panel)).toBe(false);
+    // Le conteneur de défilement de l'éditeur contient la colonne, sans autre enfant.
+    expect(layout.parentElement?.children).toHaveLength(1);
   });
 
   test("Classique : pas de panneau « Faces et schéma »", async () => {
@@ -265,5 +282,8 @@ describe("fiche équipement, onglet Connectique", () => {
     fireEvent.click(screen.getByRole("button", { name: /Connectique/ }));
     await waitFor(() => expect(screen.getAllByText("SDI OUT").length).toBeGreaterThan(0));
     expect(screen.queryByRole("region", { name: "Faces et schéma" })).toBeNull();
+    // Rendu d'arkyo : aucun élément de disposition Strata ajouté.
+    expect(document.querySelector("[data-strata-connectivity]")).toBeNull();
+    expect(document.querySelector("[data-strata-connectivity-tab]")).toBeNull();
   });
 });

@@ -8,10 +8,13 @@
  * Le survol d'une entrée sur une face la surligne dans le schéma, et
  * inversement. La liste des ports reste celle de l'onglet Connectique
  * existant, juste en dessous. Le panneau se replie (mémorisé dans le
- * navigateur).
+ * navigateur) et son contenu est plafonné à 32 % de la hauteur de la fenêtre
+ * (défilement propre ; à partir de `xl`, faces à gauche et schéma à droite) :
+ * `StrataConnectivityLayout` le pose au-dessus de
+ * l'onglet Connectique, dont la liste des ports garde le reste de la hauteur.
  */
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import type { FormData } from "@/app/(app)/admin/equipment/[id]/_editor/types";
 import { ChevronDown } from "@/components/ui/icons";
 import { cn } from "@/lib/utils";
@@ -82,7 +85,7 @@ export function FacesPanel({ form, lookup }: { form: FormData; lookup: FacesLook
   return (
     <section
       aria-label="Faces et schéma"
-      className="mb-4 rounded-lg border border-[var(--border)] bg-[var(--surface)]"
+      className="rounded-lg border border-[var(--border)] bg-[var(--surface)]"
     >
       <header className={cn("flex items-center gap-2.5 px-3.5 py-2.5", open && "border-b border-[var(--border)]")}>
         <h3 className="text-[12.5px] font-semibold text-[var(--foreground)]">Faces et schéma</h3>
@@ -98,8 +101,11 @@ export function FacesPanel({ form, lookup }: { form: FormData; lookup: FacesLook
         </button>
       </header>
       {open && (
-        <div className="grid gap-4 p-3.5">
-          <div className="grid gap-3 xl:grid-cols-2">
+        <div
+          data-faces-body=""
+          className="grid max-h-[32vh] items-start gap-4 overflow-y-auto p-3.5 xl:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]"
+        >
+          <div className="grid min-w-0 gap-3">
             {FACES.map(({ side, label }) => {
               const empty = !connectors.some((c) => c.face === side);
               return (
@@ -128,7 +134,7 @@ export function FacesPanel({ form, lookup }: { form: FormData; lookup: FacesLook
               );
             })}
           </div>
-          <div className="grid min-w-0 gap-1.5">
+          <div className="grid min-w-0 content-start gap-1.5">
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
               <span className="flex-1 text-[11px] font-bold tracking-[0.08em] text-[var(--text-tertiary)] uppercase">
                 Schéma de principe
@@ -147,7 +153,7 @@ export function FacesPanel({ form, lookup }: { form: FormData; lookup: FacesLook
                 </ul>
               )}
             </div>
-            <div className="max-w-[980px]">
+            <div>
               <BlockDiagram
                 connectors={connectors}
                 connectorTypes={connectorTypes}
@@ -163,5 +169,31 @@ export function FacesPanel({ form, lookup }: { form: FormData; lookup: FacesLook
         </div>
       )}
     </section>
+  );
+}
+
+/**
+ * Disposition de l'onglet Connectique en Strata : le panneau (hauteur propre,
+ * plafonnée) puis l'onglet existant, qui prend le reste de la hauteur et garde
+ * son unique zone de défilement (liste des ports, glisser-déposer). Hors
+ * Strata, rend l'onglet tel quel (aucun élément ajouté au DOM).
+ */
+export function StrataConnectivityLayout({
+  enabled,
+  panel,
+  children,
+}: {
+  enabled: boolean;
+  panel: ReactNode;
+  children: ReactNode;
+}) {
+  if (!enabled) return <>{children}</>;
+  return (
+    <div data-strata-connectivity="" className="flex h-full min-h-0 flex-col gap-4">
+      <div className="shrink-0">{panel}</div>
+      <div data-strata-connectivity-tab="" className="min-h-0 flex-1">
+        {children}
+      </div>
+    </div>
   );
 }

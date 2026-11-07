@@ -14,6 +14,7 @@ import { useEffect, useState } from "react";
 import type { ConnectorEntry } from "@/app/(app)/admin/equipment/[id]/_editor/types";
 import { api } from "@/lib/api-client";
 import type { DrawingConnectorType, DrawingSignal } from "./drawings/face-layout";
+import type { DrawingGender } from "./drawings/cable-drawing";
 import { portCount } from "./drawings/face-layout";
 
 /** Clé de la fonction Énergie (référentiel des fonctions). */
@@ -56,8 +57,9 @@ export function useCatalogueLookup(): CatalogueLookup | null {
       .then((l) => {
         if (!cancelled) setLookup(l ?? {});
       })
-      .catch(() => {
+      .catch((e: unknown) => {
         // Les dessins restent lisibles sans référentiels (pictogrammes neutres).
+        console.warn("Catalogue Strata : référentiels indisponibles (/api/tenant/catalogue/lookup)", e);
         if (!cancelled) setLookup({});
       });
     return () => {
@@ -65,6 +67,16 @@ export function useCatalogueLookup(): CatalogueLookup | null {
     };
   }, []);
   return lookup;
+}
+
+/** Index des types de connecteur du lookup, par id (pictogramme et nom). */
+export function connectorTypeIndex(lookup: CatalogueLookup | null | undefined): Map<string, LookupConnectorType> {
+  return new Map((lookup?.connectorTypes ?? []).map((t) => [t.id, t]));
+}
+
+/** Genre d'une extrémité (cordon, adaptateur) : `MALE` / `FEMALE`, sinon `NEUTRAL`. */
+export function drawingGender(g: string | null | undefined): DrawingGender {
+  return g === "MALE" || g === "FEMALE" ? g : "NEUTRAL";
 }
 
 /** Types de connecteur au format des dessins. */

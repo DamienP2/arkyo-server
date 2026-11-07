@@ -9,8 +9,15 @@
 
 import { useMemo, type ReactNode } from "react";
 import { CONDUCTOR_LABEL, JACKET_LABEL, SHIELDING_LABEL } from "@/components/catalogue/cabling/cabling-card";
-import { CableDrawing, type DrawingGender } from "../drawings/cable-drawing";
-import { fmtNumber, useCatalogueLookup, type CatalogueLookup } from "../catalogue-model";
+import { CableDrawing } from "../drawings/cable-drawing";
+import {
+  connectorTypeIndex,
+  drawingGender,
+  fmtNumber,
+  useCatalogueLookup,
+  type LookupCableModel,
+  type LookupConnectorType,
+} from "../catalogue-model";
 import { StrataCard, StrataGrid } from "./strata-card";
 
 /** Cordon de `GET /api/tenant/catalogue/cables` (ligne enrichie). */
@@ -39,10 +46,6 @@ const USE_CASE_LABEL: Record<string, string> = {
   INSTALLATION: "Installation",
 };
 
-function gender(g: string | null | undefined): DrawingGender {
-  return g === "MALE" || g === "FEMALE" ? g : "NEUTRAL";
-}
-
 /** Libellé d'une énumération des réglages (repris de la carte de câblage), la valeur à défaut. */
 const label = (labels: Record<string, string>, v: string | null | undefined) => (v ? (labels[v] ?? v) : null);
 
@@ -53,18 +56,19 @@ function CableCard<T extends StrataCableItem>({
   item,
   href,
   actions,
-  lookup,
+  types,
+  models,
 }: {
   item: T;
   href: string;
   actions?: ReactNode;
-  lookup: CatalogueLookup | null;
+  types: ReadonlyMap<string, LookupConnectorType>;
+  models: ReadonlyMap<string, LookupCableModel>;
 }) {
-  const types = useMemo(() => new Map((lookup?.connectorTypes ?? []).map((t) => [t.id, t])), [lookup]);
-  const model = item.cableModelId ? lookup?.cableModels?.find((m) => m.id === item.cableModelId) : undefined;
+  const model = item.cableModelId ? models.get(item.cableModelId) : undefined;
   const end = (id: string | null | undefined, ref: { name: string } | null | undefined, g: string | null | undefined) => {
     const t = id ? types.get(id) : undefined;
-    return { connectorName: t?.name ?? ref?.name ?? "—", iconId: t?.iconId ?? null, gender: gender(g) };
+    return { connectorName: t?.name ?? ref?.name ?? "—", iconId: t?.iconId ?? null, gender: drawingGender(g) };
   };
 
   const rows: [string, ReactNode][] = [];
@@ -160,10 +164,20 @@ export function StrataCablesGrid<T extends StrataCableItem>({
   renderActions?: (item: T) => ReactNode;
 }) {
   const lookup = useCatalogueLookup();
+  // Index calculés une fois par grille, partagés par les cartes.
+  const types = useMemo(() => connectorTypeIndex(lookup), [lookup]);
+  const models = useMemo(() => new Map((lookup?.cableModels ?? []).map((m) => [m.id, m])), [lookup]);
   return (
     <StrataGrid label="Cordons">
       {items.map((it) => (
-        <CableCard key={it.id} item={it} href={hrefOf(it)} actions={renderActions?.(it)} lookup={lookup} />
+        <CableCard
+          key={it.id}
+          item={it}
+          href={hrefOf(it)}
+          actions={renderActions?.(it)}
+          types={types}
+          models={models}
+        />
       ))}
     </StrataGrid>
   );
