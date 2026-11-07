@@ -403,6 +403,10 @@ async fn place_equipment_in_free_units() {
     no_rack_event(&mut rack).await;
 }
 
+/// Schema and reference refusals only (out-of-range `startU`/`column`/
+/// `heightU`, enums, unknown or full shelf, unknown reference): despite the
+/// name, there is no server-side collision check, as in arkyo; see
+/// [`overlap_is_left_to_the_canvas_like_arkyo`].
 #[tokio::test]
 async fn collision_and_out_of_bounds_rejected_nothing_written() {
     let c = ctx().await;
@@ -712,7 +716,7 @@ async fn move_slot_updates_inventory_and_ghosts() {
             &c.slot(&id),
             Some(
                 json!({"startU": 8, "view": "REAR", "column": 0, "label": "Mixeur",
-                        "panelLabels": {"0": "A"}, "synopticX": 12.5, "parentSlotId": "x"}),
+                        "panelLabels": {"0": "A"}, "synopticX": 12.5, "bogus": "x"}),
             ),
         )
         .await;
@@ -724,11 +728,8 @@ async fn move_slot_updates_inventory_and_ghosts() {
     assert_eq!(moved["label"], json!("Mixeur"));
     assert_eq!(moved["panelLabels"], json!({"0": "A"}));
     assert_eq!(moved["synopticX"].as_f64(), Some(12.5));
-    assert_eq!(
-        moved["parentSlotId"],
-        Value::Null,
-        "clé hors schéma ignorée"
-    );
+    assert!(moved.get("bogus").is_none(), "clé hors schéma ignorée");
+    assert_eq!(moved["parentSlotId"], Value::Null);
     assert_eq!(moved["heightU"].as_f64(), Some(2.0));
     assert_eq!(moved["equipment"]["id"], json!("eq1"));
     assert_eq!(
@@ -952,6 +953,192 @@ async fn remove_host_slot_removes_components() {
     .await
     .unwrap();
     assert_eq!(audit, ("rackSlot.delete".into(), shelf));
+}
+
+/// arkyo-server: correction d'un défaut d'arkyo. Le PATCH d'arkyo ignore
+/// `parentSlotId` (absent d'`updateSchema`) : un enfant glissé d'une étagère
+/// à l'autre (`reorderShelfChild`, rack-placement-canvas.tsx) revenait sous
+/// son ancienne étagère au rechargement. Le PATCH l'accepte désormais, avec
+/// la vérification de la création (étagère du même rack, 10 enfants au plus,
+/// le slot déplacé exclu du compte) ; seul un enfant d'étagère en change.
+#[tokio::test]
+async fn move_shelf_child_to_another_shelf() {
+    let c = ctx().await;
+    let shelf_at = |u: i64| {
+        json!({"label": "Étagère", "heightU": 1, "startU": u,
+               "notes": "{\"accessoryType\":\"etagere\",\"childOrder\":[]}"})
+    };
+    let a = c.place(shelf_at(5)).await["id"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    let b = c.place(shelf_at(9)).await["id"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    let child = c
+        .place(json!({"equipmentId": "eq2", "parentSlotId": a, "startU": 5, "heightU": 1}))
+        .await;
+    let child = child["id"].as_str().unwrap().to_string();
+    let top = c.place(json!({"equipmentId": "eq1", "startU": 20})).await;
+    let top = top["id"].as_str().unwrap().to_string();
+    let plate = c
+        .place(json!({"label": "Plaque", "heightU": 1, "startU": 30,
+                      "notes": "{\"accessoryType\":\"plaque\"}"}))
+        .await;
+    let plate = plate["id"].as_str().unwrap().to_string();
+    // A shelf of another rack of the project.
+    let r = c
+        .send(
+            "POST",
+            &format!("{LIST}/{}/locations", c.project),
+            Some(json!({"name": "Régie"})),
+        )
+        .await;
+    let loc = r.body["id"].as_str().unwrap().to_string();
+    let r = c
+        .send(
+            "POST",
+            &format!("{LIST}/{}/racks", c.project),
+            Some(json!({"racks": [{"name": "Baie B", "locationId": loc}]})),
+        )
+        .await;
+    assert_eq!(r.status, StatusCode::CREATED, "{:?}", r.body);
+    let rack2 = r.body["racks"][0]["id"].as_str().unwrap().to_string();
+    let r = c
+        .send(
+            "POST",
+            &format!("/api/racks/{rack2}/slots"),
+            Some(shelf_at(5)),
+        )
+        .await;
+    assert_eq!(r.status, StatusCode::CREATED, "{:?}", r.body);
+    let foreign = r.body["id"].as_str().unwrap().to_string();
+    // B full: 10 children.
+    let full = c.place(shelf_at(12)).await["id"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    for i in 0..10 {
+        exec(
+            &c.e.pool,
+            &format!(
+                r#"INSERT INTO "RackSlot" ("id","rackId","catalogEquipmentId","parentSlotId","startU","heightU","createdAt","updatedAt")
+                   VALUES ('child{i}','{}','eq2','{full}',12,1,?,?)"#,
+                c.rack
+            ),
+        )
+        .await;
+    }
+    let parent_of = |id: String| {
+        let pool = c.e.pool.clone();
+        async move {
+            sqlx::query_scalar::<_, Option<String>>(
+                r#"SELECT "parentSlotId" FROM "RackSlot" WHERE "id" = ?"#,
+            )
+            .bind(id)
+            .fetch_one(&pool)
+            .await
+            .unwrap()
+        }
+    };
+
+    // Refusals: 400, nothing written, no event.
+    let before = snapshot(&c.e.pool).await;
+    let mut rack = c.e.events.subscribe_rack(&c.rack);
+    let cases: Vec<(&str, &str, &str)> = vec![
+        (&child, "nope", "Parent shelf not found"),
+        (&child, &plate, "Parent slot is not a shelf"),
+        (&child, &foreign, "Parent shelf not found"),
+        (&child, &full, "Maximum 10 équipements par étagère"),
+        (&child, &child, "Un slot ne peut pas être son propre parent"),
+        (
+            &top,
+            &b,
+            "Seul un équipement d'étagère peut changer d'étagère",
+        ),
+    ];
+    for (slot, parent, msg) in cases {
+        let r = c
+            .send(
+                "PATCH",
+                &c.slot(slot),
+                Some(json!({"parentSlotId": parent, "startU": 9, "view": "FRONT"})),
+            )
+            .await;
+        assert_eq!(
+            (r.status, r.body),
+            (StatusCode::BAD_REQUEST, json!({"error": msg})),
+            "{slot} → {parent}"
+        );
+    }
+    let r = c
+        .send("PATCH", &c.slot(&child), Some(json!({"parentSlotId": ""})))
+        .await;
+    assert_eq!(r.status, StatusCode::BAD_REQUEST, "{:?}", r.body);
+    let r = c
+        .send("PATCH", &c.slot("nope"), Some(json!({"parentSlotId": b})))
+        .await;
+    assert_eq!(
+        (r.status, r.body),
+        (StatusCode::NOT_FOUND, json!({"error": "Slot introuvable"}))
+    );
+    assert_eq!(snapshot(&c.e.pool).await, before);
+    assert_eq!(parent_of(child.clone()).await, Some(a.clone()));
+    assert_eq!(parent_of(top.clone()).await, None);
+    no_rack_event(&mut rack).await;
+
+    // Staying on its own (full) shelf: the moved slot is not counted.
+    exec(
+        &c.e.pool,
+        &format!(r#"UPDATE "RackSlot" SET "parentSlotId" = '{full}' WHERE "id" = 'child9'"#),
+    )
+    .await;
+    let r = c
+        .send(
+            "PATCH",
+            &c.slot("child9"),
+            Some(json!({"parentSlotId": full})),
+        )
+        .await;
+    assert_eq!(r.status, StatusCode::OK, "{:?}", r.body);
+    next_rack(&mut rack).await;
+
+    // The canvas' body (reorderShelfChild): A → B.
+    let mut app = c.e.events.subscribe();
+    let r = c
+        .send(
+            "PATCH",
+            &c.slot(&child),
+            Some(json!({"parentSlotId": b, "startU": 9, "view": "FRONT"})),
+        )
+        .await;
+    assert_eq!(r.status, StatusCode::OK, "{:?}", r.body);
+    assert_eq!(r.body["parentSlotId"], json!(b));
+    assert_eq!(r.body["startU"], json!(9));
+    assert_eq!(parent_of(child.clone()).await, Some(b.clone()));
+    assert_eq!(
+        next_rack(&mut rack).await,
+        json!({"type": "slot_updated", "slot": r.body})
+    );
+    assert_eq!(
+        next_app(&mut app).await,
+        app_event(
+            "slot",
+            "updated",
+            &child,
+            json!({"rackId": c.rack, "itemId": child, "clientId": CLIENT})
+        )
+    );
+    // Shelf children stay out of the inventory.
+    assert_eq!(
+        int(
+            &c.e.pool,
+            r#"SELECT COUNT(*) FROM "RackInventoryItem" WHERE "catalogEquipmentId" = 'eq2'"#
+        )
+        .await,
+        0
+    );
 }
 
 // ── DELETE /slots : vider le rack ──────────────────────────────────────────

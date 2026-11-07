@@ -29,7 +29,10 @@
 //!   écritures séquentielles sans transaction, audit hors bloc) ;
 //! - 400/404 au lieu des 500 implicites : corps illisible, rack ou slot
 //!   inconnu, référence (`panelId`, `inventoryItemId`) inconnue ;
-//! - plafond de la quantité d'inventaire (999) quand la pose l'augmente.
+//! - plafond de la quantité d'inventaire (999) quand la pose l'augmente ;
+//! - défaut d'arkyo corrigé : le `PATCH` accepte `parentSlotId` (un enfant
+//!   change d'étagère), vérifié comme à la création ; un slot de premier
+//!   niveau ou lui-même comme parent : 400.
 
 #![allow(clippy::result_large_err)]
 
@@ -92,7 +95,7 @@ static CREATE: [Field; 12] = [
 
 /// `updateSchema` ([slotId]/route.ts:11-21); `panelLabels` is a
 /// `z.record(z.string(), z.unknown())`, checked by [`parse_update`].
-static UPDATE: [Field; 9] = [
+static UPDATE: [Field; 10] = [
     Field::new("startU", Kind::IntMin(1)),
     Field::new("view", Kind::Enum(VIEWS, VIEW_MSG)),
     Field::new("widthFraction", Kind::Enum(WIDTHS, WIDTH_MSG)),
@@ -102,6 +105,12 @@ static UPDATE: [Field; 9] = [
     Field::new("panelLabels", Kind::Any).nullable(),
     Field::new("synopticX", Kind::Num).nullable(),
     Field::new("synopticY", Kind::Num).nullable(),
+    // arkyo-server: correction d'un défaut d'arkyo. `updateSchema` n'a pas
+    // `parentSlotId` : Zod le retirait et l'enfant glissé d'une étagère à
+    // l'autre (`reorderShelfChild`) revenait sous l'ancienne au rechargement.
+    // Non nullable : le canvas n'envoie qu'une chaîne ; vérifié par
+    // [`check_shelf`] dans `update_inner`.
+    Field::new("parentSlotId", Kind::NonEmpty),
 ];
 
 /// The columns a placement writes from the body (`...rest` of route.ts:177),
@@ -170,6 +179,41 @@ async fn rack_exists(conn: &mut SqliteConnection, id: &str) -> Result<bool, Resp
         .await
         .map_err(db_error)?;
     Ok(found.is_some())
+}
+
+/// `parentSlotId` must name a shelf of this rack with fewer than 10 children
+/// (route.ts:157-175); `exclude` leaves the moved slot out of the count
+/// (PATCH, arkyo-server).
+async fn check_shelf(
+    conn: &mut SqliteConnection,
+    rack_id: &str,
+    parent: &str,
+    exclude: Option<&str>,
+) -> Result<(), Response> {
+    let row: Option<(Option<String>, i64)> = sqlx::query_as(
+        r#"SELECT p."notes", (SELECT COUNT(*) FROM "RackSlot" c
+                              WHERE c."parentSlotId" = p."id" AND c."id" IS NOT ?)
+           FROM "RackSlot" p WHERE p."id" = ? AND p."rackId" = ?"#,
+    )
+    .bind(exclude)
+    .bind(parent)
+    .bind(rack_id)
+    .fetch_optional(conn)
+    .await
+    .map_err(db_error)?;
+    let Some((notes, children)) = row else {
+        return Err(error(StatusCode::BAD_REQUEST, "Parent shelf not found"));
+    };
+    if !is_shelf(notes.as_deref()) {
+        return Err(error(StatusCode::BAD_REQUEST, "Parent slot is not a shelf"));
+    }
+    if children >= 10 {
+        return Err(error(
+            StatusCode::BAD_REQUEST,
+            "Maximum 10 équipements par étagère",
+        ));
+    }
+    Ok(())
 }
 
 // ── the slot as arkyo returns it ────────────────────────────────────────────
@@ -361,27 +405,7 @@ async fn create_inner(
 
     // parentSlotId: a shelf of this rack, 10 children at most (route.ts:157-175).
     if let Some(parent) = &parent_slot_id {
-        let row: Option<(Option<String>, i64)> = sqlx::query_as(
-            r#"SELECT p."notes", (SELECT COUNT(*) FROM "RackSlot" c WHERE c."parentSlotId" = p."id")
-               FROM "RackSlot" p WHERE p."id" = ? AND p."rackId" = ?"#,
-        )
-        .bind(parent)
-        .bind(rack_id)
-        .fetch_optional(&mut *tx)
-        .await
-        .map_err(db_error)?;
-        let Some((notes, children)) = row else {
-            return Err(error(StatusCode::BAD_REQUEST, "Parent shelf not found"));
-        };
-        if !is_shelf(notes.as_deref()) {
-            return Err(error(StatusCode::BAD_REQUEST, "Parent slot is not a shelf"));
-        }
-        if children >= 10 {
-            return Err(error(
-                StatusCode::BAD_REQUEST,
-                "Maximum 10 équipements par étagère",
-            ));
-        }
+        check_shelf(&mut tx, rack_id, parent, None).await?;
     }
 
     let sent: Vec<&str> = PLACEMENT_COLS
@@ -691,6 +715,37 @@ async fn update_inner(
     let vals = parse_update(&parse_body(&body)?)?;
 
     let mut tx = begin(&st.pool).await?;
+    // arkyo-server: changement d'étagère (défaut d'arkyo corrigé, voir
+    // `UPDATE`). Seul un enfant d'étagère en change : un slot de premier
+    // niveau (ligne d'inventaire) deviendrait sinon un enfant, supprimé par
+    // la cascade de son étagère, et sa ligne perdrait un fantôme.
+    if let Some(parent) = vals.get("parentSlotId").and_then(Value::as_str) {
+        let current: Option<Option<String>> = sqlx::query_scalar(
+            r#"SELECT "parentSlotId" FROM "RackSlot" WHERE "id" = ? AND "rackId" = ?"#,
+        )
+        .bind(slot_id)
+        .bind(rack_id)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(db_error)?;
+        match current {
+            None => return Err(slot_not_found()),
+            Some(None) => {
+                return Err(error(
+                    StatusCode::BAD_REQUEST,
+                    "Seul un équipement d'étagère peut changer d'étagère",
+                ))
+            }
+            Some(Some(_)) => {}
+        }
+        if parent == slot_id {
+            return Err(error(
+                StatusCode::BAD_REQUEST,
+                "Un slot ne peut pas être son propre parent",
+            ));
+        }
+        check_shelf(&mut tx, rack_id, parent, Some(slot_id)).await?;
+    }
     let cols: Vec<&str> = UPDATE
         .iter()
         .map(|f| f.name)
