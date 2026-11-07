@@ -86,7 +86,8 @@ const ENTITY: &str = "rackConnection";
 const RACK_404: &str = "Rack not found";
 const CONN_404: &str = "Connexion introuvable";
 
-/// `ADMIN_CONFIG_KEYS` (route.ts:51-60).
+/// `ADMIN_CONFIG_KEYS` (route.ts:51-60; the project renumbering has the
+/// same keys, connections/renumber/route.ts:38-47).
 const ADMIN_CONFIG_KEYS: [&str; 8] = [
     "cable_pad",
     "cable_sep1",
@@ -461,9 +462,9 @@ async fn connections(
 
 // ── automatic numbering ─────────────────────────────────────────────────────
 
-/// `normZoneOrRack` (route.ts:62-69): uppercase, `[A-Z0-9]` only, at most
-/// `max` characters, `None` when empty.
-fn norm_code(raw: Option<&str>, max: usize) -> Option<String> {
+/// `normZoneOrRack` (route.ts:62-69, `normCode` of the project route):
+/// uppercase, `[A-Z0-9]` only, at most `max` characters, `None` when empty.
+pub(crate) fn norm_code(raw: Option<&str>, max: usize) -> Option<String> {
     let raw = raw.filter(|r| !r.is_empty())?;
     let s: String = raw
         .to_uppercase()
@@ -476,14 +477,14 @@ fn norm_code(raw: Option<&str>, max: usize) -> Option<String> {
 
 /// `{signalName, direction}` of a connector entry (`getConnectorInfo`).
 #[derive(Default, Clone)]
-struct PortInfo {
-    signal: Option<Value>,
-    direction: Option<String>,
+pub(crate) struct PortInfo {
+    pub(crate) signal: Option<Value>,
+    pub(crate) direction: Option<String>,
 }
 
-/// `getConnectorInfo(connectors, portIndex)` (route.ts:285-303): the entries
-/// flattened by `quantity` (`?? 1`).
-fn connector_info(connectors: Option<&Value>, port: i64) -> PortInfo {
+/// `getConnectorInfo(connectors, portIndex)` (route.ts:285-303, identical
+/// in the project route): the entries flattened by `quantity` (`?? 1`).
+pub(crate) fn connector_info(connectors: Option<&Value>, port: i64) -> PortInfo {
     let Some(Value::Array(entries)) = connectors else {
         return PortInfo::default();
     };
@@ -567,62 +568,8 @@ async fn numbering(
     let (name, cable_code, numbering_override) = rack_row;
 
     // ── configuration: body.override > rack.numberingOverride > admin ───────
-    let marks = vec!["?"; ADMIN_CONFIG_KEYS.len()].join(", ");
-    let sql = format!(r#"SELECT "key", "value" FROM "AppConfig" WHERE "key" IN ({marks})"#);
-    let mut q = sqlx::query_as::<_, (String, String)>(&sql);
-    for k in ADMIN_CONFIG_KEYS {
-        q = q.bind(k);
-    }
-    let cfg: HashMap<String, String> = q
-        .fetch_all(&mut *tx)
-        .await
-        .map_err(db_error)?
-        .into_iter()
-        .collect();
-    let get = |k: &str| cfg.get(k).map(String::as_str);
-    let pad = js_max(
-        3.0,
-        js_min(10.0, get("cable_pad").map_or(5.0, string_to_number)),
-    );
-    let mut config = Map::new();
-    // A NaN pad (non-numeric `cable_pad`) has no JSON form: the text "NaN"
-    // reads back as NaN (`Number("NaN")`).
-    config.insert(
-        "pad".into(),
-        if pad.is_nan() {
-            json!("NaN")
-        } else {
-            json!(pad)
-        },
-    );
-    config.insert(
-        "sep1".into(),
-        json!(get("cable_sep1").or(get("cable_separator")).unwrap_or("-")),
-    );
-    config.insert(
-        "sep2".into(),
-        json!(get("cable_sep2")
-            .or(get("cable_suffix_separator"))
-            .unwrap_or("")),
-    );
-    config.insert(
-        "includeRack".into(),
-        json!(get("cable_include_rack") != Some("false")),
-    );
-    config.insert(
-        "template".into(),
-        json!(get("cable_template").unwrap_or("")),
-    );
-    config.insert(
-        "templateEnabled".into(),
-        json!(get("cable_template_enabled") == Some("true")),
-    );
-    if let Some(Value::Object(o)) = numbering_override
-        .as_deref()
-        .and_then(|s| serde_json::from_str::<Value>(s).ok())
-    {
-        config.extend(o);
-    }
+    let mut config = admin_config(tx).await.map_err(db_error)?;
+    apply_override(&mut config, numbering_override.as_deref());
     config.extend(auto.override_.clone());
 
     let rack_code = norm_code(cable_code.as_deref(), 5).or_else(|| norm_code(Some(name), 4));
@@ -641,27 +588,7 @@ async fn numbering(
         .into_iter()
         .filter_map(|(id, c)| Some((id, serde_json::from_str(&c?).ok()?)))
         .collect();
-    let signals: Vec<SignalRow> = sqlx::query_as(
-        r#"SELECT s."name", s."cablePrefix", s."cableSuffix", f."cablePrefix", f."cableSuffix"
-               FROM "TenantSignalType" s
-               LEFT JOIN "TenantFunction" f ON f."id" = s."functionId""#,
-    )
-    .fetch_all(&mut *tx)
-    .await
-    .map_err(db_error)?;
-    let pick = |own: &Option<String>, parent: &Option<String>| -> String {
-        [own, parent]
-            .into_iter()
-            .flatten()
-            .map(|s| crate::catalogue::import::js_trim(s))
-            .find(|s| !s.is_empty())
-            .unwrap_or_default()
-            .to_string()
-    };
-    let sig_map: HashMap<String, (String, String)> = signals
-        .iter()
-        .map(|(n, p, s, fp, fs)| (n.clone(), (pick(p, fp), pick(s, fs))))
-        .collect();
+    let sig_map = signal_affixes(tx).await.map_err(db_error)?;
 
     // ── connections ─────────────────────────────────────────────────────────
     let rows: Vec<ConnRow> = sqlx::query_as(
@@ -714,16 +641,6 @@ async fn numbering(
         };
         (prefix, suffix, dir)
     };
-    let key_of = |prefix: &str, dir: &str| {
-        format!(
-            "{}:{dir}",
-            if prefix.is_empty() {
-                "__nosig__"
-            } else {
-                prefix
-            }
-        )
-    };
 
     let mut counters: HashMap<String, i64> = HashMap::new();
     let seed = |counters: &mut HashMap<String, i64>, key: String, label: &str| {
@@ -744,7 +661,7 @@ async fn numbering(
                 continue;
             }
             let (prefix, _, dir) = resolve(c);
-            seed(&mut counters, key_of(&prefix, dir), label);
+            seed(&mut counters, counter_key(&prefix, dir), label);
         }
     }
 
@@ -761,7 +678,7 @@ async fn numbering(
             continue;
         }
         let (prefix, suffix, dir) = resolve(c);
-        let key = key_of(&prefix, dir);
+        let key = counter_key(&prefix, dir);
 
         // `onlyUnlabelled`: kept, its number advances the counter.
         if auto.only_unlabelled {
@@ -799,6 +716,111 @@ async fn numbering(
         done.insert(id.as_str());
     }
     Ok(updates)
+}
+
+// ── shared with the project renumbering ─────────────────────────────────────
+
+/// The admin numbering configuration (route.ts:189-201,
+/// connections/renumber/route.ts:194-203): the `AppConfig` keys, with
+/// arkyo's defaults.
+pub(crate) async fn admin_config(
+    conn: &mut SqliteConnection,
+) -> Result<Map<String, Value>, sqlx::Error> {
+    let marks = vec!["?"; ADMIN_CONFIG_KEYS.len()].join(", ");
+    let sql = format!(r#"SELECT "key", "value" FROM "AppConfig" WHERE "key" IN ({marks})"#);
+    let mut q = sqlx::query_as::<_, (String, String)>(&sql);
+    for k in ADMIN_CONFIG_KEYS {
+        q = q.bind(k);
+    }
+    let cfg: HashMap<String, String> = q.fetch_all(&mut *conn).await?.into_iter().collect();
+    let get = |k: &str| cfg.get(k).map(String::as_str);
+    let pad = js_max(
+        3.0,
+        js_min(10.0, get("cable_pad").map_or(5.0, string_to_number)),
+    );
+    let mut config = Map::new();
+    // A NaN pad (non-numeric `cable_pad`) has no JSON form: the text "NaN"
+    // reads back as NaN (`Number("NaN")`).
+    config.insert(
+        "pad".into(),
+        if pad.is_nan() {
+            json!("NaN")
+        } else {
+            json!(pad)
+        },
+    );
+    config.insert(
+        "sep1".into(),
+        json!(get("cable_sep1").or(get("cable_separator")).unwrap_or("-")),
+    );
+    config.insert(
+        "sep2".into(),
+        json!(get("cable_sep2")
+            .or(get("cable_suffix_separator"))
+            .unwrap_or("")),
+    );
+    config.insert(
+        "includeRack".into(),
+        json!(get("cable_include_rack") != Some("false")),
+    );
+    config.insert(
+        "template".into(),
+        json!(get("cable_template").unwrap_or("")),
+    );
+    config.insert(
+        "templateEnabled".into(),
+        json!(get("cable_template_enabled") == Some("true")),
+    );
+    Ok(config)
+}
+
+/// `{...config, ...rack.numberingOverride}`: the rack's override (free
+/// JSON), when it is an object.
+pub(crate) fn apply_override(config: &mut Map<String, Value>, numbering_override: Option<&str>) {
+    if let Some(Value::Object(o)) =
+        numbering_override.and_then(|s| serde_json::from_str::<Value>(s).ok())
+    {
+        config.extend(o);
+    }
+}
+
+/// Signal type name → (prefix, suffix): the signal's own (trimmed), else its
+/// function's, else `""` (`resolvePrefixSuffix`).
+pub(crate) async fn signal_affixes(
+    conn: &mut SqliteConnection,
+) -> Result<HashMap<String, (String, String)>, sqlx::Error> {
+    let signals: Vec<SignalRow> = sqlx::query_as(
+        r#"SELECT s."name", s."cablePrefix", s."cableSuffix", f."cablePrefix", f."cableSuffix"
+               FROM "TenantSignalType" s
+               LEFT JOIN "TenantFunction" f ON f."id" = s."functionId""#,
+    )
+    .fetch_all(&mut *conn)
+    .await?;
+    let pick = |own: &Option<String>, parent: &Option<String>| -> String {
+        [own, parent]
+            .into_iter()
+            .flatten()
+            .map(|s| crate::catalogue::import::js_trim(s))
+            .find(|s| !s.is_empty())
+            .unwrap_or_default()
+            .to_string()
+    };
+    Ok(signals
+        .iter()
+        .map(|(n, p, s, fp, fs)| (n.clone(), (pick(p, fp), pick(s, fs))))
+        .collect())
+}
+
+/// The counter key of a cable: `${prefix || "__nosig__"}:${dirDigit}`.
+pub(crate) fn counter_key(prefix: &str, dir: &str) -> String {
+    format!(
+        "{}:{dir}",
+        if prefix.is_empty() {
+            "__nosig__"
+        } else {
+            prefix
+        }
+    )
 }
 
 #[cfg(test)]

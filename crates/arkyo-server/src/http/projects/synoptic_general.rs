@@ -68,7 +68,7 @@ const GENERAL_APP_CONFIG_KEYS: [&str; 8] = [
 
 /// The scalar fields of the Prisma `ProjectConnection` model, in the
 /// schema's order.
-const PROJECT_CONNECTION_COLS: &str = r#""id", "projectId", "fromRackId", "fromSlotId",
+pub(crate) const PROJECT_CONNECTION_COLS: &str = r#""id", "projectId", "fromRackId", "fromSlotId",
     "fromConnectorIndex", "fromAdapterId", "fromAdapterPortIndex", "fromAdapterSide", "toRackId",
     "toSlotId", "toConnectorIndex", "toAdapterId", "toAdapterPortIndex", "toAdapterSide", "label",
     "color", "waypoints", "cableStyle", "notes", "tags", "catalogCableModelId", "wired", "wiredAt",

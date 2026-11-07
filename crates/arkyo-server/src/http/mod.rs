@@ -1,6 +1,7 @@
 //! HTTP API: shared state, session middleware, extractors and routing.
 
 mod admin;
+mod audit_read;
 mod auth;
 mod catalogue;
 pub mod client_id;
@@ -19,7 +20,7 @@ mod rack_construction;
 mod rack_events;
 pub(crate) mod rack_objects;
 pub(crate) mod rack_objects2;
-mod rack_renumber;
+pub(crate) mod rack_renumber;
 mod rack_slots;
 mod racks;
 mod rigs;
@@ -238,6 +239,7 @@ pub fn router(state: AppState) -> Router {
         .merge(rack_objects2::router())
         .merge(rack_connections::router())
         .merge(rack_renumber::router())
+        .merge(audit_read::router())
         .merge(rigs::router())
         .merge(panels::router())
         .merge(tenant_racks::router())

@@ -105,8 +105,8 @@ pub(crate) static CONN: Table = Table {
 
 const ENTITY: &str = "rackConnection";
 const CONN_404: &str = "Connexion introuvable";
-const SLOT_404: &str = "Slot introuvable";
-const ADAPTER_404: &str = "Adaptateur introuvable";
+pub(crate) const SLOT_404: &str = "Slot introuvable";
+pub(crate) const ADAPTER_404: &str = "Adaptateur introuvable";
 
 const SIDES: &[&str] = &["left", "right"];
 const SIDE_MSG: &str = r#"Invalid option: expected one of "left"|"right""#;

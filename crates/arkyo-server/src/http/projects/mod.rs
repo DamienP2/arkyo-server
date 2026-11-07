@@ -1,7 +1,7 @@
 //! Projects: arkyo:app/api/tenant/projects/** ([`tenant`], [`locations`],
 //! [`locations_item`], [`racks`], [`racks_item`], [`racks_template`],
 //! [`inventory`], [`inventory_item`], [`canvas_data`],
-//! [`synoptic_general`], [`synoptic_location`]) and
+//! [`synoptic_general`], [`synoptic_location`], [`synoptic_connections`]) and
 //! arkyo:app/api/projects/route.ts ([`legacy`]),
 //! plus [`editor`], the data of arkyo's Server Component
 //! `app/(fullscreen)/project/[id]/page.tsx`.
@@ -23,6 +23,7 @@ mod locations_item;
 mod racks;
 mod racks_item;
 mod racks_template;
+mod synoptic_connections;
 mod synoptic_general;
 mod synoptic_location;
 mod tenant;
@@ -101,6 +102,18 @@ pub fn router() -> Router<AppState> {
         .route(
             "/tenant/projects/{id}/synoptic/location/{location_id}",
             get(synoptic_location::get),
+        )
+        .route(
+            "/tenant/projects/{id}/synoptic/connections",
+            post(synoptic_connections::create),
+        )
+        .route(
+            "/tenant/projects/{id}/synoptic/connections/renumber",
+            post(synoptic_connections::renumber),
+        )
+        .route(
+            "/tenant/projects/{id}/synoptic/connections/{connection_id}",
+            patch(synoptic_connections::update).delete(synoptic_connections::remove),
         )
         .route("/projects", get(legacy::list).post(legacy::create))
 }
