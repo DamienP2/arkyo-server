@@ -95,7 +95,8 @@ export function RackElevation({
   );
   const occupied = new Set<number>();
   for (const s of placed) for (let k = 0; k < s.heightU; k++) occupied.add(s.startU + k);
-  const yOf = (s: RackElevationSlot) => TOP + (units - (s.startU + s.heightU - 1)) * U_MM;
+  // Haut de l'équipement, borné au haut du rack (un équipement qui dépasse est rogné, pas dessiné au-dessus du cadre).
+  const yOf = (s: RackElevationSlot) => TOP + (units - Math.min(units, s.startU + s.heightU - 1)) * U_MM;
   const hOf = (s: RackElevationSlot) => Math.min(s.heightU, units - s.startU + 1) * U_MM;
   const depthPx = RW - RAIL * 2;
   const knownDepth = depthMm && depthMm > 0 ? depthMm : null;
@@ -143,7 +144,8 @@ export function RackElevation({
             const h = hOf(s);
             const d = s.depthMm && s.depthMm > 0 ? s.depthMm : 0;
             const dw = Math.min(depthPx, (d / rackDepth) * depthPx);
-            const res = Math.min(depthPx - dw, (CABLE_RESERVE_MM / rackDepth) * depthPx);
+            // Réserve de câbles seulement à l'échelle d'une profondeur de rack connue.
+            const res = knownDepth ? Math.min(depthPx - dw, (CABLE_RESERVE_MM / rackDepth) * depthPx) : 0;
             const sel = selectedSlotId === s.id;
             return (
               <g key={s.id} data-slot={s.id} data-selected={sel ? "" : undefined} className="group" {...clickProps(s.id)}>
@@ -185,7 +187,7 @@ export function RackElevation({
           >
             {knownDepth
               ? `Profondeur utile ${knownDepth} mm · réserve câbles arrière ${CABLE_RESERVE_MM} mm en pointillés`
-              : `Réserve câbles arrière ${CABLE_RESERVE_MM} mm en pointillés`}
+              : "Profondeur non renseignée"}
           </text>
         </>
       ) : (
