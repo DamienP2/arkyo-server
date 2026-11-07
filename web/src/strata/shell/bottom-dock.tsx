@@ -12,7 +12,7 @@ import type { ReactNode } from "react";
 import { ChevronDown, ChevronUp } from "@/components/ui/icons";
 import { useLocalStorageState } from "@/lib/hooks/use-local-storage-state";
 import { cn } from "@/lib/utils";
-import { SEG_BAR, SEG_TAB, SEG_TAB_OFF, SEG_TAB_ON } from "./strata-editor-shell";
+import { SEG_BAR, SEG_TAB, SEG_TAB_OFF, SEG_TAB_ON } from "./seg-tabs";
 
 export const BOTTOM_DOCK_H = 220;
 export const BOTTOM_DOCK_COLLAPSED_H = 38;

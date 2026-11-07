@@ -73,7 +73,9 @@ import {
   type RackCanvasData,
   type LocationCanvasData,
 } from "../rack/rack-tab-client";
-import { withLibraryDock } from "@/strata/library/library-dock"; // arkyo-server: interface Strata
+import { withStrataRack } from "@/strata/editor/rack-strata"; // arkyo-server: interface Strata
+import { withStrataInventaireFace } from "@/strata/editor/inventaire-strata"; // arkyo-server: interface Strata
+import { withStrataSaveStatus } from "@/strata/shell/save-status"; // arkyo-server: interface Strata
 import {
   RackTabLeftToolbar,
   type RackRenderMode,
@@ -1211,7 +1213,7 @@ function getEditorSlots(args: {
     rackLocations,
   } = args;
 
-  const globalTopbar = (
+  const globalTopbar = withStrataSaveStatus(saveStatus, ( // arkyo-server: interface Strata — état d'enregistrement lu par la topbar Strata (contexte, sans effet en Classique).
     <ProjectGlobalTopbar
       projectName={project.header.name}
       tenantName={tenantName}
@@ -1222,7 +1224,7 @@ function getEditorSlots(args: {
       tabs={tabsNode}
       onClose={onClose}
     />
-  );
+  )); // arkyo-server: interface Strata
   const rightPanel = (
     <ProjectInfoPanel
       fiche={project.fiche}
@@ -1273,13 +1275,13 @@ function getEditorSlots(args: {
           onRequestCatalog={() => setActiveTool("equipment")}
         />
       ),
-      rightPanel: (
+      rightPanel: withStrataInventaireFace(( // arkyo-server: interface Strata — face de l'élément sélectionné au-dessus du panneau (Strata seulement).
         <InventaireRightPanel
           fiche={project.fiche}
           status={status}
           onStatusChange={onStatusChange}
         />
-      ),
+      )), // arkyo-server: interface Strata
     };
   }
 
@@ -1376,8 +1378,8 @@ function getEditorSlots(args: {
         }
       />
     );
-    // arkyo-server: interface Strata — onglets « Outils » et « Bibliothèque » du dock gauche (champ `strata`, ignoré en Classique).
-    return withLibraryDock({
+    // arkyo-server: interface Strata — dock gauche « Outils » / « Bibliothèque », face dans l'inspecteur, dock bas, lentille Connectique (sans effet en Classique).
+    return withStrataRack({
       globalTopbar,
       contextualTopbar: rackContextualTopbar,
       leftToolbar: (
@@ -1490,7 +1492,7 @@ function getEditorSlots(args: {
           }}
         />
       ),
-    }, { scope: isLocationScope ? "location" : "container", selectedRackId: rackSelectedRackId, canvasData: rackCanvasData, liveSlots: rackLiveSlots, locationData: rackLocationData, locationLiveSlots: rackLocationLiveSlots, visibleViews: rackVisibleViews, locationView: effectiveLocationView }); // arkyo-server: interface Strata
+    }, { scope: isLocationScope ? "location" : "container", selectedRackId: rackSelectedRackId, canvasData: rackCanvasData, liveSlots: rackLiveSlots, locationData: rackLocationData, locationLiveSlots: rackLocationLiveSlots, visibleViews: rackVisibleViews, locationView: effectiveLocationView, projectId: project.header.id, locationRackIds, selectedSlot: rackSelectedSlot, onSlotSelect: onRackSlotSelect }); // arkyo-server: interface Strata
   }
 
   // Note : l'onglet "synoptique" est traité hors de `getEditorSlots` car il

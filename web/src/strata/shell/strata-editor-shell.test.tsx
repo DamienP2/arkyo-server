@@ -279,8 +279,10 @@ describe("éditeur projet en Strata", () => {
     const { router } = await openStrata("/project/p1?tab=schema");
     expect(within(projectNav()).getByRole("link", { name: "Conception" })).toHaveAttribute("aria-current", "page");
     const lenses = await waitFor(() => lensBar());
+    // Plus Connectique, lentille propre à Strata (onglet `rack`, `?lens=connectique`).
     expect(within(lenses).getAllByRole("link").map((l) => l.textContent)).toEqual([
       "Rack",
+      "Connectique",
       "Synoptique",
       "Schémas",
       "Plan",

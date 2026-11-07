@@ -11,6 +11,13 @@
  *   - inspecteur : le `rightPanel`, à la largeur du store ;
  *   - volet (`slideOver`) quand le store l'ouvre.
  *
+ * Dock bas : `strata.bottomDock` ; à défaut, dans le synoptique, l'onglet
+ * Contrôles du rapport que celui-ci publie (`SynopticBottomDock`).
+ *
+ * Quand la topbar porte l'état d'enregistrement (`data-strata-save`), le
+ * badge de la barre contextuelle existante (`ProjectContextualTopbar`, dernier
+ * `span` de sa racine) est masqué : l'état n'est affiché qu'une fois.
+ *
  * Même boîte `fixed` et même décalage haut qu'`EditorShell`. Un slot absent ou
  * `null` ne réserve aucune largeur.
  */
@@ -18,6 +25,7 @@
 import { createContext, useContext, useState, type ReactNode } from "react";
 import type { EditorShellSlots } from "@/components/editor-shell/editor-shell";
 import { useWorkspace } from "@/components/editor-shell/hooks/use-workspace";
+import { useTopbarActions } from "@/components/editor-shell/topbar-actions-context";
 import {
   SHELL_LEFT_SIDE_PANEL_W,
   SHELL_LEFT_TOOLBAR_W,
@@ -25,6 +33,12 @@ import {
   SHELL_TOPBAR_CTX_H,
 } from "@/components/synoptique/lib/constants";
 import { cn } from "@/lib/utils";
+import { SynopticBottomDock } from "../bottom/rack-bottom-dock";
+import { SEG_BAR, SEG_TAB, SEG_TAB_OFF, SEG_TAB_ON } from "./seg-tabs";
+
+/** Masque le badge d'enregistrement de la barre contextuelle quand la topbar l'affiche. */
+const SAVE_BADGE_CSS =
+  '[data-strata-editor]:has([data-strata-save]) [data-dock="contextual"] > div > span:last-child:not([aria-hidden]) { display: none; }';
 
 /** Hauteur de la topbar Strata (`--topbar-height` de `[data-interface="strata"]`). */
 export const STRATA_TOPBAR_H = 46;
@@ -46,13 +60,7 @@ export function useStrataLensSlot(): HTMLElement | null {
   return useContext(LensSlotContext);
 }
 
-/** Onglets segmentés soulignés (`.seg-tabs` de la maquette). */
-export const SEG_TAB =
-  "-mb-px inline-flex items-center gap-1.5 border-b-2 px-2.5 py-2 text-[12.5px] font-medium whitespace-nowrap transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]";
-export const SEG_TAB_ON = "border-[var(--accent)] text-[var(--foreground)]";
-export const SEG_TAB_OFF = "border-transparent text-[var(--muted-foreground)] hover:text-[var(--foreground)]";
-export const SEG_BAR =
-  "flex min-h-[38px] flex-none items-end gap-0.5 overflow-x-auto border-b border-[var(--border)] [scrollbar-width:none]";
+export { SEG_BAR, SEG_TAB, SEG_TAB_OFF, SEG_TAB_ON } from "./seg-tabs";
 
 function LeftDockTabs({ tabs }: { tabs: StrataDockTab[] }) {
   const [activeId, setActiveId] = useState(tabs[0].id);
@@ -86,7 +94,13 @@ export function StrataEditorShell(props: StrataEditorShellProps) {
   const [lensSlot, setLensSlot] = useState<HTMLElement | null>(null);
 
   const leftDockTabs = props.leftDockTabs ?? props.strata?.leftDockTabs;
-  const bottomDock = props.bottomDock ?? props.strata?.bottomDock;
+  // Synoptique : dock Contrôles d'après le rapport qu'il publie (store de la topbar), s'il y en a un.
+  const workspace = useWorkspace((s) => s.workspace);
+  const synopticReport = useTopbarActions((s) => s.validationReport);
+  const bottomDock =
+    props.bottomDock ??
+    props.strata?.bottomDock ??
+    (workspace === "synoptic" && synopticReport ? <SynopticBottomDock /> : null);
   const hasTabs = !!leftDockTabs && leftDockTabs.length > 0;
   const hasPanel = hasTabs || !!props.leftSidePanel;
   const hasLeft = !!props.leftToolbar || hasPanel;
@@ -98,6 +112,7 @@ export function StrataEditorShell(props: StrataEditorShellProps) {
         className="fixed right-0 bottom-0 left-0 z-50 flex flex-col overflow-hidden bg-[var(--background)] text-[var(--foreground)]"
         style={{ top: "calc(var(--dev-banner-height) + var(--impersonation-banner-height, 0px))" }}
       >
+        <style>{SAVE_BADGE_CSS}</style>
         <div data-dock="topbar" style={{ height: STRATA_TOPBAR_H }} className="flex-none border-b border-[var(--border)]">
           {props.globalTopbar}
         </div>

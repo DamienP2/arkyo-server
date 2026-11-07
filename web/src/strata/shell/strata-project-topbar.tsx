@@ -11,20 +11,27 @@
  * Mêmes `ProjectTabId`, même `?tab=` et même stockage local que la pill
  * d'arkyo : la topbar lit `active`, `onChange`, `subValue` et `onSubChange`
  * sur l'élément `ProjectTabsPill` reçu en `tabs` (rendu par l'éditeur, pas
- * ici). À défaut, elle lit `?tab=` et écrit comme `handleTabChange`.
+ * ici). À défaut (repli), elle lit `?tab=` et écrit comme `handleTabChange` ;
+ * les sous-onglets de Lumière et Réseau, propres à la pill, ne sont alors pas
+ * proposés.
  *
- * Conception ouvre la barre de lentilles (Rack … Réseau, avec les
- * sous-onglets existants de Lumière et Réseau), Livraison la barre
+ * Conception ouvre la barre de lentilles (Rack, Connectique … Réseau, avec
+ * les sous-onglets existants de Lumière et Réseau), Livraison la barre
  * Préparation · Recette : les deux s'affichent en tête de la colonne centrale
- * de `StrataEditorShell`.
+ * de `StrataEditorShell`. Connectique, propre à Strata, est l'onglet `rack`
+ * avec `?lens=connectique` (pas de nouvel identifiant d'onglet) ; quitter la
+ * lentille retire le paramètre.
+ *
+ * À droite, l'état d'enregistrement de l'éditeur (`withStrataSaveStatus`).
  */
 
-import { isValidElement, useEffect, type ComponentProps, type ComponentType, type MouseEvent, type ReactNode } from "react";
+import { Fragment, isValidElement, useEffect, type ComponentProps, type ComponentType, type MouseEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import {
+  Cable,
   Check,
   ChevronDown,
   ClipboardList,
@@ -49,7 +56,10 @@ import { STATUS_OPTIONS, type ProjectStatus } from "@/app/(fullscreen)/project/[
 import { ProjectTabsPill } from "@/app/(fullscreen)/project/[id]/_editor/project-tabs-pill";
 import type { ProjectTabId, TabSubItem } from "@/app/(fullscreen)/project/[id]/_editor/tab-bar";
 import { cn } from "@/lib/utils";
-import { SEG_BAR, SEG_TAB, SEG_TAB_OFF, SEG_TAB_ON, useStrataLensSlot } from "./strata-editor-shell";
+import { LENS_PARAM, LENS_TAB, lensOf, type StrataLens } from "../lenses/strata-lens";
+import { StrataSaveBadge, useStrataSaveStatus } from "./save-status";
+import { SEG_BAR, SEG_TAB, SEG_TAB_OFF, SEG_TAB_ON } from "./seg-tabs";
+import { useStrataLensSlot } from "./strata-editor-shell";
 
 /** Lentilles de l'onglet Conception, dans l'ordre de la pill d'arkyo. */
 export const CONCEPTION_LENSES: ProjectTabId[] = [
@@ -130,7 +140,11 @@ type PillProps = ComponentProps<typeof ProjectTabsPill>;
 
 type TabNav = {
   active: ProjectTabId;
+  /** Lentille Strata ouverte sur l'onglet actif (`?lens=`). */
+  lens: StrataLens | null;
   go: (id: ProjectTabId) => void;
+  /** Ouvre une lentille Strata (ou la quitte, `null`) sur l'onglet `id`. */
+  goLens: (id: ProjectTabId, lens: StrataLens | null) => void;
   label: (id: ProjectTabId) => string;
   subTabs: (id: ProjectTabId) => TabSubItem[] | undefined;
   subValue?: string;
@@ -156,19 +170,45 @@ function useTabNav(tabs: ReactNode): TabNav {
   }
   const label = (id: ProjectTabId) => labels[id] ?? DEFAULT_LABELS[id];
   const subTabs = (id: ProjectTabId) => subs[id];
+  // `?lens=` tel qu'il est dans l'URL ; il ne vaut que sur l'onglet qui porte la lentille.
+  const rawLens = lensOf(searchParams);
+  const lensOn = (active: ProjectTabId) => (rawLens && LENS_TAB[rawLens] === active ? rawLens : null);
+
+  // `?tab=` et stockage local comme `handleTabChange`, `?lens=` en plus.
+  const goLens = (id: ProjectTabId, next: StrataLens | null) => {
+    writeStorage(EDITOR_TAB_KEY, id);
+    const query = new URLSearchParams(searchParams?.toString() ?? "");
+    query.set("tab", id);
+    if (next) query.set(LENS_PARAM, next);
+    else query.delete(LENS_PARAM);
+    router.replace(`/project/${params?.id}?${query.toString()}`, { scroll: false });
+  };
+  // Changer d'onglet quitte la lentille Strata (retire `?lens=`) ; rester sur l'onglet la garde.
+  const leaving = (go: (id: ProjectTabId) => void, active: ProjectTabId) => (id: ProjectTabId) => {
+    if (!rawLens) go(id);
+    else if (id !== active || !lensOn(active)) goLens(id, null);
+  };
 
   if (pill) {
-    return { active: pill.active, go: pill.onChange, label, subTabs, subValue: pill.subValue, onSubChange: pill.onSubChange };
+    return {
+      active: pill.active,
+      lens: lensOn(pill.active),
+      go: leaving(pill.onChange, pill.active),
+      goLens,
+      label,
+      subTabs,
+      subValue: pill.subValue,
+      onSubChange: pill.onSubChange,
+    };
   }
+  // Repli explicite : navigation par `?tab=`, sans les sous-onglets de la pill.
   const queryTab = searchParams?.get("tab");
+  const active = isTabId(queryTab) ? queryTab : "inventaire";
   return {
-    active: isTabId(queryTab) ? queryTab : "inventaire",
-    go: (id) => {
-      writeStorage(EDITOR_TAB_KEY, id);
-      const next = new URLSearchParams(searchParams?.toString() ?? "");
-      next.set("tab", id);
-      router.replace(`/project/${params?.id}?${next.toString()}`, { scroll: false });
-    },
+    active,
+    lens: lensOn(active),
+    go: leaving((id) => goLens(id, null), active),
+    goLens,
     label,
     subTabs,
   };
@@ -177,12 +217,15 @@ function useTabNav(tabs: ReactNode): TabNav {
 /** Lien d'onglet : `?tab=` (ouverture dans un nouvel onglet), navigation via `go`. */
 function TabLink({
   id,
+  lens = null,
   on,
   go,
   className,
   children,
 }: {
   id: ProjectTabId;
+  /** Lentille Strata de l'onglet (`?lens=`). */
+  lens?: StrataLens | null;
   on: boolean;
   go: (id: ProjectTabId) => void;
   className: string;
@@ -193,8 +236,9 @@ function TabLink({
     e.preventDefault();
     go(id);
   };
+  const href = lens ? `?tab=${id}&${LENS_PARAM}=${lens}` : `?tab=${id}`;
   return (
-    <a href={`?tab=${id}`} onClick={onClick} aria-current={on ? "page" : undefined} className={className}>
+    <a href={href} onClick={onClick} aria-current={on ? "page" : undefined} className={className}>
       {children}
     </a>
   );
@@ -217,12 +261,32 @@ function SectionBar({ nav, section }: { nav: TabNav; section: Section }) {
     <nav aria-label={section === "conception" ? "Lentilles" : "Livraison"} className={cn(SEG_BAR, "px-3")}>
       {ids.map((id) => {
         const Icon = LENS_ICONS[id];
-        const on = id === nav.active;
+        const on = id === nav.active && !nav.lens;
         return (
-          <TabLink key={id} id={id} on={on} go={nav.go} className={cn(SEG_TAB, on ? SEG_TAB_ON : SEG_TAB_OFF)}>
-            {Icon && <Icon className="h-3.5 w-3.5" />}
-            {nav.label(id)}
-          </TabLink>
+          <Fragment key={id}>
+            <TabLink
+              id={id}
+              on={on}
+              go={(t) => (nav.lens && t === nav.active ? nav.goLens(t, null) : nav.go(t))}
+              className={cn(SEG_TAB, on ? SEG_TAB_ON : SEG_TAB_OFF)}
+            >
+              {Icon && <Icon className="h-3.5 w-3.5" />}
+              {nav.label(id)}
+            </TabLink>
+            {/* Lentille propre à Strata : l'onglet Rack, vue Connectique. */}
+            {id === "rack" && (
+              <TabLink
+                id="rack"
+                lens="connectique"
+                on={nav.active === "rack" && nav.lens === "connectique"}
+                go={() => nav.goLens("rack", "connectique")}
+                className={cn(SEG_TAB, nav.active === "rack" && nav.lens === "connectique" ? SEG_TAB_ON : SEG_TAB_OFF)}
+              >
+                <Cable className="h-3.5 w-3.5" />
+                Connectique
+              </TabLink>
+            )}
+          </Fragment>
         );
       })}
       {subTabs && (
@@ -339,6 +403,7 @@ export function StrataProjectTopbar({
 }: StrataProjectTopbarProps) {
   const nav = useTabNav(tabs);
   const lensSlot = useStrataLensSlot();
+  const saveStatus = useStrataSaveStatus();
   const section = sectionOf(nav.active);
 
   // Conception rouvre la dernière lentille consultée.
@@ -391,6 +456,12 @@ export function StrataProjectTopbar({
       <div className="flex-1" />
 
       <div className="flex shrink-0 items-center gap-1.5">
+        {/* État d'enregistrement : le repère masque le badge de la barre contextuelle. */}
+        {saveStatus !== undefined && (
+          <span data-strata-save="" className="mr-1.5 inline-flex">
+            <StrataSaveBadge status={saveStatus} />
+          </span>
+        )}
         <PresenceAvatars className="mr-1" />
         {onEditCharacteristics && (
           <button type="button" onClick={onEditCharacteristics} title="Caractéristiques du projet" className={BTN}>
