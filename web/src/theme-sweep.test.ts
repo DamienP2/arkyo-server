@@ -419,6 +419,8 @@ const COPIED_FILES = [
   "lib/export/svg-inline-styles.ts",
   "lib/pdf/synoptic-cards.ts",
   "lib/services/cable-length.ts",
+  // Phase 4c (Task 11) : vue synoptique.
+  "components/synoptique/synoptic-view.tsx",
 ];
 
 /** Fichiers posés sur la topbar ou le rail : ils suivent le thème (variante « Clair A »). */
@@ -1189,6 +1191,59 @@ const ALLOW_HEX: AllowMap = {
         "rendu des plans et des PDF",
     },
     { line: /^ \* lire\. Lire la couleur CALCULÉE d'un élément donne toujours du `rgb\(\)`\.$/, reason: "commentaire, pas une couleur" },
+  ],
+  // Phase 4c (Task 11) : vue synoptique.
+  "components/synoptique/synoptic-view.tsx": [
+    {
+      line:
+        /^\s*color: String\(b\.color \?\? "#6366f1"\),$|conn\.color \?\? sigColor \?\? fromPort\?\.ct\?\.color \?\? toPort\?\.ct\?\.color \?\? "#(94a3b8|6366f1)";$|^\s*"#6366f1";$|const color = fromPort\?\.ct\?\.color \?\? "#6366f1";$/,
+      reason:
+        "couleur d'un câble (couleur posée, sinon celle du signal, sinon celle du connecteur) et ses replis, " +
+        "couleur d'un faisceau et son défaut (défaut de la colonne CableBundle.color) : couleur métier",
+    },
+    {
+      line: /^\s*color: (portInfo\?\.ct|ct|p\.ct)\?\.color \?\? "#(94a3b8|71717a)",$/,
+      reason: CONN,
+    },
+    {
+      line: /return \{ color: String\(tt\.color \?\? "#64748b"\), text: String\(tt\.text \?\? ""\) \};$|\?\? sigInfo\?\.color \?\? "#888";$/,
+      reason: "couleur d'une étiquette de câble (choisie par l'utilisateur) et repli de la couleur d'un signal (légende) : couleur métier",
+    },
+    {
+      line: /^\s*host\.style\.background = "#ffffff";$|^\s*background: "#ffffff",$/,
+      reason: "fond blanc de la capture PNG / PDF du plan : rendu des exports",
+    },
+    {
+      line: /^\s*fill="#f59e0b"$/,
+      reason:
+        "repère « ! » d'un numéro de câble en doublon, dessiné sur le plan et recalé à l'export " +
+        "(`recalibrateDuplicateMarkers`) : rendu des plans",
+    },
+    {
+      line: /^\s*(fill="#6366f115"|stroke="#6366f1"|fill="#f59e0b08"|stroke="#f59e0b"|fill="#f59e0b80")$/,
+      reason:
+        "aperçu d'une zone (indigo, première couleur de la palette des zones) et d'un label (ambre) pendant le tracé : " +
+        DOUBT,
+    },
+    {
+      line: /^\s*const labelFill = isUnlabelled \? "#9ca3af" : color;$|fill=\{hasLabel \? portColor : "#9ca3af"\}$/,
+      reason: "« — » d'un câble ou d'une connexion externe sans numéro, dessiné sur le plan et exporté : rendu des plans",
+    },
+    {
+      line: /^\s*const (S|STRAIGHT) = "#f97316";$|fill=\{snapping \? snapColor : "#f97316"\}$/,
+      reason:
+        "surbrillance orange du câble sélectionné et de son extrémité déplacée, choisie pour trancher sur les câbles " +
+        "(indigo par défaut, proche de --accent) : " +
+        DOUBT,
+    },
+    {
+      line: /^\s*(fill="#ffffff"|stroke="#374151")$|<rect x=\{3\.5\} y=\{7\} width=\{7\} height=\{5\} rx=\{1\} fill="#374151" \/>$/,
+      reason: "cadenas d'un adaptateur rattaché à un port, dessiné dans le calque de la scène (exporté) : rendu des plans, " + DOUBT,
+    },
+    {
+      line: /^\s*(stroke|fill)="rgba\(0,0,0,0\)"$|style=\{\{ filter: `drop-shadow\(0 1px 3px rgba\(0,0,0,0\.25\)\)` \}\}$/,
+      reason: "zones de clic transparentes (câbles, connexions externes, extrémités) et ombre portée d'une poignée : pas une couleur d'interface",
+    },
   ],
   "lib/print/export-with-cartouche.ts": [
     { line: /"#ffffff"/, reason: "fond blanc de la feuille et de la zone de dessin du PDF : rendu des PDF" },
