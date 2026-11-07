@@ -473,7 +473,7 @@ async fn external_port_kinds() {
     )
     .await;
     // arkyo-server: an already marked port is a 409 here too (arkyo: P2002,
-    // 500), and the new slot must be of this rack (arkyo did not check).
+    // 500), and an unknown slot a 404 (arkyo: foreign key, 500).
     let r = c
         .send(
             "PATCH",
@@ -492,8 +492,8 @@ async fn external_port_kinds() {
         &c,
         "PATCH",
         &c.item("external-ports", &id1),
-        Some(json!({"slotId": "sb"})),
-        SLOT_404,
+        Some(json!({"slotId": "nope"})),
+        "Slot introuvable",
     )
     .await;
     // Unknown port, or a port of another rack: 404 (arkyo: P2025, 500).
@@ -511,6 +511,32 @@ async fn external_port_kinds() {
     }
     assert_eq!(snapshot(pool).await, before);
     no_rack_event(&mut rack).await;
+
+    // A slot of another rack of the location is accepted, as in arkyo (the
+    // location view drags the bubble onto any free port); the port keeps its
+    // `rackId`, so its rack's routes still reach it.
+    let r = c
+        .send(
+            "PATCH",
+            &c.item("external-ports", &id1),
+            Some(json!({"slotId": "sb", "portIndex": 7})),
+        )
+        .await;
+    assert_eq!(r.status, StatusCode::OK, "{:?}", r.body);
+    let moved = r.body;
+    assert_eq!(moved["slotId"], json!("sb"));
+    assert_eq!(moved["portIndex"], json!(7));
+    assert_eq!(moved["rackId"], json!(c.rack), "rackId inchangé");
+    assert_eq!(
+        next_rack(&mut rack).await,
+        json!({"type": "external_port_updated", "externalPort": moved})
+    );
+    assert_eq!(
+        next_app(&mut app).await,
+        app_event(&c.rack, "external_port", "updated", &id1)
+    );
+    let r = c.send("GET", &c.url("external-ports"), None).await;
+    assert_eq!(ids(&r.body), [id1.clone(), id2.clone()]);
 
     // DELETE.
     let r = c

@@ -37,9 +37,13 @@
 //!   `POST` d'un adaptateur (404 « Not found », arkyo : clé étrangère),
 //!   identifiant client déjà pris (409, arkyo : P2002), port déjà marqué au
 //!   `PATCH` (409, arkyo : P2002 non intercepté) ;
-//! - le slot visé (`slotId` d'un port au `PATCH`, `attachedSlotId` d'un
-//!   adaptateur) doit appartenir au rack : 404 « Slot introuvable dans ce
-//!   rack » (arkyo : aucun contrôle, ou clé étrangère en 500).
+//! - `attachedSlotId` d'un adaptateur doit appartenir au rack : 404
+//!   « Slot introuvable dans ce rack » (arkyo : clé étrangère en 500 ; son
+//!   front refuse déjà de rattacher à un autre contenant) ;
+//! - `PATCH` d'un port : le `slotId` peut être celui d'un autre rack, comme
+//!   dans arkyo (glisser de la bulle en vue lieu), et `rackId` ne change
+//!   pas ; seul un slot inexistant donne 404 « Slot introuvable » (arkyo :
+//!   clé étrangère, 500).
 
 #![allow(clippy::result_large_err)]
 
@@ -104,6 +108,7 @@ static ADAPTER: Table = Table {
 };
 
 const SLOT_404: &str = "Slot introuvable dans ce rack";
+const SLOT_UNKNOWN: &str = "Slot introuvable";
 const PORT_404: &str = "Port externe introuvable";
 const ADAPTER_404: &str = "Adaptateur introuvable";
 const PORT_TAKEN: &str = "Ce port est déjà marqué comme externe";
@@ -180,6 +185,16 @@ async fn slot_in_rack(
             .fetch_optional(conn)
             .await
             .map_err(db_error)?;
+    Ok(found.is_some())
+}
+
+/// Whether slot `slot` exists, in any rack.
+async fn slot_exists(conn: &mut SqliteConnection, slot: &str) -> Result<bool, Response> {
+    let found: Option<i64> = sqlx::query_scalar(r#"SELECT 1 FROM "RackSlot" WHERE "id" = ?"#)
+        .bind(slot)
+        .fetch_optional(conn)
+        .await
+        .map_err(db_error)?;
     Ok(found.is_some())
 }
 
@@ -384,11 +399,13 @@ async fn run_update_port(
     if fetch(&mut tx, &PORT, rack, id).await?.is_none() {
         return Err(error(StatusCode::NOT_FOUND, PORT_404));
     }
-    // arkyo-server: correction, le nouveau slot doit être de ce rack
-    // (arkyo ne le vérifiait qu'au POST).
+    // Any existing slot, even of another rack: the location view drags a
+    // bubble onto any free port of the location, and `rackId` stays the
+    // port's own (arkyo: no check). arkyo-server: un slot inexistant donne
+    // 404 « Slot introuvable » (arkyo : clé étrangère, 500).
     if let Some(Value::String(slot)) = obj.get("slotId") {
-        if !slot_in_rack(&mut tx, rack, slot).await? {
-            return Err(error(StatusCode::NOT_FOUND, SLOT_404));
+        if !slot_exists(&mut tx, slot).await? {
+            return Err(error(StatusCode::NOT_FOUND, SLOT_UNKNOWN));
         }
     }
     update_row(&mut tx, &PORT, id, &obj)
