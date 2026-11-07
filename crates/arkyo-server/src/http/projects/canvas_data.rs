@@ -67,7 +67,7 @@ const FALLBACK_COLS: &str = r#""id", "name", "reference", "heightU", "widthFract
     "rackSymbolUrl", "rackSymbolRearUrl", "rackPhotoFrontUrl", "rackPhotoRearUrl", "brandId",
     "categoryId", "functionIds", "componentSlotSpan""#;
 
-const PANEL_SLOT: Table = Table {
+pub(crate) const PANEL_SLOT: Table = Table {
     name: "PanelSlot",
     bools: &["mountD"],
     jsons: &[],
@@ -100,9 +100,9 @@ pub async fn get(
     }
 }
 
-/// `sql` with `binds`, each row mapped with `t`; `sql` is a literal of this
-/// module.
-async fn fetch(
+/// `sql` with `binds`, each row mapped with `t`; `sql` is a literal of the
+/// caller.
+pub(crate) async fn fetch(
     conn: &mut SqliteConnection,
     sql: &str,
     binds: &[String],
@@ -408,29 +408,11 @@ async fn canvas_data(
 
     // Connector types: the select of route.ts:198-207, `functions` from
     // `functionIds`.
-    let connector_types: Vec<Value> = fetch(
-        conn,
-        r#"SELECT * FROM "TenantConnectorType" ORDER BY rowid"#,
-        &[],
-        CONNECTOR_TYPE,
-    )
-    .await?
-    .into_iter()
-    .map(|c| {
-        let fns: Vec<Value> = c
-            .get("functionIds")
-            .and_then(Value::as_array)
-            .into_iter()
-            .flatten()
-            .filter(|v| v.is_string())
-            .map(|id| json!({ "functionId": id }))
-            .collect();
-        json!({
-            "id": c.get("id"), "name": c.get("name"), "versions": c.get("versions"),
-            "iconId": c.get("iconId"), "color": c.get("color"), "functions": fns,
-        })
-    })
-    .collect();
+    let connector_types: Vec<Value> = connector_type_rows(conn)
+        .await?
+        .iter()
+        .map(connector_type_shape)
+        .collect();
     let ct_by_id: HashMap<&str, &Value> = connector_types
         .iter()
         .filter_map(|c| Some((c["id"].as_str()?, c)))
@@ -582,14 +564,7 @@ async fn canvas_data(
         })
         .collect();
 
-    let signals = fetch(
-        conn,
-        r#"SELECT "id", "name", "color", "cablePrefix", "cableSuffix", "functionId", "isIp"
-           FROM "TenantSignalType" ORDER BY rowid"#,
-        &[],
-        &SIGNAL,
-    )
-    .await?;
+    let signals = signal_rows(conn).await?;
     let config: HashMap<String, String> = sqlx::query_as(
         r#"SELECT "key", "value" FROM "AppConfig"
            WHERE "key" IN ('patch_panel_depth_mm', 'cable_safety_depth_mm')"#,
@@ -631,6 +606,51 @@ async fn canvas_data(
         "patchPanelDepthMm": depth("patch_panel_depth_mm", 5),
         "cableSafetyDepthMm": depth("cable_safety_depth_mm", 150),
     })))
+}
+
+/// Every `TenantConnectorType` row (arkyo's `catalogConnectorType.findMany`,
+/// no `orderBy`: insertion order).
+pub(crate) async fn connector_type_rows(
+    conn: &mut SqliteConnection,
+) -> Result<Vec<Obj>, sqlx::Error> {
+    fetch(
+        conn,
+        r#"SELECT * FROM "TenantConnectorType" ORDER BY rowid"#,
+        &[],
+        CONNECTOR_TYPE,
+    )
+    .await
+}
+
+/// A connector type as arkyo selects it (`{id, name, versions, iconId,
+/// color, functions: {select: {functionId}}}`, canvas-data route.ts:198-207
+/// and synoptic-focus-payload.ts:258-268): `functions` from `functionIds`.
+pub(crate) fn connector_type_shape(c: &Obj) -> Value {
+    let fns: Vec<Value> = c
+        .get("functionIds")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter(|v| v.is_string())
+        .map(|id| json!({ "functionId": id }))
+        .collect();
+    json!({
+        "id": c.get("id"), "name": c.get("name"), "versions": c.get("versions"),
+        "iconId": c.get("iconId"), "color": c.get("color"), "functions": fns,
+    })
+}
+
+/// Every `TenantSignalType` with arkyo's `select` (`{id, name, color,
+/// cablePrefix, cableSuffix, functionId, isIp}`), insertion order.
+pub(crate) async fn signal_rows(conn: &mut SqliteConnection) -> Result<Vec<Obj>, sqlx::Error> {
+    fetch(
+        conn,
+        r#"SELECT "id", "name", "color", "cablePrefix", "cableSuffix", "functionId", "isIp"
+           FROM "TenantSignalType" ORDER BY rowid"#,
+        &[],
+        &SIGNAL,
+    )
+    .await
 }
 
 /// The string ids of an equipment's `functionIds` (already parsed JSON).

@@ -76,8 +76,8 @@ fn distinct<'a>(rows: impl IntoIterator<Item = &'a Obj>, key: &str) -> Vec<Strin
 }
 
 /// `SELECT cols FROM table WHERE col IN (ids) ORDER BY order`, mapped with
-/// `t`; `table`, `cols`, `col` and `order` are literals of this module.
-async fn rows_in(
+/// `t`; `table`, `cols`, `col` and `order` are literals of the caller.
+pub(crate) async fn rows_in(
     conn: &mut SqliteConnection,
     t: &Table,
     table: &str,

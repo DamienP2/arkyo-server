@@ -1,0 +1,350 @@
+{
+  "$comment": "Réponse attendue de GET /api/tenant/projects/p1/synoptic/location/loc1 pour le jeu de données de tests/synoptic_location.rs, écrite à la main d'après arkyo:app/api/tenant/projects/[id]/synoptic/location/[locationId]/route.ts et arkyo:lib/services/synoptic-focus-payload.ts. Un objet {\"$ref\": id, …} vaut la ligne catalogue complète de $defs[id] (findMany sans select dans arkyo), complétée des autres clés.",
+  "$defs": {
+    "eq1": {
+      "id": "eq1", "name": "HDC-5500", "reference": null, "brandId": "b1", "categoryId": null,
+      "typeId": null, "clonedFromArkyoId": null, "shadowsArkyo": false,
+      "clonedFromArkyoVersion": null, "isRackable": true, "heightU": null, "depthMm": null,
+      "rearCableDepthMm": null, "widthFraction": "FULL", "dimLmm": null, "dimWmm": null,
+      "dimHmm": null, "weight": null, "powerW": null, "heatBtuH": null, "hasDualPsu": false,
+      "is2110": false, "ip2110Mode": null, "isLightingFixture": false,
+      "dmxChannelsDefault": null, "dmxModes": [], "isComponentHost": true, "hostSlotCount": 2,
+      "isComponent": false, "componentSlotSpan": 1,
+      "connectors": [
+        { "connectorTypeId": "ct1", "label": "SDI OUT", "quantity": 2 },
+        { "connectorTypeId": "ct2", "quantity": 1 }
+      ],
+      "signalCapacities": [], "customFields": [], "imageUrl": null, "iconUrl": null,
+      "rackSymbolUrl": null, "rackSymbolRearUrl": null, "rackPhotoFrontUrl": null,
+      "rackPhotoRearUrl": null, "schemaImageUrl": null, "frontImageUrl": null,
+      "rearImageUrl": null, "documents": [], "notes": null, "tags": [], "isActive": true,
+      "createdById": "u", "createdAt": "2026-11-07T10:00:00.000Z",
+      "updatedAt": "2026-11-07T10:00:00.000Z", "functionIds": ["f1"], "phaseIds": []
+    },
+    "eq2": {
+      "id": "eq2", "name": "Carte SDI", "reference": null, "brandId": "bx", "categoryId": null,
+      "typeId": null, "clonedFromArkyoId": null, "shadowsArkyo": false,
+      "clonedFromArkyoVersion": null, "isRackable": true, "heightU": null, "depthMm": null,
+      "rearCableDepthMm": null, "widthFraction": "FULL", "dimLmm": null, "dimWmm": null,
+      "dimHmm": null, "weight": null, "powerW": null, "heatBtuH": null, "hasDualPsu": false,
+      "is2110": false, "ip2110Mode": null, "isLightingFixture": false,
+      "dmxChannelsDefault": null, "dmxModes": [], "isComponentHost": false,
+      "hostSlotCount": null, "isComponent": true, "componentSlotSpan": 2, "connectors": [],
+      "signalCapacities": [], "customFields": [], "imageUrl": null, "iconUrl": null,
+      "rackSymbolUrl": null, "rackSymbolRearUrl": null, "rackPhotoFrontUrl": null,
+      "rackPhotoRearUrl": null, "schemaImageUrl": null, "frontImageUrl": null,
+      "rearImageUrl": null, "documents": [], "notes": null, "tags": [], "isActive": true,
+      "createdById": "u", "createdAt": "2026-11-07T10:00:00.000Z",
+      "updatedAt": "2026-11-07T10:00:00.000Z", "functionIds": [], "phaseIds": []
+    },
+    "ad1": {
+      "id": "ad1", "name": "BNC → XLR", "reference": "AD-1", "functionId": null,
+      "inputs": [], "outputs": [], "notes": null, "imageUrl": null, "isActive": true,
+      "clonedFromArkyoId": null, "shadowsArkyo": false, "clonedFromArkyoVersion": null,
+      "createdById": "u", "createdAt": "2026-11-07T10:00:00.000Z",
+      "updatedAt": "2026-11-07T10:00:00.000Z"
+    }
+  },
+  "expected": {
+    "location": { "id": "loc1", "name": "Plateau", "cableCode": "PLT", "virtualRackId": "rv" },
+    "racks": [
+      {
+        "id": "rv", "name": "Plateau", "cableCode": "PLT", "cableId": null,
+        "numberingOverride": null, "isVirtual": true, "totalU": 42, "rackType": "STANDARD"
+      },
+      {
+        "id": "ra", "name": "Baie A", "cableCode": "BA", "cableId": 3,
+        "numberingOverride": { "pad": 2 }, "isVirtual": false, "totalU": 12,
+        "rackType": "FLIGHT_CASE_CLASSIC"
+      }
+    ],
+    "slots": [
+      {
+        "id": "sv1", "rackId": "rv", "catalogEquipmentId": "eq1", "snapshotId": null,
+        "panelId": null, "parentSlotId": null, "inventoryItemId": null, "view": "FRONT",
+        "startU": null, "heightU": null, "widthFraction": "FULL", "column": 0, "label": null,
+        "notes": null, "patchNotes": null, "panelLabels": null, "synopticX": 10.0,
+        "synopticY": 20.0, "createdAt": "2026-11-07T10:00:00.000Z",
+        "updatedAt": "2026-11-07T10:00:00.000Z",
+        "panel": null, "panelRows": [], "attachedAdapters": [], "children": [],
+        "equipment": { "$ref": "eq1", "brand": { "id": "b1", "name": "Marque test" } },
+        "components": []
+      },
+      {
+        "id": "sa3", "rackId": "ra", "catalogEquipmentId": null, "snapshotId": null,
+        "panelId": "pa1", "parentSlotId": null, "inventoryItemId": null, "view": "FRONT",
+        "startU": 3, "heightU": 1.0, "widthFraction": "FULL", "column": 0, "label": "Patch",
+        "notes": null, "patchNotes": null, "panelLabels": null, "synopticX": null,
+        "synopticY": 50.0, "createdAt": "2026-11-07T10:00:00.000Z",
+        "updatedAt": "2026-11-07T10:00:00.000Z",
+        "panel": {
+          "id": "pa1", "name": "Patch BNC", "heightU": 1, "slotsPerU": 2, "rearCableDepthMm": 80,
+          "slots": [
+            {
+              "id": "ps1", "position": 0, "sizeSlots": 1, "label": "IN 1", "notes": null,
+              "catalogConnectorTypeId": "ct1", "mountD": false, "connectorTypeId": "ct1",
+              "connectorType": {
+                "id": "ct1", "name": "BNC", "versions": ["75"], "iconId": "bnc",
+                "color": "#6B7280", "functions": [{ "functionId": "f1" }], "functionId": "f1"
+              }
+            },
+            {
+              "id": "ps2", "position": 1, "sizeSlots": 1, "label": null, "notes": null,
+              "catalogConnectorTypeId": null, "mountD": true, "connectorTypeId": null,
+              "connectorType": null
+            }
+          ]
+        },
+        "panelRows": [
+          {
+            "id": "pr1", "slotId": "sa3", "rowIndex": 0, "synopticX": 5.0, "synopticY": 6.0,
+            "createdAt": "2026-11-07T10:00:00.000Z", "updatedAt": "2026-11-07T10:00:00.000Z"
+          }
+        ],
+        "attachedAdapters": [], "children": [], "equipment": null, "components": []
+      },
+      {
+        "id": "sa1", "rackId": "ra", "catalogEquipmentId": "eq1", "snapshotId": null,
+        "panelId": null, "parentSlotId": null, "inventoryItemId": "it1", "view": "FRONT",
+        "startU": 1, "heightU": 2.0, "widthFraction": "FULL", "column": 0, "label": null,
+        "notes": null, "patchNotes": null, "panelLabels": null, "synopticX": 100.0,
+        "synopticY": 100.0, "createdAt": "2026-11-07T10:00:00.000Z",
+        "updatedAt": "2026-11-07T10:00:00.000Z",
+        "panel": null, "panelRows": [],
+        "attachedAdapters": [
+          {
+            "id": "ada1", "rackId": "ra", "catalogAdapterId": "ad1", "snapshotId": null,
+            "x": 1.0, "y": 2.0, "attachedSlotId": "sa1", "attachedSide": "left",
+            "attachedPortIndex": 0, "label": null, "notes": null,
+            "createdAt": "2026-11-07T10:00:00.000Z", "updatedAt": "2026-11-07T10:00:00.000Z",
+            "adapter": { "$ref": "ad1" }
+          }
+        ],
+        "children": [],
+        "equipment": { "$ref": "eq1", "brand": { "id": "b1", "name": "Marque test" } },
+        "components": [
+          { "itemId": "itd", "slotIndex": 0, "slotSpan": 1, "equipment": null },
+          {
+            "itemId": "itc", "slotIndex": 1, "slotSpan": 2,
+            "equipment": { "$ref": "eq2", "brand": null }
+          }
+        ]
+      },
+      {
+        "id": "sa2", "rackId": "ra", "catalogEquipmentId": null, "snapshotId": null,
+        "panelId": null, "parentSlotId": null, "inventoryItemId": null, "view": "FRONT",
+        "startU": 5, "heightU": 1.0, "widthFraction": "FULL", "column": 0,
+        "label": "Étagère", "notes": "{\"shelf\":true}", "patchNotes": null,
+        "panelLabels": null, "synopticX": null, "synopticY": null,
+        "createdAt": "2026-11-07T10:00:00.000Z", "updatedAt": "2026-11-07T10:00:00.000Z",
+        "panel": null, "panelRows": [], "attachedAdapters": [],
+        "children": [
+          {
+            "id": "sc1", "rackId": "ra", "catalogEquipmentId": "eq1", "snapshotId": null,
+            "panelId": null, "parentSlotId": "sa2", "inventoryItemId": null, "view": "FRONT",
+            "startU": null, "heightU": null, "widthFraction": "HALF", "column": 1,
+            "label": "Retour", "notes": null, "patchNotes": null, "panelLabels": ["a"],
+            "synopticX": null, "synopticY": null, "createdAt": "2026-11-07T10:00:00.000Z",
+            "updatedAt": "2026-11-07T10:00:00.000Z",
+            "panel": null,
+            "panelRows": [
+              {
+                "id": "prc", "slotId": "sc1", "rowIndex": 0, "synopticX": 7.0,
+                "synopticY": 8.0, "createdAt": "2026-11-07T10:00:00.000Z",
+                "updatedAt": "2026-11-07T10:00:00.000Z"
+              }
+            ],
+            "attachedAdapters": [
+              {
+                "id": "adc", "rackId": "ra", "catalogAdapterId": "ad1", "snapshotId": null,
+                "x": 5.0, "y": 6.0, "attachedSlotId": "sc1", "attachedSide": "right",
+                "attachedPortIndex": 1, "label": "ADP", "notes": null,
+                "createdAt": "2026-11-07T10:00:00.000Z",
+                "updatedAt": "2026-11-07T10:00:00.000Z",
+                "adapter": { "$ref": "ad1" }
+              }
+            ],
+            "equipment": { "$ref": "eq1", "brand": { "id": "b1", "name": "Marque test" } },
+            "components": []
+          }
+        ],
+        "equipment": null, "components": []
+      }
+    ],
+    "connections": [
+      {
+        "id": "rc2", "rackId": "rv", "fromSlotId": "sv1", "fromConnectorIndex": 0,
+        "fromAdapterId": null, "fromAdapterSide": null, "fromAdapterPortIndex": null,
+        "fromComponentItemId": null, "toSlotId": "sa1", "toConnectorIndex": 1,
+        "toAdapterId": null, "toAdapterSide": null, "toAdapterPortIndex": null,
+        "toComponentItemId": null, "label": null, "color": null, "waypoints": null,
+        "cableStyle": null, "notes": null, "tags": null, "catalogCableModelId": null,
+        "snapshotId": null, "wired": false, "wiredAt": null, "wiredNotes": null,
+        "bundleId": null, "createdAt": "2026-11-07T10:00:00.000Z", "bundle": null
+      },
+      {
+        "id": "rc1", "rackId": "ra", "fromSlotId": "sa1", "fromConnectorIndex": 0,
+        "fromAdapterId": null, "fromAdapterSide": null, "fromAdapterPortIndex": null,
+        "fromComponentItemId": null, "toSlotId": "sa3", "toConnectorIndex": 0,
+        "toAdapterId": null, "toAdapterSide": null, "toAdapterPortIndex": null,
+        "toComponentItemId": null, "label": "V-001", "color": "#ff0000",
+        "waypoints": [{ "x": 1, "y": 2 }], "cableStyle": null, "notes": null,
+        "tags": [{ "color": "#000", "text": "A" }], "catalogCableModelId": null,
+        "snapshotId": null, "wired": true, "wiredAt": null, "wiredNotes": null,
+        "bundleId": "bu1", "createdAt": "2026-11-07T10:00:00.000Z",
+        "bundle": { "id": "bu1", "name": "Faisceau", "color": "#ff00ff" }
+      }
+    ],
+    "projectConnections": [
+      {
+        "id": "pc2", "projectId": "p1", "fromRackId": "rv", "fromSlotId": "sv1",
+        "fromConnectorIndex": 0, "fromAdapterId": null, "fromAdapterPortIndex": null,
+        "fromAdapterSide": null, "toRackId": "ra", "toSlotId": "sa1", "toConnectorIndex": 2,
+        "toAdapterId": null, "toAdapterPortIndex": null, "toAdapterSide": null, "label": null,
+        "color": null, "waypoints": null, "cableStyle": null, "notes": null, "tags": null,
+        "catalogCableModelId": null, "wired": false, "wiredAt": null, "wiredNotes": null,
+        "bundleId": null, "createdAt": "2026-11-07T10:00:00.000Z"
+      },
+      {
+        "id": "pc3", "projectId": "p1", "fromRackId": "ra", "fromSlotId": "sa1",
+        "fromConnectorIndex": 1, "fromAdapterId": null, "fromAdapterPortIndex": null,
+        "fromAdapterSide": null, "toRackId": "rv", "toSlotId": "sv1", "toConnectorIndex": 2,
+        "toAdapterId": null, "toAdapterPortIndex": null, "toAdapterSide": null, "label": "",
+        "color": null, "waypoints": [{ "x": 3, "y": 4 }], "cableStyle": null, "notes": null,
+        "tags": null, "catalogCableModelId": null, "wired": true, "wiredAt": null,
+        "wiredNotes": null, "bundleId": null, "createdAt": "2026-11-07T10:00:00.000Z"
+      },
+      {
+        "id": "pc6", "projectId": "p1", "fromRackId": "ra", "fromSlotId": null,
+        "fromConnectorIndex": null, "fromAdapterId": null, "fromAdapterPortIndex": null,
+        "fromAdapterSide": null, "toRackId": "rv", "toSlotId": "sv1", "toConnectorIndex": 3,
+        "toAdapterId": null, "toAdapterPortIndex": null, "toAdapterSide": null, "label": null,
+        "color": null, "waypoints": null, "cableStyle": null, "notes": null, "tags": null,
+        "catalogCableModelId": null, "wired": false, "wiredAt": null, "wiredNotes": null,
+        "bundleId": null, "createdAt": "2026-11-07T10:00:00.000Z"
+      }
+    ],
+    "zones": [
+      {
+        "id": "z1", "rackId": "ra", "label": "Zone", "labelPosition": "top-left",
+        "color": "#6366f1", "x": 0.0, "y": 0.0, "w": 100.0, "h": 50.0, "borderRadius": 8,
+        "borderWidth": 2, "borderStyle": "solid", "opacity": 0.12, "labelFontSize": 12,
+        "labelFontWeight": "normal", "labelFontStyle": "normal",
+        "labelTextDecoration": "none", "labelFontFamily": null,
+        "createdAt": "2026-11-07T10:00:00.000Z", "updatedAt": "2026-11-07T10:00:00.000Z"
+      }
+    ],
+    "labels": [
+      {
+        "id": "l1", "rackId": "ra", "text": "Note", "x": 5.0, "y": 5.0, "fontSize": 14,
+        "width": null, "color": "#111827", "fontWeight": "normal", "fontFamily": null,
+        "fontStyle": "normal", "textDecoration": "none", "pill": true, "pillBg": null,
+        "pillRadius": 12, "createdAt": "2026-11-07T10:00:00.000Z",
+        "updatedAt": "2026-11-07T10:00:00.000Z"
+      }
+    ],
+    "adapters": [
+      {
+        "id": "ada2", "rackId": "rv", "catalogAdapterId": "gone", "snapshotId": null,
+        "x": 3.0, "y": 4.0, "attachedSlotId": null, "attachedSide": null,
+        "attachedPortIndex": null, "label": null, "notes": null,
+        "createdAt": "2026-11-07T10:00:00.000Z", "updatedAt": "2026-11-07T10:00:00.000Z",
+        "adapter": null
+      },
+      {
+        "id": "ada1", "rackId": "ra", "catalogAdapterId": "ad1", "snapshotId": null,
+        "x": 1.0, "y": 2.0, "attachedSlotId": "sa1", "attachedSide": "left",
+        "attachedPortIndex": 0, "label": null, "notes": null,
+        "createdAt": "2026-11-07T10:00:00.000Z", "updatedAt": "2026-11-07T10:00:00.000Z",
+        "adapter": { "$ref": "ad1" }
+      },
+      {
+        "id": "adc", "rackId": "ra", "catalogAdapterId": "ad1", "snapshotId": null,
+        "x": 5.0, "y": 6.0, "attachedSlotId": "sc1", "attachedSide": "right",
+        "attachedPortIndex": 1, "label": "ADP", "notes": null,
+        "createdAt": "2026-11-07T10:00:00.000Z", "updatedAt": "2026-11-07T10:00:00.000Z",
+        "adapter": { "$ref": "ad1" }
+      }
+    ],
+    "externalPorts": [
+      {
+        "id": "ep1", "rackId": "ra", "slotId": "sa1", "portIndex": 0, "labelX": 200.0,
+        "labelY": 210.0, "label": null, "kind": "INTER_LIEU",
+        "createdAt": "2026-11-07T10:00:00.000Z", "updatedAt": "2026-11-07T10:00:00.000Z",
+        "targetLabel": "Baie Z · HDC-5500 · SDI OUT 2", "targetCableLabel": "V-001"
+      },
+      {
+        "id": "ep3", "rackId": "ra", "slotId": "sa1", "portIndex": 1, "labelX": null,
+        "labelY": null, "label": "Feed", "kind": "MONDE",
+        "createdAt": "2026-11-07T10:00:00.000Z", "updatedAt": "2026-11-07T10:00:00.000Z",
+        "targetLabel": "Plateau · HDC-5500 · XLR", "targetCableLabel": null
+      },
+      {
+        "id": "ep4", "rackId": "ra", "slotId": "sz2", "portIndex": 0, "labelX": null,
+        "labelY": null, "label": null, "kind": "INTER_LIEU",
+        "createdAt": "2026-11-07T10:00:00.000Z", "updatedAt": "2026-11-07T10:00:00.000Z",
+        "targetLabel": null
+      }
+    ],
+    "panelRows": [
+      { "id": "pr1", "slotId": "sa3", "rowIndex": 0, "synopticX": 5.0, "synopticY": 6.0, "rackId": "ra" },
+      { "id": "prc", "slotId": "sc1", "rowIndex": 0, "synopticX": 7.0, "synopticY": 8.0, "rackId": "ra" }
+    ],
+    "bundles": [
+      {
+        "id": "bu1", "rackId": "ra", "name": "Faisceau", "color": "#ff00ff",
+        "createdAt": "2026-11-07T10:00:00.000Z", "updatedAt": "2026-11-07T10:00:00.000Z"
+      }
+    ],
+    "connectorTypes": [
+      {
+        "id": "ct1", "name": "BNC", "versions": ["75"], "iconId": "bnc", "color": "#2563eb",
+        "functions": [{ "functionId": "f1" }], "functionId": "f1"
+      },
+      {
+        "id": "ct2", "name": "XLR", "versions": [], "iconId": null, "color": "#ff0000",
+        "functions": [], "functionId": null
+      },
+      {
+        "id": "ct3", "name": "RJ45", "versions": [], "iconId": null, "color": "#a3a3a3",
+        "functions": [{ "functionId": "f2" }], "functionId": "f2"
+      }
+    ],
+    "signals": [
+      {
+        "id": "sg1", "name": "SDI", "color": "#2563eb", "cablePrefix": "S", "cableSuffix": null,
+        "category": "Vidéo",
+        "categoryRef": { "name": "Vidéo", "cablePrefix": "V", "cableSuffix": null }
+      },
+      {
+        "id": "sg2", "name": "AES", "color": "#a3a3a3", "cablePrefix": null,
+        "cableSuffix": null, "category": "Audio",
+        "categoryRef": { "name": "Audio", "cablePrefix": "A", "cableSuffix": "x" }
+      },
+      {
+        "id": "sg3", "name": "GPIO", "color": "#00ff00", "cablePrefix": null,
+        "cableSuffix": null, "category": null, "categoryRef": null
+      }
+    ],
+    "signalCategories": [
+      { "name": "Vidéo", "cablePrefix": "V", "cableSuffix": null },
+      { "name": "Audio", "cablePrefix": "A", "cableSuffix": "x" }
+    ],
+    "equipmentCategories": [
+      {
+        "id": "c1", "name": "Vidéo", "color": "#2563eb",
+        "children": [{ "id": "c2", "name": "Caméras", "color": null }]
+      },
+      { "id": "c3", "name": "Audio", "color": "#16a34a", "children": [] }
+    ],
+    "appConfig": { "cable_pad": "3", "cable_numbering_template_enabled": "true" },
+    "project": { "id": "p1", "name": "Match" }
+  },
+  "empty": {
+    "location": { "id": "loc3", "name": "Vide", "cableCode": null, "virtualRackId": null },
+    "racks": [], "slots": [], "connections": [], "projectConnections": [], "zones": [],
+    "labels": [], "adapters": [], "externalPorts": [], "panelRows": [], "bundles": [],
+    "connectorTypes": [], "signals": [], "signalCategories": [], "equipmentCategories": [],
+    "appConfig": {}, "project": { "id": "p1", "name": "Match" }
+  }
+}

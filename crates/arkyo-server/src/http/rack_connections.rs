@@ -97,7 +97,7 @@ pub fn router() -> Router<AppState> {
         )
 }
 
-pub(super) static CONN: Table = Table {
+pub(crate) static CONN: Table = Table {
     name: "RackConnection",
     bools: &["wired"],
     jsons: &["waypoints", "tags"],

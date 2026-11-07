@@ -240,6 +240,11 @@ static BUNDLE: Spec = Spec {
     update: &BUNDLE_UPDATE,
 };
 
+/// The three tables, for the synoptic payload (`crate::synoptic`).
+pub(crate) static ZONE_TABLE: &Table = &ZONE.table;
+pub(crate) static LABEL_TABLE: &Table = &LABEL.table;
+pub(crate) static BUNDLE_TABLE: &Table = &BUNDLE.table;
+
 // ── handlers ────────────────────────────────────────────────────────────────
 
 macro_rules! handlers {

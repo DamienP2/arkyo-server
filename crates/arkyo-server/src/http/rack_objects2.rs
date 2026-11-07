@@ -93,17 +93,17 @@ pub fn router() -> Router<AppState> {
         )
 }
 
-static PORT: Table = Table {
+pub(crate) static PORT: Table = Table {
     name: "ExternalPort",
     bools: &[],
     jsons: &[],
 };
-static PANEL_ROW: Table = Table {
+pub(crate) static PANEL_ROW: Table = Table {
     name: "RackSlotPanelRow",
     bools: &[],
     jsons: &[],
 };
-static ADAPTER: Table = Table {
+pub(crate) static ADAPTER: Table = Table {
     name: "SynopticAdapter",
     bools: &[],
     jsons: &[],
