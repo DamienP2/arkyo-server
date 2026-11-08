@@ -14,6 +14,7 @@ pub mod seeds;
 pub mod service;
 pub mod sessions;
 pub mod synoptic;
+pub mod transfer;
 pub mod update;
 pub mod users;
 pub mod web;
