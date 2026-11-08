@@ -9,6 +9,7 @@ use std::fmt;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+pub mod archive;
 pub mod graph;
 pub mod rows;
 
