@@ -108,7 +108,28 @@ arkyo-server service install --port 8090 --bind 0.0.0.0 --data-dir <dossier>
 
 La base contient les empreintes des mots de passe : `arkyo.db` est créé en `0600` (lisible par le seul compte du service) et l'installation du service restreint le dossier (`0700` sous Linux, avec `UMask=0077` dans l'unité systemd ; `0711` sous macOS, où l'application de la barre des menus lit `config.json`).
 
-**Sauvegarde** : arrêtez le service (`service stop`) puis copiez le dossier entier.
+- `backups/` : les sauvegardes (voir « Sauvegarder et restaurer »).
+
+Copie manuelle : arrêtez le service (`service stop`) puis copiez le dossier entier. Les sauvegardes intégrées ci-dessous évitent cette étape.
+
+## Sauvegarder et restaurer
+
+Trois mécanismes, dans **Administration › Système › Sauvegardes**, protègent de pertes différentes.
+
+| Mécanisme | Protège contre | Où sont les fichiers |
+| --- | --- | --- |
+| **Points de restauration** (par projet, automatiques toutes les heures et manuels) | une erreur de manipulation dans un projet, y compris sa suppression | `<données>/backups/projects/<projet>/` |
+| **Export / import `.arkyo`** (projets, contenants, régies, panels) | le besoin de déplacer ou de partager des objets d'un serveur à un autre | le fichier téléchargé |
+| **Sauvegarde complète du site** (base, fichiers déposés, `config.json`, points de restauration) | la perte ou la corruption du serveur | par défaut `<données>/backups/site/` |
+
+- **Dossier des sauvegardes du site** : réglable dans Système › Sauvegardes. Préférez un autre disque ou un partage réseau : une sauvegarde sur le disque qui tombe en panne ne protège de rien. Le dossier doit être accessible en écriture au compte du service et ne pas faire partie des données sauvegardées. Par défaut : une sauvegarde par jour à 3 h, les 7 dernières gardées.
+- **Ligne de commande** (service arrêté ou non) :
+  - `arkyo-server backup [--out <dossier>]` produit l'archive `Arkyo-site-<horodatage>.zip` ;
+  - `arkyo-server restore <fichier>` vérifie l'archive et la dépose ; elle est appliquée **au prochain démarrage du service**.
+- **Restaurer le site** : depuis Système (envoi de l'archive, confirmation, le serveur redémarre) ou par la commande `restore`. L'archive est vérifiée avant tout (manifeste, base lisible). Une archive issue d'une version plus récente est acceptée avec un avertissement.
+- **Ce que devient l'état actuel** : les données actuelles sont déplacées dans `<données>/before-restore-<horodatage>/`, rien n'est supprimé. Une fois la restauration appliquée, l'archive est conservée sous `restore-applied-<horodatage>.zip` ; en cas d'échec, sous `restore-failed-<horodatage>.zip`, et le résultat s'affiche dans Système › Sauvegardes.
+- Le `config.json` de l'archive **remplace** le `config.json` actuel : le port et l'adresse d'écoute redeviennent ceux du serveur sauvegardé. Les sauvegardes du site elles-mêmes, `update/` et `logs/` ne sont ni sauvegardés ni remplacés.
+- Les dossiers `before-restore-*` et les archives `restore-*` ne sont jamais purgés automatiquement : supprimez-les quand vous êtes sûr de la restauration.
 
 ## Mettre à jour sans désinstaller
 

@@ -50,6 +50,20 @@ SQLite (`arkyo.db`, mode WAL) via `sqlx`, sans macros `query!`. Les migrations s
 - La phase 2 (`0002_catalogue.sql`) crée le catalogue unique (tables `Tenant*`, `CatalogSymbol`, `PrintSettings`, `ExportTemplate`, `AuditLog`) ; l'en-tête de la migration documente l'écart de chaque table avec les modèles `Catalog*` d'arkyo.
 - **Référentiels de départ** : `crates/arkyo-server/seeds/*.json`, extraits une seule fois des seeds d'arkyo par `tools/extract-seeds/extract.mjs` (outil non livré, à ne plus relancer : il régénère les ID). `seeds::apply`, appelé par `db::open`, insère une famille jamais seedée dans sa table vide et la note dans `AppConfig` `seeds.applied` : une suppression par l'utilisateur est respectée au démarrage suivant. Seuls `restore-arkyo` et la purge réinsèrent les lignes seedées.
 
+## Sauvegardes, export et import (`transfer`)
+
+Module `crates/arkyo-server/src/transfer/`, routes sous `/api/system/backups/*` et `/api/system/transfer/*` (`http/backups.rs`). Spec : `docs/superpowers/specs/2026-11-07-sauvegardes-design.md`.
+
+- `graph.rs` : le graphe des tables. Chaque table est **classée** (possédée par une racine, référentiel de catalogue, ou exclue) ; `collect` rassemble les lignes d'une racine (projet, contenant, régie ou panel) et de ses dépendances.
+- `archive.rs` : le format **`.arkyo`**, un zip (`manifest.json` `format: "arkyo-server-transfer"`, `data.json`, `uploads/<chemin>`), avec contrôle des chemins et de la taille décompressée.
+- `import.rs` et `remap.rs` : inspection, puis insertion, remplacement ou copie ; en copie, les identifiants sont régénérés et toutes les références remappées.
+- `rows.rs` : lecture et écriture générique des lignes.
+- `points.rs` : points de restauration de projet, fichiers `.arkyo` dans `<données>/backups/projects/<projet>/` avec un index `points.json`.
+- `site.rs` : sauvegarde complète du site (`Arkyo-site-<horodatage>.zip`, `format: "arkyo-server-site"`, base copiée par `VACUUM INTO`), planification quotidienne, restauration.
+- **Restauration du site** : l'archive vérifiée est déposée en `<données>/restore-pending.zip` ; au démarrage suivant, avant l'ouverture de la base, `apply_pending_restore` déplace les données actuelles dans `before-restore-<horodatage>/`, déplie l'archive et la renomme `restore-applied-<horodatage>.zip`. `restore-in-progress.json` marque l'opération en cours (reprise après un arrêt brutal), `restore-status.json` garde le résultat affiché par l'écran (`restore-failed-<horodatage>.zip` en cas d'échec).
+- Dossier `backups/` : `projects/` (points) et `site/` (sauvegardes du site, dossier réglable).
+- **Règle : toute nouvelle table est classée dans `transfer/graph.rs`.** Un test l'exige : une table de migration absente de la classification fait échouer `cargo test`.
+
 ## Embarquement de `web/dist`
 
 `npm run build` produit `web/dist`. `crates/arkyo-server/build.rs` en fait des copies gzip (dans `OUT_DIR`) et `src/web.rs` embarque le tout dans l'exécutable ; il sert `index.html` en repli SPA pour les chemins hors API. Sans `web/dist`, le serveur compile quand même et sert une page d'explication. Conséquence : **construire le front avant le serveur** pour une release (la CI le fait : job `web`, puis `engine` / `build` qui téléchargent l'artefact `web-dist`).

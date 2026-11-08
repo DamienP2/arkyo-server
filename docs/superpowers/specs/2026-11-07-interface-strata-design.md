@@ -181,6 +181,7 @@ Toute autre modification d'un fichier copié est refusée en relecture.
 | Catalogue (équipements, câbles, adaptateurs, éditeurs) | rail › Catalogue | Catalogue (cartes dessinées + éditeurs existants) |
 | Paramètres, Utilisateurs, Espace, Système | rail › Admin | Administration ▾ |
 | Profil, notifications, langue, thème, présence | topbar | topbar Strata |
+| Sauvegardes : points de restauration, export / import `.arkyo`, sauvegarde du site | Système › Sauvegardes | Système › Sauvegardes (Administration ▾) |
 | Interface (nouveau) | Système › Interface | Système › Interface |
 
 ## 8. Lots et ordre
