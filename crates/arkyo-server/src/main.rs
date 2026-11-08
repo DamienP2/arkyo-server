@@ -326,6 +326,7 @@ async fn serve(
     let listener = bind_retry(addr).await?;
     update::confirm_after(dir.clone(), std::time::Duration::from_secs(60));
     update::spawn_auto_check(dir.clone());
+    arkyo_server::transfer::points::spawn_scheduler(state.clone());
     tracing::info!("listening on http://{addr} (data dir {})", dir.display());
     axum::serve(
         listener,

@@ -237,6 +237,27 @@ pub fn router(state: AppState) -> Router {
             post(backups::inspect).layer(DefaultBodyLimit::max(backups::MAX_INSPECT)),
         )
         .route("/system/transfer/import", post(backups::import))
+        .route("/system/backups/projects", get(backups::point_projects))
+        .route(
+            "/system/backups/projects/{id}/points",
+            get(backups::point_list).post(backups::point_create),
+        )
+        .route(
+            "/system/backups/projects/{id}/points/{point_id}",
+            axum::routing::delete(backups::point_delete),
+        )
+        .route(
+            "/system/backups/projects/{id}/points/{point_id}/restore",
+            post(backups::point_restore),
+        )
+        .route(
+            "/system/backups/projects/{id}/points/{point_id}/download",
+            get(backups::point_download),
+        )
+        .route(
+            "/system/backups/settings/projects",
+            get(backups::point_settings).put(backups::set_point_settings),
+        )
         .merge(parametres::router())
         .merge(admin::router())
         .merge(catalogue::router())

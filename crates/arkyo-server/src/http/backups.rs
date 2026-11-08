@@ -9,6 +9,11 @@
 //! - `POST /api/system/transfer/import` `{ token, modes }` → the report.
 //!
 //! An inspected file is removed after its import or after an hour.
+//!
+//! Restore points of a project (§5), under `/api/system/backups/`:
+//! `projects`, `projects/{id}/points` (list, create),
+//! `projects/{id}/points/{pointId}` (delete, `restore`, `download`) and
+//! `settings/projects`.
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -16,7 +21,7 @@ use std::time::Duration;
 
 use arkyo_core::permissions::{Domain, Level};
 use axum::body::{Body, Bytes};
-use axum::extract::State;
+use axum::extract::{Path as AxumPath, State};
 use axum::http::{header, StatusCode};
 use axum::response::{IntoResponse, Response};
 use axum::Json;
@@ -29,6 +34,7 @@ use super::{error, require, server_error, AppState, CurrentUser};
 use crate::ids::new_id;
 use crate::transfer::archive::read_archive;
 use crate::transfer::import::{export_to_file, import as run_import, preview, ImportOptions, Mode};
+use crate::transfer::points::{self, Point, PointKind, ProjectSettings};
 use crate::transfer::{RootKind, TransferError};
 
 /// Maximum size of an inspected file (2 Gio).
@@ -133,12 +139,17 @@ pub async fn export(
         base
     };
     let stamp = jiff::Zoned::now().strftime("%Y%m%d-%H%M").to_string();
-    let file = match tokio::fs::File::open(&path).await {
+    file_response(&path, &format!("{base}-{stamp}.arkyo"), Some(guard)).await
+}
+
+/// The file at `path` as a zip attachment named `name`, read in chunks;
+/// `guard` (a temporary file) is dropped once the stream ends.
+async fn file_response(path: &Path, name: &str, guard: Option<RemoveOnDrop>) -> Response {
+    let file = match tokio::fs::File::open(path).await {
         Ok(f) => f,
         Err(_) => return server_error(),
     };
     let len = file.metadata().await.map(|m| m.len()).ok();
-    // The file is read in chunks and removed once the stream ends.
     let stream = futures_util::stream::unfold((Some(file), guard), |(file, guard)| async move {
         let mut file = file?;
         let mut buf = vec![0u8; 64 * 1024];
@@ -164,9 +175,7 @@ pub async fn export(
         header::CONTENT_TYPE,
         header::HeaderValue::from_static("application/zip"),
     );
-    if let Ok(v) =
-        header::HeaderValue::from_str(&format!("attachment; filename=\"{base}-{stamp}.arkyo\""))
-    {
+    if let Ok(v) = header::HeaderValue::from_str(&format!("attachment; filename=\"{name}\"")) {
         headers.insert(header::CONTENT_DISPOSITION, v);
     }
     if let Some(len) = len {
@@ -375,6 +384,235 @@ pub async fn import(
             // Kept for another try (other modes), until its hour is up.
             let _ = std::fs::rename(&busy, &ready);
             transfer_error(e)
+        }
+    }
+}
+
+// ── Restore points (§5) ─────────────────────────────────────────────────────
+
+const NO_POINT: &str = "Point de restauration introuvable";
+const BAD_SETTINGS: &str = "Paramètres invalides";
+
+fn no_point() -> Response {
+    error(StatusCode::NOT_FOUND, NO_POINT)
+}
+
+async fn find(st: &AppState, project_id: &str, point_id: &str) -> Option<(Point, PathBuf)> {
+    let (dir, project_id, point_id) = (
+        st.data_dir.clone(),
+        project_id.to_string(),
+        point_id.to_string(),
+    );
+    tokio::task::spawn_blocking(move || points::find_point(&dir, &project_id, &point_id))
+        .await
+        .ok()
+        .flatten()
+}
+
+/// `GET /api/system/backups/projects`: the existing projects and the
+/// deleted ones that have points, `{ id, name, deleted, lastPoint, count }`.
+pub async fn point_projects(State(st): State<AppState>, CurrentUser(me): CurrentUser) -> Response {
+    if let Err(r) = require(&me, &st.pool, Domain::Settings, Level::Admin).await {
+        return r;
+    }
+    let existing: Vec<(String, String)> =
+        match sqlx::query_as(r#"SELECT "id", "name" FROM "Project""#)
+            .fetch_all(&st.pool)
+            .await
+        {
+            Ok(v) => v,
+            Err(e) => {
+                tracing::error!("restore points: {e}");
+                return server_error();
+            }
+        };
+    let dir = st.data_dir.clone();
+    let Ok(with_points) = tokio::task::spawn_blocking(move || points::list_projects(&dir)).await
+    else {
+        return server_error();
+    };
+    let mut by_id: HashMap<String, points::ProjectPoints> =
+        with_points.into_iter().map(|p| (p.id.clone(), p)).collect();
+    let mut out: Vec<(String, Value)> = Vec::new();
+    for (id, name) in existing {
+        let p = by_id.remove(&id);
+        let entry = json!({
+            "id": id,
+            "name": name,
+            "deleted": false,
+            "lastPoint": p.as_ref().and_then(|p| p.last_point.clone()),
+            "count": p.as_ref().map_or(0, |p| p.count),
+        });
+        out.push((name.to_lowercase(), entry));
+    }
+    for p in by_id.into_values() {
+        let entry = json!({
+            "id": p.id,
+            "name": p.name,
+            "deleted": true,
+            "lastPoint": p.last_point,
+            "count": p.count,
+        });
+        out.push((p.name.to_lowercase(), entry));
+    }
+    out.sort_by(|a, b| (&a.0, a.1["id"].as_str()).cmp(&(&b.0, b.1["id"].as_str())));
+    Json(Value::Array(out.into_iter().map(|(_, v)| v).collect())).into_response()
+}
+
+/// `GET /api/system/backups/projects/{id}/points`: newest first.
+pub async fn point_list(
+    State(st): State<AppState>,
+    CurrentUser(me): CurrentUser,
+    AxumPath(id): AxumPath<String>,
+) -> Response {
+    if let Err(r) = require(&me, &st.pool, Domain::Settings, Level::Admin).await {
+        return r;
+    }
+    let dir = st.data_dir.clone();
+    match tokio::task::spawn_blocking(move || points::list_points(&dir, &id)).await {
+        Ok(list) => Json(list).into_response(),
+        Err(_) => server_error(),
+    }
+}
+
+#[derive(Deserialize, Default)]
+struct PointBody {
+    #[serde(default)]
+    label: Option<String>,
+}
+
+/// `POST /api/system/backups/projects/{id}/points` `{ label? }`: a manual
+/// point.
+pub async fn point_create(
+    State(st): State<AppState>,
+    CurrentUser(me): CurrentUser,
+    AxumPath(id): AxumPath<String>,
+    body: Bytes,
+) -> Response {
+    if let Err(r) = require(&me, &st.pool, Domain::Settings, Level::Admin).await {
+        return r;
+    }
+    let b = if body.iter().all(u8::is_ascii_whitespace) {
+        PointBody::default()
+    } else {
+        match serde_json::from_slice::<PointBody>(&body) {
+            Ok(b) => b,
+            Err(_) => return error(StatusCode::BAD_REQUEST, "Requête invalide."),
+        }
+    };
+    let label = b
+        .label
+        .map(|l| l.trim().chars().take(points::MAX_LABEL).collect::<String>())
+        .filter(|l| !l.is_empty());
+    if points::project_dir(&st, &id).is_err() {
+        return error(StatusCode::NOT_FOUND, "Projet introuvable");
+    }
+    let author = Some(points::author_of(&me));
+    match points::create_point(&st, &id, PointKind::Manual, label, author).await {
+        Ok(Some(p)) => Json(p).into_response(),
+        Ok(None) => server_error(),
+        Err(e) => transfer_error(e),
+    }
+}
+
+/// `POST …/points/{pointId}/restore`: the project is replaced by the point
+/// (after a point « avant restauration », taken by the import), or
+/// recreated when it was deleted.
+pub async fn point_restore(
+    State(st): State<AppState>,
+    CurrentUser(me): CurrentUser,
+    AxumPath((id, point_id)): AxumPath<(String, String)>,
+) -> Response {
+    if let Err(r) = require(&me, &st.pool, Domain::Settings, Level::Admin).await {
+        return r;
+    }
+    let Some((_, path)) = find(&st, &id, &point_id).await else {
+        return no_point();
+    };
+    // Imported from a link of its own: a retention pass may remove the
+    // point meanwhile.
+    let dir = tmp_dir(&st);
+    if std::fs::create_dir_all(&dir).is_err() {
+        return server_error();
+    }
+    let busy = dir.join(format!("{}.importing", new_id()));
+    let _guard = RemoveOnDrop(busy.clone());
+    if std::fs::hard_link(&path, &busy).is_err() && std::fs::copy(&path, &busy).is_err() {
+        return no_point();
+    }
+    let opts = ImportOptions {
+        modes: HashMap::from([(id, Mode::Replace)]),
+    };
+    match run_import(&st, &me, &busy, opts).await {
+        Ok(report) => Json(report).into_response(),
+        Err(e) => transfer_error(e),
+    }
+}
+
+/// `GET …/points/{pointId}/download`: the `.arkyo` file.
+pub async fn point_download(
+    State(st): State<AppState>,
+    CurrentUser(me): CurrentUser,
+    AxumPath((id, point_id)): AxumPath<(String, String)>,
+) -> Response {
+    if let Err(r) = require(&me, &st.pool, Domain::Settings, Level::Admin).await {
+        return r;
+    }
+    let Some((point, path)) = find(&st, &id, &point_id).await else {
+        return no_point();
+    };
+    let base = ascii_name(&point.project_name);
+    let base = if base.is_empty() {
+        "Arkyo-projet".into()
+    } else {
+        base
+    };
+    file_response(&path, &format!("{base}-{}.arkyo", point.id), None).await
+}
+
+/// `DELETE …/points/{pointId}`.
+pub async fn point_delete(
+    State(st): State<AppState>,
+    CurrentUser(me): CurrentUser,
+    AxumPath((id, point_id)): AxumPath<(String, String)>,
+) -> Response {
+    if let Err(r) = require(&me, &st.pool, Domain::Settings, Level::Admin).await {
+        return r;
+    }
+    match points::delete_point(&st, &id, &point_id).await {
+        Ok(true) => StatusCode::NO_CONTENT.into_response(),
+        Ok(false) => no_point(),
+        Err(e) => transfer_error(e),
+    }
+}
+
+/// `GET /api/system/backups/settings/projects`.
+pub async fn point_settings(State(st): State<AppState>, CurrentUser(me): CurrentUser) -> Response {
+    if let Err(r) = require(&me, &st.pool, Domain::Settings, Level::Admin).await {
+        return r;
+    }
+    Json(points::load_settings(&st.pool).await).into_response()
+}
+
+/// `PUT /api/system/backups/settings/projects` `{ enabled, intervalHours,
+/// keep }` → the settings.
+pub async fn set_point_settings(
+    State(st): State<AppState>,
+    CurrentUser(me): CurrentUser,
+    body: Bytes,
+) -> Response {
+    if let Err(r) = require(&me, &st.pool, Domain::Settings, Level::Admin).await {
+        return r;
+    }
+    let s = match serde_json::from_slice::<ProjectSettings>(&body) {
+        Ok(s) if s.is_valid() => s,
+        _ => return error(StatusCode::BAD_REQUEST, BAD_SETTINGS),
+    };
+    match points::save_settings(&st.pool, &s).await {
+        Ok(()) => Json(s).into_response(),
+        Err(e) => {
+            tracing::error!("restore points settings: {e}");
+            server_error()
         }
     }
 }

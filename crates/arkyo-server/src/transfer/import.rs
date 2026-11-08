@@ -96,7 +96,7 @@ const SEED_AUTHOR: &str = "system";
 /// Cable ids a rack may take, in the order `POST /api/racks` gives them.
 const CABLE_IDS: [i64; 10] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 0];
 
-async fn blocking<T: Send + 'static>(
+pub(super) async fn blocking<T: Send + 'static>(
     f: impl FnOnce() -> Result<T, TransferError> + Send + 'static,
 ) -> Result<T, TransferError> {
     tokio::task::spawn_blocking(f)

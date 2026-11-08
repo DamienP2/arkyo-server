@@ -37,6 +37,10 @@ pub struct Manifest {
     pub created_by: Option<Author>,
     pub roots: Vec<Root>,
     pub counts: BTreeMap<String, usize>,
+    /// The label of a restore point (`transfer::points`), kept in the file
+    /// so that a rebuilt index still has it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub label: Option<String>,
 }
 
 fn bad() -> TransferError {
@@ -68,6 +72,17 @@ pub fn write_archive(
     uploads_dir: &Path,
     out: &Path,
 ) -> Result<Manifest, TransferError> {
+    write_archive_labeled(bundle, author, None, uploads_dir, out)
+}
+
+/// [`write_archive`] with the label of a restore point in the manifest.
+pub fn write_archive_labeled(
+    bundle: &Bundle,
+    author: Option<Author>,
+    label: Option<String>,
+    uploads_dir: &Path,
+    out: &Path,
+) -> Result<Manifest, TransferError> {
     let manifest = Manifest {
         format: FORMAT.into(),
         version: VERSION,
@@ -80,6 +95,7 @@ pub fn write_archive(
             .iter()
             .map(|(t, r)| (t.clone(), r.len()))
             .collect(),
+        label,
     };
     let opts = SimpleFileOptions::default()
         .compression_method(CompressionMethod::Deflated)

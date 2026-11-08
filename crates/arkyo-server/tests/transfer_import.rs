@@ -479,6 +479,7 @@ async fn replace_mode_restores_and_keeps_a_point() {
     let points: Vec<_> = std::fs::read_dir(&dir)
         .unwrap()
         .map(|e| e.unwrap().file_name().into_string().unwrap())
+        .filter(|n| n.ends_with(".arkyo"))
         .collect();
     assert_eq!(points.len(), 1, "{points:?}");
     assert!(
