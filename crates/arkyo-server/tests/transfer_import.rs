@@ -225,6 +225,11 @@ fn audit_ids(b: &Bundle) -> BTreeSet<String> {
 }
 
 fn assert_same_rows(before: &Bundle, after: &Bundle) {
+    assert_same_rows_but(before, after, &[]);
+}
+
+/// [`assert_same_rows`], the `AuditLog` columns of `audit_skip` apart.
+fn assert_same_rows_but(before: &Bundle, after: &Bundle, audit_skip: &[&str]) {
     let (a, b) = (by_id(before), by_id(after));
     assert_eq!(
         a.keys().collect::<Vec<_>>(),
@@ -243,6 +248,11 @@ fn assert_same_rows(before: &Bundle, after: &Bundle) {
         .collect();
     for r in &after.tables["AuditLog"] {
         if let Some(old) = before_rows.get(r["id"].as_str().unwrap()) {
+            let (mut old, mut r) = (old.clone(), r.clone());
+            for c in audit_skip {
+                old.remove(*c);
+                r.remove(*c);
+            }
             assert_eq!(old, r, "AuditLog");
         }
     }
@@ -270,7 +280,15 @@ async fn export_delete_import_restores_identical_rows() {
     );
 
     let after = snapshot(&t.e.pool, RootKind::Project, &p1).await;
-    assert_same_rows(&before, &after);
+    // The audit rows the deletion left (projectId set to NULL) are kept as
+    // they are: an insertion never overwrites.
+    assert_same_rows_but(&before, &after, &["projectId"]);
+    assert!(
+        rep.warnings.iter().any(|w| w
+            == "2 ligne(s) de « AuditLog » existaient déjà ici et ont été gardées telles quelles."),
+        "{:?}",
+        rep.warnings
+    );
     let n = count(
         &t.e.pool,
         &format!(
@@ -857,6 +875,220 @@ async fn panel_root_replace_keeps_its_users_and_copy_duplicates_it() {
     );
 }
 
+/// Links rack `ra` to the library rig `rgt` too (a rig outside the
+/// project), then exports `root` and changes `ra` and its root afterwards.
+async fn shared_rack_changed_after_export(t: &T, root: (RootKind, &str)) -> PathBuf {
+    let u = t.owner.id.clone();
+    for sql in [
+        r#"INSERT INTO "RigConfig" ("id","name","isTemplate","createdById","createdAt","updatedAt") VALUES ('<rgt>','Modèle',1,'<u>',?,?)"#,
+        r#"INSERT INTO "RigRack" ("id","rigConfigId","rackId","position") VALUES ('<rr9>','<rgt>','<ra>',0)"#,
+    ] {
+        exec(&t.e.pool, sql, &u).await;
+    }
+    let file = export(t, &[root], "shared.arkyo").await;
+    for sql in [
+        r#"UPDATE "RackSlot" SET "startU" = 5 WHERE "id" = '<sa1>'"#,
+        r#"INSERT INTO "RackSlot" ("id","rackId","startU","createdAt","updatedAt") VALUES ('<sa9>','<ra>',1,?,?)"#,
+        r#"UPDATE "Rack" SET "name" = 'Baie A modifiée' WHERE "id" = '<ra>'"#,
+        r#"UPDATE "Project" SET "name" = 'Renommé' WHERE "id" = '<p1>'"#,
+        r#"UPDATE "RigConfig" SET "name" = 'Régie renommée' WHERE "id" = '<rg1>'"#,
+    ] {
+        exec(&t.e.pool, sql, &u).await;
+    }
+    file
+}
+
+const SHARED_WARNING: &str =
+    "Le contenant « Baie A modifiée » est aussi utilisé par une autre régie : il garde son état actuel.";
+
+#[tokio::test]
+async fn replace_keeps_a_rack_shared_with_another_rig() {
+    for kind in [RootKind::Project, RootKind::Rig] {
+        let t = setup().await;
+        let id = cid(if kind == RootKind::Project {
+            "p1"
+        } else {
+            "rg1"
+        });
+        let file = shared_rack_changed_after_export(&t, (kind, &id)).await;
+        let rack_before = snapshot(&t.e.pool, RootKind::Rack, &cid("ra")).await;
+
+        let rep = run(&t, &file, modes(&[(&id, Mode::Replace)]))
+            .await
+            .unwrap();
+        assert!(
+            rep.warnings.iter().any(|w| w == SHARED_WARNING),
+            "{kind:?} {:?}",
+            rep.warnings
+        );
+        let rack_after = snapshot(&t.e.pool, RootKind::Rack, &cid("ra")).await;
+        assert_eq!(by_id(&rack_before), by_id(&rack_after), "{kind:?}");
+        assert_eq!(audit_ids(&rack_before), audit_ids(&rack_after), "{kind:?}");
+        // The rest of the graph is restored, its link to the rack included.
+        assert_eq!(
+            text(
+                &t.e.pool,
+                r#"SELECT "name" FROM "RigConfig" WHERE "id" = ?"#,
+                &cid("rg1")
+            )
+            .await,
+            Some("Régie 1".into())
+        );
+        assert_eq!(
+            count(
+                &t.e.pool,
+                &format!(
+                    r#"SELECT COUNT(*) FROM "RigRack" WHERE "id" = '{}'"#,
+                    cid("rr1")
+                )
+            )
+            .await,
+            1
+        );
+        if kind == RootKind::Project {
+            assert_eq!(
+                text(
+                    &t.e.pool,
+                    r#"SELECT "name" FROM "Project" WHERE "id" = ?"#,
+                    &id
+                )
+                .await,
+                Some("Match".into())
+            );
+        }
+    }
+}
+
+#[tokio::test]
+async fn insert_keeps_rows_already_here() {
+    let t = setup().await;
+    let p1 = cid("p1");
+    let u = t.owner.id.clone();
+    for sql in [
+        r#"INSERT INTO "RigConfig" ("id","name","isTemplate","createdById","createdAt","updatedAt") VALUES ('<rgt>','Modèle',1,'<u>',?,?)"#,
+        r#"INSERT INTO "RigRack" ("id","rigConfigId","rackId","position") VALUES ('<rr9>','<rgt>','<ra>',0)"#,
+    ] {
+        exec(&t.e.pool, sql, &u).await;
+    }
+    let file = export(&t, &[(RootKind::Project, &p1)], "p.arkyo").await;
+    // The deletion keeps `ra` (the library rig uses it), then it changes
+    // through that rig.
+    delete_project(&t, &p1).await;
+    exec(
+        &t.e.pool,
+        r#"UPDATE "Rack" SET "name" = 'Valise modifiée' WHERE "id" = '<ra>'"#,
+        &u,
+    )
+    .await;
+    exec(
+        &t.e.pool,
+        r#"UPDATE "RackSlot" SET "startU" = 7 WHERE "id" = '<sa1>'"#,
+        &u,
+    )
+    .await;
+    let rack_before = snapshot(&t.e.pool, RootKind::Rack, &cid("ra")).await;
+
+    let rep = run(&t, &file, modes(&[])).await.unwrap();
+    assert_eq!(rep.roots[0].mode, Mode::Insert);
+    let rack_after = snapshot(&t.e.pool, RootKind::Rack, &cid("ra")).await;
+    assert_eq!(by_id(&rack_before), by_id(&rack_after));
+    for w in [
+        "1 ligne(s) de « Rack » existaient déjà ici et ont été gardées telles quelles.",
+        "3 ligne(s) de « RackSlot » existaient déjà ici et ont été gardées telles quelles.",
+    ] {
+        assert!(
+            rep.warnings.iter().any(|x| x == w),
+            "{w} / {:?}",
+            rep.warnings
+        );
+    }
+    // No such warning for the catalogue and panels already here.
+    assert!(
+        !rep.warnings
+            .iter()
+            .any(|w| w.contains("« Panel »") || w.contains("« TenantEquipment »")),
+        "{:?}",
+        rep.warnings
+    );
+    assert_eq!(rep.roots[0].inserted.get("Rack"), Some(&1), "rb seulement");
+    assert_eq!(
+        text(
+            &t.e.pool,
+            r#"SELECT "name" FROM "Project" WHERE "id" = ?"#,
+            &p1
+        )
+        .await,
+        Some("Match".into())
+    );
+    assert_eq!(
+        count(
+            &t.e.pool,
+            &format!(
+                r#"SELECT COUNT(*) FROM "RigRack" WHERE "id" = '{}'"#,
+                cid("rr1")
+            )
+        )
+        .await,
+        1
+    );
+}
+
+#[tokio::test]
+async fn catalogue_unique_clash_uses_the_local_row() {
+    let t = setup().await;
+    let p1 = cid("p1");
+    let u = t.owner.id.clone();
+    for sql in [
+        r#"INSERT INTO "TenantEquipmentCategory" ("id","name","createdAt","updatedAt") VALUES ('<cat1>','Catégorie test',?,?)"#,
+        r#"INSERT INTO "TenantEquipmentCategory" ("id","name","parentId","createdAt","updatedAt") VALUES ('<cat2>','Catégorie enfant','<cat1>',?,?)"#,
+        r#"UPDATE "TenantEquipment" SET "categoryId" = '<cat1>' WHERE "id" = '<eq1>'"#,
+    ] {
+        exec(&t.e.pool, sql, &u).await;
+    }
+    let file = export(&t, &[(RootKind::Project, &p1)], "p.arkyo").await;
+    // Here, the same category under another id; the child and the
+    // equipment are gone.
+    for sql in [
+        r#"DELETE FROM "TenantEquipmentCategory" WHERE "id" IN ('<cat2>','<cat1>')"#,
+        r#"DELETE FROM "TenantEquipment" WHERE "id" = '<eq1>'"#,
+        r#"INSERT INTO "TenantEquipmentCategory" ("id","name","createdAt","updatedAt") VALUES ('<catx>','Catégorie test',?,?)"#,
+    ] {
+        exec(&t.e.pool, sql, &u).await;
+    }
+    let rep = run(&t, &file, modes(&[(&p1, Mode::Copy)])).await.unwrap();
+    assert!(
+        rep.warnings.iter().any(|w| w.contains("Catégorie test")),
+        "{:?}",
+        rep.warnings
+    );
+    assert_eq!(
+        text(
+            &t.e.pool,
+            r#"SELECT "parentId" FROM "TenantEquipmentCategory" WHERE "id" = ?"#,
+            &cid("cat2")
+        )
+        .await,
+        Some(cid("catx"))
+    );
+    assert_eq!(
+        text(
+            &t.e.pool,
+            r#"SELECT "categoryId" FROM "TenantEquipment" WHERE "id" = ?"#,
+            &cid("eq1")
+        )
+        .await,
+        Some(cid("catx"))
+    );
+    assert_eq!(
+        count(
+            &t.e.pool,
+            r#"SELECT COUNT(*) FROM "TenantEquipmentCategory" WHERE "name" = 'Catégorie test'"#
+        )
+        .await,
+        1
+    );
+}
+
 /// Raw request with a body (and a session cookie).
 async fn raw(
     app: &axum::Router,
@@ -1063,6 +1295,110 @@ async fn routes_export_inspect_and_import() {
         assert_eq!(r.status, StatusCode::BAD_REQUEST, "{tok}");
         assert!(r.body["error"].is_string());
     }
+}
+
+#[tokio::test]
+async fn same_token_imports_once() {
+    let t = setup().await;
+    let token = login(&t.e.app, "o@b.fr").await;
+    let p1 = cid("p1");
+    let file = export(&t, &[(RootKind::Project, &p1)], "p.arkyo").await;
+    let (status, _, body) = raw(
+        &t.e.app,
+        "POST",
+        "/api/system/transfer/inspect",
+        &token,
+        std::fs::read(&file).unwrap(),
+        false,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    let tok = serde_json::from_slice::<Value>(&body).unwrap()["token"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    let body = json!({"token": tok, "modes": {p1.clone(): "copy"}});
+    let (a, b) = tokio::join!(
+        call(
+            &t.e.app,
+            "POST",
+            "/api/system/transfer/import",
+            LOCAL,
+            Some(&token),
+            Some(body.clone())
+        ),
+        call(
+            &t.e.app,
+            "POST",
+            "/api/system/transfer/import",
+            LOCAL,
+            Some(&token),
+            Some(body)
+        ),
+    );
+    let mut statuses = [a.status, b.status];
+    statuses.sort();
+    assert_eq!(
+        statuses,
+        [StatusCode::OK, StatusCode::BAD_REQUEST],
+        "{:?} {:?}",
+        a.body,
+        b.body
+    );
+    let refused = if a.status == StatusCode::OK { &b } else { &a };
+    assert_eq!(
+        refused.body,
+        json!({"error": "Fichier introuvable : choisissez-le à nouveau."})
+    );
+    assert_eq!(
+        count(&t.e.pool, r#"SELECT COUNT(*) FROM "Project""#).await,
+        2
+    );
+    let left = std::fs::read_dir(t.file("tmp")).unwrap().count();
+    assert_eq!(left, 0);
+}
+
+#[tokio::test]
+async fn failed_import_keeps_the_token() {
+    let t = setup().await;
+    let token = login(&t.e.app, "o@b.fr").await;
+    let p1 = cid("p1");
+    let file = export(&t, &[(RootKind::Project, &p1)], "p.arkyo").await;
+    let (_, _, body) = raw(
+        &t.e.app,
+        "POST",
+        "/api/system/transfer/inspect",
+        &token,
+        std::fs::read(&file).unwrap(),
+        false,
+    )
+    .await;
+    let tok = serde_json::from_slice::<Value>(&body).unwrap()["token"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    // No mode: refused, the file stays for another try.
+    let r = call(
+        &t.e.app,
+        "POST",
+        "/api/system/transfer/import",
+        LOCAL,
+        Some(&token),
+        Some(json!({"token": tok, "modes": {}})),
+    )
+    .await;
+    assert_eq!(r.status, StatusCode::BAD_REQUEST);
+    assert!(t.file(&format!("tmp/{tok}.arkyo")).exists());
+    let r = call(
+        &t.e.app,
+        "POST",
+        "/api/system/transfer/import",
+        LOCAL,
+        Some(&token),
+        Some(json!({"token": tok, "modes": {p1.clone(): "copy"}})),
+    )
+    .await;
+    assert_eq!(r.status, StatusCode::OK, "{:?}", r.body);
 }
 
 #[tokio::test]

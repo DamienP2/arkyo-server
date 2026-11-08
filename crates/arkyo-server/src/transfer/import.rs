@@ -4,7 +4,7 @@
 //! present), adds the missing catalogue and panels (never modifying the
 //! existing ones), then copies the missing uploads.
 
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::path::Path;
 
 use serde::{Deserialize, Serialize};
@@ -216,6 +216,9 @@ struct Ctx<'a> {
     present: HashMap<(String, String, String), bool>,
     /// Cable ids of the file's racks (kept free for them when possible).
     cable_ids: HashSet<i64>,
+    /// File id → id here of a catalogue row already here under another id
+    /// (same unique key): references to it are rewritten.
+    alias: HashMap<String, String>,
     warned: HashSet<String>,
     warnings: Vec<String>,
 }
@@ -327,8 +330,11 @@ fn bind_value<'q>(
 /// How a row is written.
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Write {
-    /// Owned row: inserted, or its columns overwritten when its id exists.
+    /// Owned row (*Replace*, *Copy*): inserted, or its columns overwritten
+    /// when its id exists.
     Upsert,
+    /// Owned row (*Insert*): inserted, kept as it is when its id exists.
+    InsertOnly,
     /// Catalogue or panel: inserted only when its id is missing here.
     IfMissing,
 }
@@ -368,6 +374,9 @@ async fn write_row(
     mut row: Row,
     how: Write,
 ) -> Result<bool, TransferError> {
+    if !ctx.alias.is_empty() {
+        remap_row(&mut row, &ctx.alias);
+    }
     for k in row.keys() {
         if ts.col(k).is_none() {
             ctx.warn(format!(
@@ -469,6 +478,7 @@ async fn write_row(
             }
         }
         Write::Upsert => String::new(),
+        Write::InsertOnly => r#" ON CONFLICT("id") DO NOTHING"#.to_string(),
         // Another unique key (a brand of the same name under another id):
         // the local row wins.
         Write::IfMissing => " ON CONFLICT DO NOTHING".to_string(),
@@ -480,15 +490,83 @@ async fn write_row(
     }
     let done = q.execute(&mut *conn).await?.rows_affected() > 0;
     if !done && how == Write::IfMissing {
+        // Its id is missing here: another unique key clashed.
         let name = text(&row, "name")
             .or(id.as_deref())
             .unwrap_or("?")
             .to_string();
-        ctx.warn(format!(
-            "« {name} » ({table}) existe déjà ici sous un autre identifiant : non ajouté."
-        ));
+        let local = same_unique_key(conn, table, &row).await?;
+        match (&id, local) {
+            (Some(id), Some(local)) => {
+                ctx.alias.insert(id.clone(), local);
+                ctx.warn(format!(
+                    "« {name} » ({table}) existe déjà ici sous un autre identifiant : celui d'ici est utilisé."
+                ));
+            }
+            (id, _) => {
+                if let (Some(id), Some(planned)) = (id, ctx.planned.get_mut(table)) {
+                    planned.remove(id);
+                }
+                ctx.warn(format!(
+                    "« {name} » ({table}) existe déjà ici sous un autre identifiant : non ajouté."
+                ));
+            }
+        }
     }
     Ok(done)
+}
+
+/// The id of the row here that has one of the unique keys of `row`.
+async fn same_unique_key(
+    conn: &mut SqliteConnection,
+    table: &str,
+    row: &Row,
+) -> Result<Option<String>, TransferError> {
+    let indexes: Vec<(String, i64, String)> =
+        sqlx::query_as(r#"SELECT "name", "unique", "origin" FROM pragma_index_list(?)"#)
+            .bind(table)
+            .fetch_all(&mut *conn)
+            .await?;
+    for (index, unique, origin) in indexes {
+        if unique == 0 || origin == "pk" {
+            continue;
+        }
+        let cols: Vec<String> =
+            sqlx::query_scalar(r#"SELECT "name" FROM pragma_index_info(?) ORDER BY "seqno""#)
+                .bind(&index)
+                .fetch_all(&mut *conn)
+                .await?;
+        // NULLs never clash; an expression index has unnamed columns.
+        let values: Option<Vec<&Value>> = cols
+            .iter()
+            .map(|c| row.get(c).filter(|v| !v.is_null()))
+            .collect();
+        let Some(values) = values.filter(|v| !v.is_empty()) else {
+            continue;
+        };
+        let filter = cols
+            .iter()
+            .map(|c| format!(r#""{c}" = ?"#))
+            .collect::<Vec<_>>()
+            .join(" AND ");
+        let sql = format!(r#"SELECT "id" FROM "{table}" WHERE {filter} LIMIT 1"#);
+        let mut q = sqlx::query_scalar::<_, String>(&sql);
+        for v in values {
+            q = match v {
+                Value::Number(n) => match n.as_i64() {
+                    Some(i) => q.bind(i),
+                    None => q.bind(n.as_f64()),
+                },
+                Value::Bool(b) => q.bind(i64::from(*b)),
+                Value::String(s) => q.bind(s.clone()),
+                other => q.bind(other.to_string()),
+            };
+        }
+        if let Some(id) = q.fetch_optional(&mut *conn).await? {
+            return Ok(Some(id));
+        }
+    }
+    Ok(None)
 }
 
 // ── Import ──────────────────────────────────────────────────────────────────
@@ -597,6 +675,7 @@ pub async fn import(
         planned: HashMap::new(),
         present: HashMap::new(),
         cable_ids: HashSet::new(),
+        alias: HashMap::new(),
         warned: HashSet::new(),
         warnings: Vec::new(),
     };
@@ -646,11 +725,26 @@ pub async fn import(
     }
 
     // Replace: the rows of the current graph that the file does not have
-    // are deleted (children first); the others are overwritten below.
+    // are deleted (children first); the others are overwritten below. A
+    // rack another rig uses keeps its current state: its rows of the file
+    // are skipped.
+    let mut skipped: Vec<HashSet<(String, usize)>> = Vec::new();
     for plan in &plans {
+        let mut skip = HashSet::new();
         if plan.mode == Mode::Replace {
-            delete_stale(&mut tx, plan, &bundle).await?;
+            let shared = delete_stale(&mut tx, plan, &bundle).await?;
+            let mut rows = Parter::new(&bundle);
+            rows.racks(&shared.keys().cloned().collect());
+            for (t, idx) in rows.part {
+                skip.extend(idx.into_iter().map(|i| (t.clone(), i)));
+            }
+            for name in shared.values() {
+                ctx.warn(format!(
+                    "Le contenant « {name} » est aussi utilisé par une autre régie : il garde son état actuel."
+                ));
+            }
         }
+        skipped.push(skip);
     }
 
     let mut report = Report::default();
@@ -663,13 +757,21 @@ pub async fn import(
             *report.catalogue_added.entry(table.to_string()).or_default() += 1;
         }
     }
-    for plan in &plans {
+    let mut kept: BTreeMap<String, usize> = BTreeMap::new();
+    for (plan, skip) in plans.iter().zip(&skipped) {
         let mut inserted = BTreeMap::new();
+        let how = match plan.mode {
+            Mode::Insert => Write::InsertOnly,
+            Mode::Replace | Mode::Copy => Write::Upsert,
+        };
         for table in root_tables(plan.root.kind) {
             let (Some(idx), Some(ts)) = (plan.part.get(*table), schemas.get(*table)) else {
                 continue;
             };
             for i in idx {
+                if skip.contains(&(table.to_string(), *i)) {
+                    continue;
+                }
                 let mut row = bundle.tables[*table][*i].clone();
                 if plan.mode == Mode::Copy {
                     let is_root =
@@ -679,8 +781,11 @@ pub async fn import(
                         row.insert("name".into(), Value::String(plan.final_name()));
                     }
                 }
-                write_row(&mut tx, &mut ctx, ts, table, row, Write::Upsert).await?;
-                *inserted.entry(table.to_string()).or_default() += 1;
+                if write_row(&mut tx, &mut ctx, ts, table, row, how).await? {
+                    *inserted.entry(table.to_string()).or_default() += 1;
+                } else {
+                    *kept.entry(table.to_string()).or_default() += 1;
+                }
             }
         }
         let id = plan.final_id(&plan.root.id);
@@ -705,6 +810,11 @@ pub async fn import(
         });
     }
     tx.commit().await?;
+    for (table, n) in kept {
+        ctx.warn(format!(
+            "{n} ligne(s) de « {table} » existaient déjà ici et ont été gardées telles quelles."
+        ));
+    }
     report.warnings = std::mem::take(&mut ctx.warnings);
 
     // Uploads after the commit, never overwriting.
@@ -732,31 +842,34 @@ pub async fn import(
 }
 
 /// Deletes the rows of the root's current graph absent from the file, in
-/// reverse insert order. A rack another rig still uses (outside this graph)
-/// is kept with its rows, as the project deletion does.
+/// reverse insert order. A rack another rig still uses (outside this graph,
+/// current or of the file) is kept with all its rows, as the project
+/// deletion does; returns these racks (id → name here).
 async fn delete_stale(
     conn: &mut SqliteConnection,
     plan: &RootPlan<'_>,
     bundle: &Bundle,
-) -> Result<(), TransferError> {
+) -> Result<BTreeMap<String, String>, TransferError> {
     let (kind, id) = (plan.root.kind, plan.root.id.as_str());
     let current = collect(conn, &[(kind, id.to_string())]).await?;
     let file = part_ids(bundle, &plan.part);
     let current_ids = part_ids(&current, &partition(&current, kind, id));
-    let ids_of = |table: &str| -> Vec<&String> {
+    let ids_of = |table: &str| -> BTreeSet<&String> {
         current_ids
             .get(table)
-            .map(|s| s.iter().collect())
-            .unwrap_or_default()
+            .into_iter()
+            .chain(file.get(table))
+            .flatten()
+            .collect()
     };
     let (rigs, racks) = (ids_of("RigConfig"), ids_of("Rack"));
-    let shared: HashSet<String> = if racks.is_empty() || kind == RootKind::Rack {
-        HashSet::new()
+    let shared: BTreeMap<String, String> = if racks.is_empty() || kind == RootKind::Rack {
+        BTreeMap::new()
     } else {
-        sqlx::query_scalar(
-            r#"SELECT DISTINCT "rackId" FROM "RigRack"
-               WHERE "rackId" IN (SELECT value FROM json_each(?))
-                 AND "rigConfigId" NOT IN (SELECT value FROM json_each(?))"#,
+        sqlx::query_as(
+            r#"SELECT DISTINCT r."id", r."name" FROM "RigRack" rr JOIN "Rack" r ON r."id" = rr."rackId"
+               WHERE rr."rackId" IN (SELECT value FROM json_each(?))
+                 AND rr."rigConfigId" NOT IN (SELECT value FROM json_each(?))"#,
         )
         .bind(serde_json::to_string(&racks).expect("ids"))
         .bind(serde_json::to_string(&rigs).expect("ids"))
@@ -766,7 +879,7 @@ async fn delete_stale(
         .collect()
     };
     let mut keep = Parter::new(&current);
-    keep.racks(&shared);
+    keep.racks(&shared.keys().cloned().collect());
     let keep = part_ids(&current, &keep.part);
     for table in root_tables(kind).iter().rev() {
         let Some(ids) = current_ids.get(*table) else {
@@ -787,5 +900,5 @@ async fn delete_stale(
         .execute(&mut *conn)
         .await?;
     }
-    Ok(())
+    Ok(shared)
 }

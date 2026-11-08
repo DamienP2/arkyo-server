@@ -35,6 +35,8 @@ use crate::transfer::{RootKind, TransferError};
 pub const MAX_INSPECT: usize = 2 * 1024 * 1024 * 1024;
 /// Lifetime of an inspected file not imported.
 const TMP_TTL: Duration = Duration::from_secs(3600);
+/// Age past which a file left `.importing` (a crash) is removed.
+const STALE_IMPORT: Duration = Duration::from_secs(24 * 3600);
 const EXPIRED: &str = "Fichier introuvable : choisissez-le à nouveau.";
 
 fn tmp_dir(st: &AppState) -> PathBuf {
@@ -223,7 +225,10 @@ pub async fn objects(State(st): State<AppState>, CurrentUser(me): CurrentUser) -
 
 // ── POST /api/system/transfer/inspect ──────────────────────────────────────
 
-/// Removes the inspected files older than [`TMP_TTL`] (left by a restart).
+/// Removes the temporary files older than [`TMP_TTL`] (left by a restart):
+/// inspected files (`.arkyo`) and exports (`.export`). A file being
+/// imported (`.importing`) is only removed after [`STALE_IMPORT`], far
+/// beyond any import (left by a crash).
 fn sweep(dir: &Path) {
     let Ok(entries) = std::fs::read_dir(dir) else {
         return;
@@ -234,9 +239,13 @@ fn sweep(dir: &Path) {
             .metadata()
             .and_then(|m| m.modified())
             .ok()
-            .and_then(|t| t.elapsed().ok())
-            .is_some_and(|age| age > TMP_TTL);
-        if old && path.extension().is_some_and(|e| e == "arkyo") {
+            .and_then(|t| t.elapsed().ok());
+        let ttl = match path.extension().and_then(|e| e.to_str()) {
+            Some("arkyo" | "export") => TMP_TTL,
+            Some("importing") => STALE_IMPORT,
+            _ => continue,
+        };
+        if old.is_some_and(|age| age > ttl) {
             let _ = std::fs::remove_file(&path);
         }
     }
@@ -347,22 +356,58 @@ pub async fn import(
     let plain = !b.token.is_empty()
         && b.token.len() <= 64
         && b.token.chars().all(|c| c.is_ascii_alphanumeric());
-    let path = tmp_dir(&st).join(format!("{}.arkyo", b.token));
-    if !plain || !path.is_file() {
+    if !plain {
         return error(StatusCode::BAD_REQUEST, EXPIRED);
     }
-    match run_import(&st, &me, &path, ImportOptions { modes: b.modes }).await {
+    // The token is consumed atomically: a concurrent import of the same
+    // file finds nothing, and the sweep leaves an `.importing` file alone.
+    let ready = tmp_dir(&st).join(format!("{}.arkyo", b.token));
+    let busy = ready.with_extension("importing");
+    if std::fs::rename(&ready, &busy).is_err() {
+        return error(StatusCode::BAD_REQUEST, EXPIRED);
+    }
+    match run_import(&st, &me, &busy, ImportOptions { modes: b.modes }).await {
         Ok(report) => {
-            let _ = std::fs::remove_file(&path);
+            let _ = std::fs::remove_file(&busy);
             Json(report).into_response()
         }
-        Err(e) => transfer_error(e),
+        Err(e) => {
+            // Kept for another try (other modes), until its hour is up.
+            let _ = std::fs::rename(&busy, &ready);
+            transfer_error(e)
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::ascii_name;
+    use super::{ascii_name, sweep};
+    use std::time::{Duration, SystemTime};
+
+    #[test]
+    fn sweep_removes_stale_temporaries_but_not_an_import_in_progress() {
+        let dir = tempfile::tempdir().unwrap();
+        let old = SystemTime::now() - Duration::from_secs(2 * 3600);
+        for (name, stale) in [
+            ("a.arkyo", true),
+            ("b.export", true),
+            ("c.importing", true),
+            ("d.arkyo", false),
+        ] {
+            let path = dir.path().join(name);
+            let f = std::fs::File::create(&path).unwrap();
+            if stale {
+                f.set_modified(old).unwrap();
+            }
+        }
+        sweep(dir.path());
+        let mut left: Vec<String> = std::fs::read_dir(dir.path())
+            .unwrap()
+            .map(|e| e.unwrap().file_name().into_string().unwrap())
+            .collect();
+        left.sort();
+        assert_eq!(left, ["c.importing", "d.arkyo"]);
+    }
 
     #[test]
     fn file_names_are_plain_ascii() {
