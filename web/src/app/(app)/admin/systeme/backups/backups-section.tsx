@@ -4,6 +4,7 @@
  */
 
 import { RestorePoints } from "./restore-points";
+import { SiteBackups } from "./site-backups";
 import { TransferBlock } from "./transfer";
 
 export function BackupsSection() {
@@ -14,6 +15,7 @@ export function BackupsSection() {
       </h2>
       <RestorePoints />
       <TransferBlock />
+      <SiteBackups />
     </section>
   );
 }
