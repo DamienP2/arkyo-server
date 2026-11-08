@@ -4,7 +4,14 @@ import { renderApp, resetApp, sentBody, signedInApi } from "@/tests/app-harness"
 import { ApiError, getApiErrorMessage } from "@/lib/api-client";
 import { backupsApi } from "./api";
 
-afterEach(resetApp);
+const realCreate = URL.createObjectURL;
+const realRevoke = URL.revokeObjectURL;
+afterEach(() => {
+  vi.useRealTimers();
+  URL.createObjectURL = realCreate;
+  URL.revokeObjectURL = realRevoke;
+  resetApp();
+});
 
 const objects = {
   projects: [{ id: "p1", name: "Finale", updatedAt: "2026-11-07T10:00:00.000Z" }],
@@ -32,7 +39,7 @@ const preview = {
   preview: {
     manifest: { format: "arkyo", version: 1, appVersion: "0.1.0", createdAt: "2026-11-07T10:00:00.000Z", roots: [], counts: {} },
     roots: [
-      { kind: "project", id: "p1", name: "Finale", exists: true, counts: { Rack: 3, Port: 12 } },
+      { kind: "project", id: "p1", name: "Finale", exists: true, counts: { Rack: 3, RackSlot: 12 } },
       { kind: "panel", id: "n9", name: "Nouveau", exists: false, counts: { Panel: 1 } },
     ],
   },
@@ -55,17 +62,20 @@ describe("Système › exporter / importer", () => {
     fireEvent.click(screen.getByRole("tab", { name: "Panels" }));
     expect(screen.getByText("Panel A")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("tab", { name: "Régies" }));
-    expect(screen.getByText(/Aucun objet/)).toBeInTheDocument();
+    expect(screen.getByText("Aucun objet dans « Régies »")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("tab", { name: "Projets" }));
     fireEvent.click(screen.getByLabelText(/Finale/));
-    URL.createObjectURL = vi.fn(() => "blob:x");
+    const created = vi.fn(() => "blob:x");
+    URL.createObjectURL = created;
     URL.revokeObjectURL = vi.fn();
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
     fireEvent.click(screen.getByRole("button", { name: "Exporter (1)" }));
     await waitFor(() =>
       expect(sentBody(fetchSpy, "POST", "/api/system/transfer/export")).toEqual({
         roots: [{ kind: "project", id: "p1" }],
       }),
     );
+    await waitFor(() => expect(created).toHaveBeenCalledTimes(1));
   });
 
   test("import : aperçu, défaut Copie, choix Remplacer, rapport", async () => {
@@ -76,7 +86,7 @@ describe("Système › exporter / importer", () => {
         "POST /api/system/transfer/import": {
           body: {
             roots: [{ kind: "project", id: "p1", name: "Finale", mode: "replace", inserted: { Rack: 3 } }],
-            catalogueAdded: { Brand: 2 },
+            catalogueAdded: { TenantBrand: 2 },
             uploadsCopied: 4,
             warnings: ["Fichier manquant"],
           },
@@ -86,7 +96,7 @@ describe("Système › exporter / importer", () => {
     await screen.findByRole("button", { name: "Exporter (0)" });
     pickFile();
     expect(await screen.findByText("Existe déjà ici")).toBeInTheDocument();
-    expect(screen.getByText("Rack 3 · Port 12")).toBeInTheDocument();
+    expect(screen.getByText("Contenants 3 · Emplacements 12")).toBeInTheDocument();
     const group = screen.getByRole("radiogroup", { name: "Mode d'import de Finale" });
     const [replace, copy] = within(group).getAllByRole("radio") as HTMLInputElement[];
     expect(copy.checked).toBe(true);
@@ -100,7 +110,7 @@ describe("Système › exporter / importer", () => {
       modes: { p1: "replace" },
     });
     expect(screen.getByText(/Finale » · Remplacé/)).toBeInTheDocument();
-    expect(screen.getByText(/Brand 2/)).toBeInTheDocument();
+    expect(screen.getByText(/Marques 2/)).toBeInTheDocument();
     expect(screen.getByText("Fichiers copiés : 4")).toBeInTheDocument();
     expect(screen.getByText("Fichier manquant")).toBeInTheDocument();
   });
@@ -114,6 +124,67 @@ describe("Système › exporter / importer", () => {
     pickFile();
     expect(await screen.findByText("Fichier illisible.")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Importer" })).toBeNull();
+  });
+});
+
+describe("import à rejouer", () => {
+  test("jeton refusé (400) : aperçu retiré, fichier à choisir à nouveau", async () => {
+    renderApp(
+      "/admin/systeme",
+      api({
+        "POST /api/system/transfer/inspect": { body: preview },
+        "POST /api/system/transfer/import": {
+          status: 400,
+          body: { error: "Fichier introuvable : choisissez-le à nouveau." },
+        },
+      }),
+    );
+    await screen.findByRole("button", { name: "Exporter (0)" });
+    pickFile();
+    fireEvent.click(await screen.findByRole("button", { name: "Importer" }));
+    expect(
+      await screen.findByText("Fichier introuvable : choisissez-le à nouveau."),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Importer" })).toBeNull();
+    expect((screen.getByLabelText("Fichier .arkyo à importer") as HTMLInputElement).value).toBe("");
+  });
+
+  test("erreur serveur (500) : l'aperçu reste pour réessayer", async () => {
+    renderApp(
+      "/admin/systeme",
+      api({
+        "POST /api/system/transfer/inspect": { body: preview },
+        "POST /api/system/transfer/import": { status: 500, body: { error: "Erreur interne." } },
+      }),
+    );
+    await screen.findByRole("button", { name: "Exporter (0)" });
+    pickFile();
+    fireEvent.click(await screen.findByRole("button", { name: "Importer" }));
+    await screen.findByText("Erreur interne.");
+    expect(screen.getByRole("button", { name: "Importer" })).toBeInTheDocument();
+  });
+
+  test("après un import réussi, les listes d'export sont rechargées", async () => {
+    let loads = 0;
+    renderApp(
+      "/admin/systeme",
+      api({
+        "GET /api/system/transfer/objects": () => {
+          loads++;
+          return { body: objects };
+        },
+        "POST /api/system/transfer/inspect": { body: preview },
+        "POST /api/system/transfer/import": {
+          body: { roots: [], catalogueAdded: {}, uploadsCopied: 0, warnings: [] },
+        },
+      }),
+    );
+    await screen.findByRole("button", { name: "Exporter (0)" });
+    const before = loads;
+    pickFile();
+    fireEvent.click(await screen.findByRole("button", { name: "Importer" }));
+    await screen.findByText("Import terminé");
+    await waitFor(() => expect(loads).toBeGreaterThan(before));
   });
 });
 

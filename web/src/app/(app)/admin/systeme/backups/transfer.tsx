@@ -5,7 +5,7 @@ import { Download, Upload } from "@/components/ui/icons";
 import { LoadingState } from "@/components/ui/loading-state";
 import { EmptyState } from "@/components/ui/empty-state";
 import { useToast } from "@/components/ui/toast";
-import { getApiErrorMessage } from "@/lib/api-client";
+import { ApiError, getApiErrorMessage } from "@/lib/api-client";
 import {
   backupsApi,
   type ImportMode,
@@ -14,8 +14,9 @@ import {
   type RootKind,
   type TransferObjects,
 } from "./api";
-import { BackupBlock } from "./backups-section";
+import { BackupBlock } from "./backup-block";
 import { formatDate } from "./format";
+import { summarize } from "./table-labels";
 
 type Tab = { key: keyof TransferObjects; kind: RootKind; label: string };
 const TABS: Tab[] = [
@@ -40,14 +41,7 @@ const MODE_LABEL: Record<ImportMode, string> = {
 const btn =
   "border-border/60 text-foreground hover:bg-muted flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-[11px] transition-colors disabled:pointer-events-none disabled:opacity-50";
 
-function summary(counts: Record<string, number>): string {
-  return Object.entries(counts)
-    .filter(([, n]) => n > 0)
-    .map(([table, n]) => `${table} ${n}`)
-    .join(" · ");
-}
-
-function ExportPanel() {
+function ExportPanel({ reloadKey }: { reloadKey: number }) {
   const toast = useToast();
   const [objects, setObjects] = useState<TransferObjects | null>(null);
   const [tab, setTab] = useState<Tab>(TABS[0]);
@@ -59,7 +53,7 @@ function ExportPanel() {
       .objects()
       .then(setObjects)
       .catch((e) => toast.error(getApiErrorMessage(e)));
-  }, [toast]);
+  }, [toast, reloadKey]);
 
   const key = (kind: RootKind, id: string) => `${kind}:${id}`;
   const chosen = Object.entries(picked)
@@ -144,7 +138,7 @@ function ExportPanel() {
 }
 
 function ReportView({ report }: { report: ImportReport }) {
-  const added = summary(report.catalogueAdded);
+  const added = summarize(report.catalogueAdded);
   return (
     <div className="border-border/60 space-y-2 rounded-md border p-3 text-sm">
       <div className="font-medium">Import terminé</div>
@@ -153,7 +147,7 @@ function ReportView({ report }: { report: ImportReport }) {
           <li key={`${r.kind}:${r.id}`}>
             {KIND_LABEL[r.kind]} « {r.name} » · {MODE_LABEL[r.mode]}
             <span className="text-muted-foreground block text-xs">
-              {summary(r.inserted)}
+              {summarize(r.inserted)}
             </span>
           </li>
         ))}
@@ -173,7 +167,7 @@ function ReportView({ report }: { report: ImportReport }) {
   );
 }
 
-function ImportPanel() {
+function ImportPanel({ onImported }: { onImported: () => void }) {
   const toast = useToast();
   const fileRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
@@ -210,8 +204,18 @@ function ImportPanel() {
     try {
       setReport(await backupsApi.importFile(session.token, modes));
       setSession(null);
+      onImported();
     } catch (err) {
       toast.error(getApiErrorMessage(err));
+      // Jeton consommé ou expiré : il faut choisir le fichier à nouveau.
+      if (
+        err instanceof ApiError &&
+        (err.status === 400 || err.status === 404)
+      ) {
+        setSession(null);
+        setModes({});
+        if (fileRef.current) fileRef.current.value = "";
+      }
     } finally {
       setBusy(false);
     }
@@ -254,7 +258,7 @@ function ImportPanel() {
                     </span>
                   )}
                 </div>
-                <div className="text-muted-foreground text-xs">{summary(r.counts)}</div>
+                <div className="text-muted-foreground text-xs">{summarize(r.counts)}</div>
                 {r.exists && (
                   <div
                     role="radiogroup"
@@ -294,10 +298,11 @@ function ImportPanel() {
 }
 
 export function TransferBlock() {
+  const [reloadKey, setReloadKey] = useState(0);
   return (
     <BackupBlock title="Exporter / importer">
-      <ExportPanel />
-      <ImportPanel />
+      <ExportPanel reloadKey={reloadKey} />
+      <ImportPanel onImported={() => setReloadKey((k) => k + 1)} />
     </BackupBlock>
   );
 }

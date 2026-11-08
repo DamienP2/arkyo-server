@@ -29,7 +29,7 @@ import {
   type PointProject,
   type ProjectSettings,
 } from "./api";
-import { BackupBlock } from "./backups-section";
+import { BackupBlock } from "./backup-block";
 import { formatDate, formatSize } from "./format";
 
 const KIND_LABEL: Record<PointKind, string> = {
