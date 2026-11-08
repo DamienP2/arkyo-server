@@ -3,11 +3,13 @@
 //! `manifest.json`, `arkyo.db` (a consistent copy made by `VACUUM INTO`),
 //! `config.json`, `uploads/**` and `backups/projects/**`.
 //!
-//! Restore: the archive is checked, then staged as `<data>/restore-pending.zip`
-//! and applied at the next start, before the base is opened
-//! ([`apply_pending_restore`]): the current data moves to
-//! `<data>/before-restore-<horodatage>/`, the archive is unpacked, then
-//! `db::open` runs the (additive) migrations. The `config.json` of the
+//! Restore: the archive is checked (its base extracted into `<data>/tmp`),
+//! then staged as `<data>/restore-pending.zip` and applied at the next
+//! start, before the base is opened ([`apply_pending_restore`]): the
+//! current data moves to `<data>/before-restore-<horodatage>/`, the archive
+//! is unpacked, renamed `restore-applied-<horodatage>.zip` (the commit
+//! point), then `db::open` runs the (additive) migrations. The outcome is
+//! kept in `<data>/restore-status.json`. The `config.json` of the
 //! archive replaces the current one as is: port and address are settings of
 //! the site, restored with it. `backups/site/` (the site backups themselves),
 //! `update/`, `logs/` and `tmp/` are neither saved nor replaced.
@@ -28,7 +30,7 @@ use zip::{CompressionMethod, ZipArchive, ZipWriter};
 
 use super::archive::safe_rel;
 use super::import::blocking;
-use super::TransferError;
+use super::{RemoveOnDrop, TransferError};
 use crate::http::AppState;
 
 const FORMAT: &str = "arkyo-server-site";
@@ -60,6 +62,17 @@ const TICK: Duration = Duration::from_secs(60);
 /// Delay before a failed automatic backup is tried again.
 const RETRY: Duration = Duration::from_secs(3600);
 const BAD_DIR: &str = "Dossier inaccessible";
+/// A destination folder inside the saved data.
+pub const INSIDE_DATA: &str = "Ce dossier fait partie des données sauvegardées.";
+/// A backup whose base comes from a newer version (still restorable under
+/// the additive rule) or whose format is newer (refused).
+pub const NEWER: &str = "Cette sauvegarde vient d'une version plus récente de Strata Arkyo.";
+/// Marker of a restore being applied (crash recovery).
+const IN_PROGRESS: &str = "restore-in-progress.json";
+/// Outcome of the last restore applied at startup.
+const STATUS: &str = "restore-status.json";
+/// Age past which a temporary file left by a crash is removed.
+const STALE: Duration = Duration::from_secs(3600);
 
 fn bad() -> TransferError {
     TransferError::Invalid("Archive invalide.".into())
@@ -67,15 +80,6 @@ fn bad() -> TransferError {
 
 fn zip_err(_: zip::result::ZipError) -> TransferError {
     bad()
-}
-
-/// Removes the file when dropped.
-struct RemoveOnDrop(PathBuf);
-
-impl Drop for RemoveOnDrop {
-    fn drop(&mut self) {
-        let _ = std::fs::remove_file(&self.0);
-    }
 }
 
 // ── Settings ────────────────────────────────────────────────────────────────
@@ -163,12 +167,22 @@ pub fn backup_dir(data_dir: &Path, s: &SiteSettings) -> PathBuf {
     }
 }
 
-/// Whether `dir` is an absolute path to an existing folder this process can
-/// write in (a probe file is created then removed).
-pub fn check_dir(dir: &str) -> bool {
+/// Checks a destination folder: an absolute path to an existing folder this
+/// process can write in (a probe file is created then removed), else
+/// « Dossier inaccessible » ; never inside the saved data (`uploads/`,
+/// `backups/projects/`), else [`INSIDE_DATA`].
+pub fn check_dir(data_dir: &Path, dir: &str) -> Result<(), &'static str> {
     let dir = Path::new(dir);
     if !dir.is_absolute() || !dir.is_dir() {
-        return false;
+        return Err(BAD_DIR);
+    }
+    let real = std::fs::canonicalize(dir).map_err(|_| BAD_DIR)?;
+    let base = std::fs::canonicalize(data_dir).unwrap_or_else(|_| data_dir.to_path_buf());
+    for tree in TREES {
+        let saved = std::fs::canonicalize(data_dir.join(tree)).unwrap_or_else(|_| base.join(tree));
+        if real.starts_with(&saved) {
+            return Err(INSIDE_DATA);
+        }
     }
     let probe = dir.join(format!(".arkyo-probe-{}", crate::ids::new_id()));
     let ok = std::fs::OpenOptions::new()
@@ -178,7 +192,40 @@ pub fn check_dir(dir: &str) -> bool {
         .and_then(|mut f| f.write_all(b"x"))
         .is_ok();
     let _ = std::fs::remove_file(&probe);
-    ok
+    if ok {
+        Ok(())
+    } else {
+        Err(BAD_DIR)
+    }
+}
+
+/// Whether the file was last written more than [`STALE`] ago.
+fn stale(path: &Path) -> bool {
+    std::fs::symlink_metadata(path)
+        .and_then(|m| m.modified())
+        .ok()
+        .and_then(|t| t.elapsed().ok())
+        .is_some_and(|age| age > STALE)
+}
+
+/// Removes the temporaries a crash may leave: `Arkyo-site-*.zip.part` in the
+/// backup folder and `restore-pending.zip.part`, last written more than an
+/// hour ago (the copies of the base in `<data>/tmp` are swept with the
+/// other temporaries of that folder).
+pub fn sweep_stale(data_dir: &Path, backup_dir: &Path) {
+    if let Ok(entries) = std::fs::read_dir(backup_dir) {
+        for e in entries.flatten() {
+            let name = e.file_name().to_string_lossy().into_owned();
+            let part = name.strip_suffix(".part").is_some_and(is_backup_name);
+            if part && stale(&e.path()) {
+                let _ = std::fs::remove_file(e.path());
+            }
+        }
+    }
+    let pending_part = data_dir.join(format!("{PENDING}.part"));
+    if stale(&pending_part) {
+        let _ = std::fs::remove_file(&pending_part);
+    }
 }
 
 // ── Names and listing ───────────────────────────────────────────────────────
@@ -378,7 +425,9 @@ pub async fn create_site_backup(
     let _guard = LOCK.lock().await;
     let owner = Owner::of(data_dir);
     let tmp = data_dir.join("tmp");
-    std::fs::create_dir_all(&tmp)?;
+    tokio::fs::create_dir_all(&tmp)
+        .await
+        .map_err(TransferError::Storage)?;
     owner.dirs(data_dir, &tmp);
     let copy = tmp.join(format!("site-{}.db", crate::ids::new_id()));
     let _remove = RemoveOnDrop(copy.clone());
@@ -404,7 +453,7 @@ pub async fn create_site_backup(
     };
     let (data_dir, out_dir) = (data_dir.to_path_buf(), out_dir.to_path_buf());
     blocking(move || {
-        std::fs::create_dir_all(&out_dir)?;
+        std::fs::create_dir_all(&out_dir).map_err(TransferError::Storage)?;
         let owner = if out_dir.starts_with(&data_dir) {
             owner.dirs(&data_dir, &out_dir);
             owner
@@ -459,7 +508,11 @@ fn write_site_zip(
     let opts = SimpleFileOptions::default()
         .compression_method(CompressionMethod::Deflated)
         .large_file(true);
-    let file = File::create(out)?;
+    // Never clobbers the `.part` of another process.
+    let file = std::fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(out)?;
     owner.file(&file);
     let mut z = ZipWriter::new(BufWriter::new(file));
     z.start_file(MANIFEST, opts).map_err(zip_err)?;
@@ -532,9 +585,16 @@ fn add_tree<W: Write + io::Seek>(
 /// be an unmounted share).
 pub async fn run_backup(st: &AppState, s: &SiteSettings) -> Result<SiteBackup, TransferError> {
     let dir = backup_dir(&st.data_dir, s);
-    if s.dir.is_some() && !dir.is_dir() {
+    let exists = tokio::fs::metadata(&dir).await.is_ok_and(|m| m.is_dir());
+    if s.dir.is_some() && !exists {
         return Err(TransferError::Invalid(BAD_DIR.into()));
     }
+    let (data_dir, swept) = (st.data_dir.clone(), dir.clone());
+    blocking(move || {
+        sweep_stale(&data_dir, &swept);
+        Ok(())
+    })
+    .await?;
     let backup = create_site_backup(&st.pool, &st.data_dir, &dir).await?;
     let keep = s.keep;
     blocking(move || Ok(prune_site_backups(&dir, keep))).await?;
@@ -608,9 +668,7 @@ fn check(z: &mut ZipArchive<File>) -> Result<SiteManifest, TransferError> {
         ));
     }
     if m.get("version").and_then(Value::as_u64).unwrap_or(0) > u64::from(VERSION) {
-        return Err(TransferError::Invalid(
-            "Cette sauvegarde vient d'une version plus récente de Strata Arkyo.".into(),
-        ));
+        return Err(TransferError::Invalid(NEWER.into()));
     }
     let manifest: SiteManifest = serde_json::from_value(m).map_err(|_| bad())?;
     if !has_db {
@@ -619,10 +677,36 @@ fn check(z: &mut ZipArchive<File>) -> Result<SiteManifest, TransferError> {
     Ok(manifest)
 }
 
+/// Copies at most `limit` bytes of `r` to `w`; a read error goes through
+/// `on_read`, a write error is [`TransferError::Storage`]. Returns the bytes
+/// copied.
+fn pump(
+    r: &mut impl Read,
+    w: &mut impl Write,
+    limit: u64,
+    on_read: fn(io::Error) -> TransferError,
+) -> Result<u64, TransferError> {
+    let mut buf = vec![0u8; 64 * 1024];
+    let mut done: u64 = 0;
+    while done < limit {
+        let want = usize::try_from(limit - done).map_or(buf.len(), |l| l.min(buf.len()));
+        let n = match r.read(&mut buf[..want]) {
+            Ok(0) => break,
+            Ok(n) => n,
+            Err(e) if e.kind() == io::ErrorKind::Interrupted => continue,
+            Err(e) => return Err(on_read(e)),
+        };
+        w.write_all(&buf[..n]).map_err(TransferError::Storage)?;
+        done += n as u64;
+    }
+    Ok(done)
+}
+
 /// Copies exactly the declared `size` bytes of `entry` to `out`, then reads
-/// it to its end (which checks its CRC).
+/// it to its end (which checks its CRC). A read or format error is
+/// « Archive invalide. », a write error [`TransferError::Storage`].
 fn copy_entry(entry: &mut impl Read, size: u64, out: &mut impl Write) -> Result<(), TransferError> {
-    let n = io::copy(&mut entry.take(size), out).map_err(|_| bad())?;
+    let n = pump(entry, out, size, |_| bad())?;
     let mut more = [0u8; 1];
     if n != size || entry.read(&mut more).map_err(|_| bad())? != 0 {
         return Err(bad());
@@ -680,18 +764,25 @@ fn check_base(path: &Path) -> Result<(), TransferError> {
 }
 
 /// Checks a site archive: format, safe paths, and a base SQLite opens
-/// read-only (from a copy extracted to the temporary folder).
-pub fn verify_site_archive(path: &Path) -> Result<SiteManifest, TransferError> {
+/// read-only, from a copy extracted into `work_dir` (`<data>/tmp`: the
+/// system temporary folder may be a small tmpfs).
+pub fn verify_site_archive(path: &Path, work_dir: &Path) -> Result<SiteManifest, TransferError> {
     let mut z = open(path)?;
     let manifest = check(&mut z)?;
-    let tmp = std::env::temp_dir().join(format!("arkyo-verify-{}.db", crate::ids::new_id()));
+    std::fs::create_dir_all(work_dir).map_err(TransferError::Storage)?;
+    let tmp = work_dir.join(format!("verify-{}.db", crate::ids::new_id()));
     let _remove = RemoveOnDrop(tmp.clone());
     {
         let mut e = z.by_name(DB).map_err(zip_err)?;
         let size = e.size();
-        let mut f = BufWriter::new(File::create(&tmp)?);
+        let file = std::fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&tmp)
+            .map_err(TransferError::Storage)?;
+        let mut f = BufWriter::new(file);
         copy_entry(&mut e, size, &mut f)?;
-        f.flush()?;
+        f.flush().map_err(TransferError::Storage)?;
     }
     check_base(&tmp)?;
     Ok(manifest)
@@ -714,52 +805,298 @@ pub fn stage_restore_moving(
 }
 
 fn stage(data_dir: &Path, archive: &Path, moving: bool) -> Result<SiteManifest, TransferError> {
-    let manifest = verify_site_archive(archive)?;
-    std::fs::create_dir_all(data_dir)?;
+    std::fs::create_dir_all(data_dir).map_err(TransferError::Storage)?;
+    let owner = Owner::of(data_dir);
+    let work = data_dir.join("tmp");
+    std::fs::create_dir_all(&work).map_err(TransferError::Storage)?;
+    owner.dirs(data_dir, &work);
+    let manifest = verify_site_archive(archive, &work)?;
     let dest = data_dir.join(PENDING);
     if moving && std::fs::rename(archive, &dest).is_ok() {
         return Ok(manifest);
     }
     let part = data_dir.join(format!("{PENDING}.part"));
-    let copied = (|| -> io::Result<()> {
-        let mut out = File::create(&part)?;
-        Owner::of(data_dir).file(&out);
-        io::copy(&mut File::open(archive)?, &mut out)?;
-        out.sync_all()?;
-        std::fs::rename(&part, &dest)
-    })();
+    if stale(&part) {
+        let _ = std::fs::remove_file(&part);
+    }
+    // Never clobbers the copy of another process.
+    let mut out = match std::fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&part)
+    {
+        Ok(f) => f,
+        Err(e) if e.kind() == io::ErrorKind::AlreadyExists => {
+            return Err(TransferError::Invalid(
+                "Une autre restauration est en cours de préparation.".into(),
+            ))
+        }
+        Err(e) => return Err(TransferError::Storage(e)),
+    };
+    owner.file(&out);
+    let copied = File::open(archive)
+        .map_err(TransferError::Io)
+        .and_then(|mut src| pump(&mut src, &mut out, u64::MAX, TransferError::Io))
+        .and_then(|_| out.sync_all().map_err(TransferError::Storage))
+        .and_then(|()| std::fs::rename(&part, &dest).map_err(TransferError::Storage));
     if let Err(e) = copied {
         let _ = std::fs::remove_file(&part);
-        return Err(e.into());
+        return Err(e);
     }
     Ok(manifest)
 }
 
+/// Identity of the staged file, to recognise one already applied.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PendingId {
+    pub size: u64,
+    pub modified_ns: u64,
+}
+
+fn pending_id(path: &Path) -> Option<PendingId> {
+    let m = std::fs::metadata(path).ok()?;
+    let modified = m
+        .modified()
+        .ok()?
+        .duration_since(std::time::UNIX_EPOCH)
+        .ok()?;
+    Some(PendingId {
+        size: m.len(),
+        modified_ns: u64::try_from(modified.as_nanos()).ok()?,
+    })
+}
+
+/// `<data>/restore-status.json`: the outcome of the last restore applied at
+/// startup (`lastRestore` of `GET /api/system/backups/site`).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RestoreStatus {
+    pub ok: bool,
+    pub at: String,
+    /// The archive, as kept in the data directory
+    /// (`restore-applied-…zip`, `restore-failed-…zip`).
+    pub archive: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
+    /// `createdAt` of the backup restored.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub backup_created_at: Option<String>,
+    /// Set when the applied archive could be neither renamed nor removed:
+    /// the next start recognises it and does not apply it again.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pending: Option<PendingId>,
+}
+
+pub fn read_restore_status(data_dir: &Path) -> Option<RestoreStatus> {
+    serde_json::from_slice(&std::fs::read(data_dir.join(STATUS)).ok()?).ok()
+}
+
+/// Writes `value` at `path` atomically and durably (temporary file, sync,
+/// rename).
+fn write_json(path: &Path, value: &impl Serialize, owner: Owner) -> io::Result<()> {
+    let tmp = path.with_extension(format!("{}.tmp", crate::ids::new_id()));
+    let res = (|| {
+        let mut f = std::fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&tmp)?;
+        owner.file(&f);
+        f.write_all(&serde_json::to_vec_pretty(value)?)?;
+        f.sync_all()?;
+        std::fs::rename(&tmp, path)
+    })();
+    if res.is_err() {
+        let _ = std::fs::remove_file(&tmp);
+    }
+    res
+}
+
+fn write_status(data_dir: &Path, status: &RestoreStatus, owner: Owner) {
+    if let Err(e) = write_json(&data_dir.join(STATUS), status, owner) {
+        tracing::error!("cannot write {STATUS}: {e}");
+    }
+}
+
+/// Phase of a restore being applied.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+enum Phase {
+    /// The current data is being moved aside: what is not in the folder
+    /// aside yet is still the original.
+    Moving,
+    /// The archive is being unpacked: what is in place is from the archive.
+    Unpacking,
+}
+
+/// `<data>/restore-in-progress.json`.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct Progress {
+    /// The name of the `before-restore-…` folder.
+    aside: String,
+    phase: Phase,
+    started_at: String,
+}
+
+/// Whether `pending` was already applied, its rename and removal having
+/// both failed.
+fn already_applied(data_dir: &Path, pending: &Path) -> bool {
+    let Some(status) = read_restore_status(data_dir) else {
+        return false;
+    };
+    status.ok && status.pending.is_some() && status.pending == pending_id(pending)
+}
+
+const INTERRUPTED: &str =
+    "La restauration a été interrompue ; les données d'origine ont été remises en place.";
+
 /// Applies `<data>/restore-pending.zip` when there is one (at startup,
-/// before the base is opened); `Ok(false)` when there is none. On failure
-/// the data is put back as it was and the archive renamed
-/// `restore-failed-<horodatage>.zip`.
+/// before the base is opened); `Ok(false)` when there is none.
+///
+/// The current data moves to `<data>/before-restore-<horodatage>/`, the
+/// archive is unpacked (base synced to disk), then the archive is renamed
+/// `restore-applied-<horodatage>.zip`: the commit point. On failure the
+/// data is put back as it was and the archive renamed
+/// `restore-failed-<horodatage>.zip`. A marker `restore-in-progress.json`
+/// lets the next start put the original data back after a crash in
+/// between. The outcome goes to `restore-status.json`.
 pub fn apply_pending_restore(data_dir: &Path) -> Result<bool, TransferError> {
+    let owner = Owner::of(data_dir);
+    let stamp = local_stamp();
     let pending = data_dir.join(PENDING);
+    if data_dir.join(IN_PROGRESS).exists() {
+        recover(data_dir, &pending, &stamp, owner)?;
+    }
     if !pending.is_file() {
         return Ok(false);
     }
-    let stamp = local_stamp();
-    match apply(data_dir, &pending, &stamp) {
-        Ok(aside) => {
-            let _ = std::fs::remove_file(&pending);
+    if already_applied(data_dir, &pending) {
+        tracing::warn!("{PENDING} already applied; not applying it again");
+        let _ = std::fs::remove_file(&pending);
+        return Ok(false);
+    }
+    match apply(data_dir, &pending, &stamp, owner) {
+        Ok((aside, manifest)) => {
+            let applied = format!("restore-applied-{stamp}.zip");
+            let mut status = RestoreStatus {
+                ok: true,
+                at: crate::ids::now_iso(),
+                archive: applied.clone(),
+                error: None,
+                backup_created_at: Some(manifest.created_at),
+                pending: None,
+            };
+            // The commit point: the archive leaves `restore-pending.zip`.
+            if std::fs::rename(&pending, data_dir.join(&applied)).is_err() {
+                status.archive = PENDING.into();
+                if let Err(e) = std::fs::remove_file(&pending) {
+                    tracing::error!(
+                        "cannot rename nor remove {PENDING} ({e}); it is marked as applied"
+                    );
+                    status.pending = pending_id(&pending);
+                }
+            }
+            write_status(data_dir, &status, owner);
+            let _ = std::fs::remove_file(data_dir.join(IN_PROGRESS));
             tracing::info!("site backup restored; previous data in {}", aside.display());
             Ok(true)
         }
         Err(e) => {
-            let failed = data_dir.join(format!("restore-failed-{stamp}.zip"));
-            if std::fs::rename(&pending, &failed).is_err() {
-                let _ = std::fs::remove_file(&pending);
-            }
+            let archive = fail_pending(data_dir, &pending, &stamp);
+            write_status(
+                data_dir,
+                &RestoreStatus {
+                    ok: false,
+                    at: crate::ids::now_iso(),
+                    archive,
+                    error: Some(e.to_string()),
+                    backup_created_at: None,
+                    pending: None,
+                },
+                owner,
+            );
             tracing::error!("site restore failed, data kept: {e}");
             Err(e)
         }
     }
+}
+
+/// Renames the staged archive `restore-failed-<stamp>.zip` (removed when it
+/// cannot be); returns the name it is kept under.
+fn fail_pending(data_dir: &Path, pending: &Path, stamp: &str) -> String {
+    let failed = format!("restore-failed-{stamp}.zip");
+    if std::fs::rename(pending, data_dir.join(&failed)).is_ok() {
+        failed
+    } else {
+        let _ = std::fs::remove_file(pending);
+        PENDING.into()
+    }
+}
+
+/// After a crash while a restore was applied: committed (the archive left
+/// `restore-pending.zip`, or is marked as applied) → nothing to undo;
+/// otherwise the original data is put back from the folder aside, and the
+/// archive set aside as failed (`Err`).
+fn recover(
+    data_dir: &Path,
+    pending: &Path,
+    stamp: &str,
+    owner: Owner,
+) -> Result<(), TransferError> {
+    let marker = data_dir.join(IN_PROGRESS);
+    let progress: Option<Progress> = std::fs::read(&marker)
+        .ok()
+        .and_then(|b| serde_json::from_slice(&b).ok());
+    let Some(progress) = progress else {
+        tracing::error!("{IN_PROGRESS} unreadable; removed");
+        let _ = std::fs::remove_file(&marker);
+        return Ok(());
+    };
+    if !pending.is_file() || already_applied(data_dir, pending) {
+        // Committed before the crash.
+        let newer = read_restore_status(data_dir).is_some_and(|s| s.at >= progress.started_at);
+        if !newer {
+            write_status(
+                data_dir,
+                &RestoreStatus {
+                    ok: true,
+                    at: crate::ids::now_iso(),
+                    archive: PENDING.into(),
+                    error: None,
+                    backup_created_at: None,
+                    pending: None,
+                },
+                owner,
+            );
+        }
+        let _ = std::fs::remove_file(&marker);
+        return Ok(());
+    }
+    let plain = progress.aside.starts_with("before-restore-")
+        && !progress.aside.contains(['/', '\\'])
+        && !progress.aside.contains("..");
+    if plain {
+        put_back(data_dir, &data_dir.join(&progress.aside), progress.phase);
+    } else {
+        tracing::error!("{IN_PROGRESS}: invalid folder {}", progress.aside);
+    }
+    let _ = std::fs::remove_file(&marker);
+    let archive = fail_pending(data_dir, pending, stamp);
+    write_status(
+        data_dir,
+        &RestoreStatus {
+            ok: false,
+            at: crate::ids::now_iso(),
+            archive,
+            error: Some(INTERRUPTED.into()),
+            backup_created_at: None,
+            pending: None,
+        },
+        owner,
+    );
+    tracing::error!("{INTERRUPTED}");
+    Err(TransferError::Invalid(INTERRUPTED.into()))
 }
 
 /// A free `<data>/before-restore-<stamp>[-n]` folder.
@@ -783,11 +1120,25 @@ fn remove_any(path: &Path) -> io::Result<()> {
     }
 }
 
-/// Moves the items set aside back to their place.
-fn put_back(data_dir: &Path, aside: &Path, moved: &[&str]) {
-    for item in moved.iter().rev() {
-        if let Err(e) = std::fs::rename(aside.join(item), data_dir.join(item)) {
-            tracing::error!("cannot put {item} back from {}: {e}", aside.display());
+/// Puts the original data back from `aside`: each item found there replaces
+/// what is in place; while `Unpacking`, an item absent from `aside` (absent
+/// before the restore) is removed. The emptied folder aside is removed.
+fn put_back(data_dir: &Path, aside: &Path, phase: Phase) {
+    for item in REPLACED {
+        let (saved, target) = (aside.join(item), data_dir.join(item));
+        let is_saved = std::fs::symlink_metadata(&saved).is_ok();
+        if is_saved || phase == Phase::Unpacking {
+            if let Err(e) = remove_any(&target) {
+                tracing::error!("cannot clear {item} after a failed restore: {e}");
+            }
+        }
+        if is_saved {
+            if let Some(parent) = target.parent() {
+                let _ = std::fs::create_dir_all(parent);
+            }
+            if let Err(e) = std::fs::rename(&saved, &target) {
+                tracing::error!("cannot put {item} back from {}: {e}", aside.display());
+            }
         }
     }
     // Only empty folders are left (`backups/`).
@@ -795,14 +1146,35 @@ fn put_back(data_dir: &Path, aside: &Path, moved: &[&str]) {
     let _ = std::fs::remove_dir(aside);
 }
 
-fn apply(data_dir: &Path, pending: &Path, stamp: &str) -> Result<PathBuf, TransferError> {
+fn apply(
+    data_dir: &Path,
+    pending: &Path,
+    stamp: &str,
+    owner: Owner,
+) -> Result<(PathBuf, SiteManifest), TransferError> {
     let mut z = open(pending)?;
-    check(&mut z)?;
+    let manifest = check(&mut z)?;
     let aside = aside_dir(data_dir, stamp);
-    std::fs::create_dir(&aside)?;
-    let owner = Owner::of(data_dir);
+    std::fs::create_dir(&aside).map_err(TransferError::Storage)?;
     owner.dirs(data_dir, &aside);
-    let mut moved: Vec<&str> = Vec::new();
+    let mut progress = Progress {
+        aside: aside
+            .file_name()
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_default(),
+        phase: Phase::Moving,
+        started_at: crate::ids::now_iso(),
+    };
+    let marker = data_dir.join(IN_PROGRESS);
+    let undo = |phase: Phase, e: TransferError| {
+        put_back(data_dir, &aside, phase);
+        let _ = std::fs::remove_file(&marker);
+        e
+    };
+    if let Err(e) = write_json(&marker, &progress, owner) {
+        let _ = std::fs::remove_dir(&aside);
+        return Err(TransferError::Storage(e));
+    }
     for item in REPLACED {
         let src = data_dir.join(item);
         if std::fs::symlink_metadata(&src).is_err() {
@@ -815,21 +1187,17 @@ fn apply(data_dir: &Path, pending: &Path, stamp: &str) -> Result<PathBuf, Transf
         }
         .and_then(|()| std::fs::rename(&src, &dest));
         if let Err(e) = res {
-            put_back(data_dir, &aside, &moved);
-            return Err(e.into());
+            return Err(undo(Phase::Moving, TransferError::Storage(e)));
         }
-        moved.push(item);
+    }
+    progress.phase = Phase::Unpacking;
+    if let Err(e) = write_json(&marker, &progress, owner) {
+        return Err(undo(Phase::Moving, TransferError::Storage(e)));
     }
     if let Err(e) = unpack(&mut z, data_dir, owner) {
-        for item in REPLACED {
-            if let Err(e) = remove_any(&data_dir.join(item)) {
-                tracing::error!("cannot clear {item} after a failed restore: {e}");
-            }
-        }
-        put_back(data_dir, &aside, &moved);
-        return Err(e);
+        return Err(undo(Phase::Unpacking, e));
     }
-    Ok(aside)
+    Ok((aside, manifest))
 }
 
 /// Whether an entry of a site archive is restored (`manifest.json` and
@@ -855,23 +1223,30 @@ fn unpack(z: &mut ZipArchive<File>, data_dir: &Path, owner: Owner) -> Result<(),
         }
         let dest = data_dir.join(rel);
         if e.is_dir() {
-            std::fs::create_dir_all(&dest)?;
+            std::fs::create_dir_all(&dest).map_err(TransferError::Storage)?;
             owner.dirs(data_dir, &dest);
             continue;
         }
         if let Some(parent) = dest.parent() {
-            std::fs::create_dir_all(parent)?;
+            std::fs::create_dir_all(parent).map_err(TransferError::Storage)?;
             owner.dirs(data_dir, parent);
         }
         let size = e.size();
         let file = std::fs::OpenOptions::new()
             .write(true)
             .create_new(true)
-            .open(&dest)?;
+            .open(&dest)
+            .map_err(TransferError::Storage)?;
         owner.file(&file);
         let mut out = BufWriter::new(file);
         copy_entry(&mut e, size, &mut out)?;
-        out.flush()?;
+        let file = out
+            .into_inner()
+            .map_err(|e| TransferError::Storage(e.into_error()))?;
+        // On disk before the commit point.
+        if name == DB || name == CONFIG {
+            file.sync_all().map_err(TransferError::Storage)?;
+        }
     }
     Ok(())
 }
@@ -900,6 +1275,44 @@ mod tests {
         assert!(!restored("backups/site/x.zip"));
         assert!(!restored("uploadsx/a"));
         assert!(!restored("arkyo.db-wal"));
+    }
+
+    struct Full;
+
+    impl Write for Full {
+        fn write(&mut self, _: &[u8]) -> io::Result<usize> {
+            Err(io::Error::other("disk full"))
+        }
+        fn flush(&mut self) -> io::Result<()> {
+            Ok(())
+        }
+    }
+
+    struct Broken;
+
+    impl Read for Broken {
+        fn read(&mut self, _: &mut [u8]) -> io::Result<usize> {
+            Err(io::Error::other("bad deflate"))
+        }
+    }
+
+    #[test]
+    fn copy_entry_tells_write_errors_from_read_errors() {
+        let e = copy_entry(&mut &b"abc"[..], 3, &mut Full).unwrap_err();
+        assert!(matches!(e, TransferError::Storage(_)), "{e:?}");
+        let e = copy_entry(&mut Broken, 3, &mut Vec::new()).unwrap_err();
+        assert!(
+            matches!(&e, TransferError::Invalid(m) if m == "Archive invalide."),
+            "{e:?}"
+        );
+        // Shorter or longer than declared.
+        let e = copy_entry(&mut &b"ab"[..], 3, &mut Vec::new()).unwrap_err();
+        assert!(matches!(e, TransferError::Invalid(_)), "{e:?}");
+        let e = copy_entry(&mut &b"abcd"[..], 3, &mut Vec::new()).unwrap_err();
+        assert!(matches!(e, TransferError::Invalid(_)), "{e:?}");
+        let mut out = Vec::new();
+        copy_entry(&mut &b"abc"[..], 3, &mut out).unwrap();
+        assert_eq!(out, b"abc");
     }
 
     #[test]

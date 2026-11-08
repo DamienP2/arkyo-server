@@ -41,7 +41,7 @@ use crate::transfer::archive::read_archive;
 use crate::transfer::import::{export_to_file, import as run_import, preview, ImportOptions, Mode};
 use crate::transfer::points::{self, Point, PointKind, ProjectSettings};
 use crate::transfer::site::{self, SiteSettings};
-use crate::transfer::{RootKind, TransferError};
+use crate::transfer::{RemoveOnDrop, RootKind, TransferError};
 
 /// Maximum size of an inspected file (2 Gio).
 pub const MAX_INSPECT: usize = 2 * 1024 * 1024 * 1024;
@@ -69,19 +69,14 @@ fn transfer_error(e: TransferError) -> Response {
                 "Le fichier ne peut pas être importé : ses données sont incohérentes.",
             )
         }
+        TransferError::Storage(io) => {
+            tracing::error!("transfer: {e} ({io})");
+            error(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string())
+        }
         _ => {
             tracing::error!("transfer: {e}");
             server_error()
         }
-    }
-}
-
-/// Removes the file when dropped (the response stream ends or is dropped).
-struct RemoveOnDrop(PathBuf);
-
-impl Drop for RemoveOnDrop {
-    fn drop(&mut self) {
-        let _ = std::fs::remove_file(&self.0);
     }
 }
 
@@ -128,7 +123,7 @@ pub async fn export(
         _ => return error(StatusCode::BAD_REQUEST, "Choisissez au moins un objet."),
     };
     let dir = tmp_dir(&st);
-    if std::fs::create_dir_all(&dir).is_err() {
+    if tokio::fs::create_dir_all(&dir).await.is_err() {
         return server_error();
     }
     let path = dir.join(format!("{}.export", new_id()));
@@ -243,7 +238,9 @@ pub async fn objects(State(st): State<AppState>, CurrentUser(me): CurrentUser) -
 // ── POST /api/system/transfer/inspect ──────────────────────────────────────
 
 /// Removes the temporary files older than [`TMP_TTL`] (left by a restart):
-/// inspected files (`.arkyo`) and exports (`.export`). A file being
+/// inspected files (`.arkyo`), exports (`.export`) and the bases copied by
+/// a site backup or a check (`site-*.db`, `verify-*.db`; the age counts
+/// from the last write). A file being
 /// imported (`.importing`) or a site backup being received (`.site`) is
 /// only removed after [`STALE_IMPORT`], far beyond any import or upload
 /// (left by a crash).
@@ -258,8 +255,10 @@ fn sweep(dir: &Path) {
             .and_then(|m| m.modified())
             .ok()
             .and_then(|t| t.elapsed().ok());
+        let name = entry.file_name().to_string_lossy().into_owned();
         let ttl = match path.extension().and_then(|e| e.to_str()) {
             Some("arkyo" | "export") => TMP_TTL,
+            Some("db") if name.starts_with("site-") || name.starts_with("verify-") => TMP_TTL,
             Some("importing" | "site") => STALE_IMPORT,
             _ => continue,
         };
@@ -312,7 +311,7 @@ pub async fn inspect(
         return r;
     }
     let dir = tmp_dir(&st);
-    if std::fs::create_dir_all(&dir).is_err() {
+    if tokio::fs::create_dir_all(&dir).await.is_err() {
         return server_error();
     }
     sweep(&dir);
@@ -381,17 +380,17 @@ pub async fn import(
     // file finds nothing, and the sweep leaves an `.importing` file alone.
     let ready = tmp_dir(&st).join(format!("{}.arkyo", b.token));
     let busy = ready.with_extension("importing");
-    if std::fs::rename(&ready, &busy).is_err() {
+    if tokio::fs::rename(&ready, &busy).await.is_err() {
         return error(StatusCode::BAD_REQUEST, EXPIRED);
     }
     match run_import(&st, &me, &busy, ImportOptions { modes: b.modes }).await {
         Ok(report) => {
-            let _ = std::fs::remove_file(&busy);
+            let _ = tokio::fs::remove_file(&busy).await;
             Json(report).into_response()
         }
         Err(e) => {
             // Kept for another try (other modes), until its hour is up.
-            let _ = std::fs::rename(&busy, &ready);
+            let _ = tokio::fs::rename(&busy, &ready).await;
             transfer_error(e)
         }
     }
@@ -541,7 +540,7 @@ pub async fn point_restore(
     // Imported from a link of its own: a retention pass may remove the
     // point meanwhile.
     let dir = tmp_dir(&st);
-    if std::fs::create_dir_all(&dir).is_err() {
+    if tokio::fs::create_dir_all(&dir).await.is_err() {
         return server_error();
     }
     let busy = dir.join(format!("{}.importing", new_id()));
@@ -631,16 +630,23 @@ pub async fn set_point_settings(
 const NO_BACKUP: &str = "Sauvegarde introuvable";
 const BAD_DIR: &str = "Dossier inaccessible";
 
-/// `GET /api/system/backups/site`: `{ settings, backups, dir }`, the
-/// backups newest first.
+/// `GET /api/system/backups/site`: `{ settings, backups, dir, lastRestore }`,
+/// the backups newest first, `lastRestore` the outcome of the last restore
+/// applied at startup (or `null`).
 pub async fn site_list(State(st): State<AppState>, CurrentUser(me): CurrentUser) -> Response {
     if let Err(r) = require(&me, &st.pool, Domain::Settings, Level::Admin).await {
         return r;
     }
     let settings = site::load_settings(&st.pool).await;
     let dir = site::backup_dir(&st.data_dir, &settings);
-    let listed = dir.clone();
-    let Ok(backups) = tokio::task::spawn_blocking(move || site::list_site_backups(&listed)).await
+    let (listed, data_dir) = (dir.clone(), st.data_dir.clone());
+    let Ok((backups, last)) = tokio::task::spawn_blocking(move || {
+        (
+            site::list_site_backups(&listed),
+            site::read_restore_status(&data_dir),
+        )
+    })
+    .await
     else {
         return server_error();
     };
@@ -648,6 +654,7 @@ pub async fn site_list(State(st): State<AppState>, CurrentUser(me): CurrentUser)
         "settings": settings,
         "backups": backups,
         "dir": dir.to_string_lossy(),
+        "lastRestore": last,
     }))
     .into_response()
 }
@@ -659,10 +666,23 @@ pub async fn site_create(State(st): State<AppState>, CurrentUser(me): CurrentUse
         return r;
     }
     let settings = site::load_settings(&st.pool).await;
+    sweep_all(&st, &settings).await;
     match site::run_backup(&st, &settings).await {
         Ok(b) => Json(b).into_response(),
         Err(e) => transfer_error(e),
     }
+}
+
+/// Removes the stale temporaries of `<data>/tmp`, of the backup folder and
+/// a stale `restore-pending.zip.part`.
+async fn sweep_all(st: &AppState, settings: &SiteSettings) {
+    let (tmp, data_dir) = (tmp_dir(st), st.data_dir.clone());
+    let backups = site::backup_dir(&st.data_dir, settings);
+    let _ = tokio::task::spawn_blocking(move || {
+        sweep(&tmp);
+        site::sweep_stale(&data_dir, &backups);
+    })
+    .await;
 }
 
 /// The file of the backup `name` in the folder of the settings.
@@ -672,7 +692,8 @@ async fn site_file(st: &AppState, name: &str) -> Option<PathBuf> {
     }
     let settings = site::load_settings(&st.pool).await;
     let path = site::backup_dir(&st.data_dir, &settings).join(name);
-    path.is_file().then_some(path)
+    let is_file = tokio::fs::metadata(&path).await.is_ok_and(|m| m.is_file());
+    is_file.then_some(path)
 }
 
 /// `GET /api/system/backups/site/{name}/download`.
@@ -702,7 +723,7 @@ pub async fn site_delete(
     let Some(path) = site_file(&st, &name).await else {
         return error(StatusCode::NOT_FOUND, NO_BACKUP);
     };
-    match std::fs::remove_file(&path) {
+    match tokio::fs::remove_file(&path).await {
         Ok(()) => StatusCode::NO_CONTENT.into_response(),
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
             error(StatusCode::NOT_FOUND, NO_BACKUP)
@@ -716,8 +737,8 @@ pub async fn site_delete(
 
 /// `PUT /api/system/backups/settings/site` `{ enabled, hour, dir, keep }`
 /// → the settings. A folder set must be an absolute path to an existing
-/// folder the server can write in (« Dossier inaccessible »); blank means
-/// the default.
+/// folder the server can write in (« Dossier inaccessible »), outside the
+/// saved data; blank means the default.
 pub async fn set_site_settings(
     State(st): State<AppState>,
     CurrentUser(me): CurrentUser,
@@ -733,11 +754,12 @@ pub async fn set_site_settings(
         return error(StatusCode::BAD_REQUEST, BAD_SETTINGS);
     }
     if let Some(dir) = s.dir.clone() {
-        let ok = tokio::task::spawn_blocking(move || site::check_dir(&dir))
+        let data_dir = st.data_dir.clone();
+        let checked = tokio::task::spawn_blocking(move || site::check_dir(&data_dir, &dir))
             .await
-            .unwrap_or(false);
-        if !ok {
-            return error(StatusCode::BAD_REQUEST, BAD_DIR);
+            .unwrap_or(Err(BAD_DIR));
+        if let Err(msg) = checked {
+            return error(StatusCode::BAD_REQUEST, msg);
         }
     }
     if !s.is_valid() {
@@ -754,7 +776,9 @@ pub async fn set_site_settings(
 
 /// `POST /api/system/backups/site/restore` (raw body = the archive, at
 /// most 8 Gio): checked, staged as `<data>/restore-pending.zip`, then the
-/// server restarts to apply it (as after an update) → `{ restarting: true }`.
+/// server restarts to apply it (as after an update) → `{ restarting: true }`,
+/// with a `warning` when the base comes from a newer version (opened under
+/// the additive rule).
 pub async fn site_restore(
     State(st): State<AppState>,
     CurrentUser(me): CurrentUser,
@@ -764,9 +788,10 @@ pub async fn site_restore(
         return r;
     }
     let dir = tmp_dir(&st);
-    if std::fs::create_dir_all(&dir).is_err() {
+    if tokio::fs::create_dir_all(&dir).await.is_err() {
         return server_error();
     }
+    sweep_all(&st, &site::load_settings(&st.pool).await).await;
     let path = dir.join(format!("{}.site", new_id()));
     let _guard = RemoveOnDrop(path.clone());
     if let Err(r) = receive(body, &path, MAX_SITE_RESTORE).await {
@@ -777,15 +802,17 @@ pub async fn site_restore(
         tokio::task::spawn_blocking(move || site::stage_restore_moving(&data_dir, &path)).await;
     match staged {
         Ok(Ok(m)) => {
+            let mut res = json!({ "restarting": true });
             if m.migration > crate::db::latest_migration() {
                 tracing::warn!(
                     app_version = m.app_version,
                     "the site backup comes from a newer version; restored under the additive rule"
                 );
+                res["warning"] = json!(site::NEWER);
             }
             tracing::info!("site restore staged; restarting");
             crate::update::restart_soon();
-            Json(json!({ "restarting": true })).into_response()
+            Json(res).into_response()
         }
         Ok(Err(e)) => transfer_error(e),
         Err(_) => server_error(),

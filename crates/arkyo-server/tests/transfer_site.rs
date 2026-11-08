@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 use arkyo_server::transfer::archive::write_archive;
 use arkyo_server::transfer::site::{
     apply_pending_restore, create_site_backup, is_due, list_site_backups, prune_site_backups,
-    stage_restore, verify_site_archive, SiteManifest, PENDING,
+    read_restore_status, stage_restore, verify_site_archive, SiteManifest, PENDING,
 };
 use arkyo_server::transfer::{Bundle, TransferError};
 use axum::body::Body;
@@ -139,7 +139,7 @@ async fn site_backup_contains_db_uploads_config_points() {
         .unwrap();
     assert_eq!(name, "Match");
 
-    let manifest = verify_site_archive(&path).unwrap();
+    let manifest = verify(&path).unwrap();
     assert_eq!(manifest.format, "arkyo-server-site");
     assert_eq!(manifest.migration, arkyo_server::db::latest_migration());
 }
@@ -196,6 +196,12 @@ fn site_manifest() -> Vec<u8> {
     .into_bytes()
 }
 
+/// Checks an archive with a work folder of its own.
+fn verify(path: &Path) -> Result<SiteManifest, TransferError> {
+    let work = tempfile::tempdir().unwrap();
+    verify_site_archive(path, work.path())
+}
+
 fn invalid(r: Result<SiteManifest, TransferError>) -> String {
     match r {
         Err(TransferError::Invalid(m)) => m,
@@ -211,7 +217,7 @@ async fn verify_rejects_project_archive_and_garbage() {
     // A `.arkyo` export.
     let export = d.path().join("p.arkyo");
     write_archive(&Bundle::default(), None, d.path(), &export).unwrap();
-    let m = invalid(verify_site_archive(&export));
+    let m = invalid(verify(&export));
     assert_eq!(
         m,
         "Ce fichier n'est pas une sauvegarde du site Strata Arkyo."
@@ -220,12 +226,12 @@ async fn verify_rejects_project_archive_and_garbage() {
     // Not a zip.
     let garbage = d.path().join("g.zip");
     std::fs::write(&garbage, b"not a zip at all").unwrap();
-    assert_eq!(invalid(verify_site_archive(&garbage)), "Archive invalide.");
+    assert_eq!(invalid(verify(&garbage)), "Archive invalide.");
 
     // A site manifest, but no base / a base that is not SQLite.
     let no_db = d.path().join("n.zip");
     zip_of(&no_db, &[("manifest.json", &site_manifest())]);
-    assert_eq!(invalid(verify_site_archive(&no_db)), "Archive invalide.");
+    assert_eq!(invalid(verify(&no_db)), "Archive invalide.");
     let bad_db = d.path().join("b.zip");
     zip_of(
         &bad_db,
@@ -234,7 +240,7 @@ async fn verify_rejects_project_archive_and_garbage() {
             ("arkyo.db", b"SQLite? no"),
         ],
     );
-    assert_eq!(invalid(verify_site_archive(&bad_db)), "Archive invalide.");
+    assert_eq!(invalid(verify(&bad_db)), "Archive invalide.");
 
     // An unsafe path.
     let out = tempfile::tempdir().unwrap();
@@ -251,7 +257,7 @@ async fn verify_rejects_project_archive_and_garbage() {
             ("uploads/../../evil", b"x"),
         ],
     );
-    assert_eq!(invalid(verify_site_archive(&slip)), "Archive invalide.");
+    assert_eq!(invalid(verify(&slip)), "Archive invalide.");
 
     // A newer format.
     let newer = d.path().join("v.zip");
@@ -265,7 +271,7 @@ async fn verify_rejects_project_archive_and_garbage() {
         ],
     );
     assert_eq!(
-        invalid(verify_site_archive(&newer)),
+        invalid(verify(&newer)),
         "Cette sauvegarde vient d'une version plus récente de Strata Arkyo."
     );
 
@@ -314,6 +320,24 @@ async fn apply_pending_restore_swaps_data_and_keeps_old() {
     e.pool.close().await;
     assert!(apply_pending_restore(&d).unwrap());
     assert!(!d.join(PENDING).exists());
+    // The commit point: the archive is kept as `restore-applied-…`, the
+    // marker is gone and the outcome recorded.
+    let applied = aside(&d, "restore-applied-");
+    assert_eq!(applied.len(), 1, "{:?}", names(&d));
+    assert!(!d.join("restore-in-progress.json").exists());
+    let status = read_restore_status(&d).unwrap();
+    assert!(status.ok);
+    assert_eq!(
+        status.archive,
+        applied[0].file_name().unwrap().to_str().unwrap()
+    );
+    assert_eq!(
+        status.backup_created_at.as_deref(),
+        Some(m.created_at.as_str())
+    );
+    assert_eq!(status.error, None);
+    // Nothing left in the work folder by the check.
+    assert_eq!(std::fs::read_dir(d.join("tmp")).unwrap().count(), 0);
 
     // The restored data.
     assert_eq!(
@@ -365,13 +389,13 @@ async fn apply_pending_restore_swaps_data_and_keeps_old() {
 
 #[tokio::test]
 async fn apply_pending_restore_failure_rolls_back() {
-    let (e, _) = populated().await;
+    let (e, owner) = populated().await;
     let d = e._dir.path().to_path_buf();
     let out = tempfile::tempdir().unwrap();
     let b = create_site_backup(&e.pool, &d, out.path()).await.unwrap();
     let db = entry(&out.path().join(&b.name), "arkyo.db");
+    add_project(&e.pool, "cp2000000000000000000000000", "Après", &owner).await;
     e.pool.close().await;
-    let before_db = std::fs::read(d.join("arkyo.db")).unwrap();
 
     // `uploads/a` is a file, then `uploads/a/b` needs it as a folder.
     zip_of(
@@ -387,7 +411,7 @@ async fn apply_pending_restore_failure_rolls_back() {
     assert!(apply_pending_restore(&d).is_err());
 
     // Everything is back.
-    assert_eq!(std::fs::read(d.join("arkyo.db")).unwrap(), before_db);
+    assert_eq!(projects(&d).await, ["Après", "Match"]);
     assert_eq!(
         std::fs::read(d.join("config.json")).unwrap(),
         br#"{"port":9100,"bind":"0.0.0.0"}"#
@@ -406,9 +430,18 @@ async fn apply_pending_restore_failure_rolls_back() {
     let failed = aside(&d, "restore-failed-");
     assert_eq!(failed.len(), 1, "{:?}", names(&d));
     assert!(failed[0].to_string_lossy().ends_with(".zip"));
+    assert!(!d.join("restore-in-progress.json").exists());
+    let status = read_restore_status(&d).unwrap();
+    assert!(!status.ok);
+    assert_eq!(
+        status.archive,
+        failed[0].file_name().unwrap().to_str().unwrap()
+    );
+    assert_eq!(
+        status.error.as_deref(),
+        Some("Espace disque insuffisant ou dossier non inscriptible.")
+    );
     assert!(!apply_pending_restore(&d).unwrap());
-    let pool = arkyo_server::db::open(&d).await.unwrap();
-    pool.close().await;
 }
 
 #[test]
@@ -738,7 +771,7 @@ async fn cli_backup_writes_archive() {
         is_backup_name(path.file_name().unwrap().to_str().unwrap()),
         "{printed}"
     );
-    verify_site_archive(&path).unwrap();
+    verify(&path).unwrap();
 
     // `restore` checks the file and stages it.
     let o = std::process::Command::new(exe)
@@ -770,4 +803,348 @@ async fn cli_backup_writes_archive() {
         .unwrap();
     assert!(!o.status.success());
     assert!(String::from_utf8_lossy(&o.stderr).contains("Archive invalide."));
+}
+
+// ── Fix round 1 ─────────────────────────────────────────────────────────────
+
+#[tokio::test]
+async fn a_write_failure_is_not_an_invalid_archive() {
+    let (e, _) = populated().await;
+    let out = tempfile::tempdir().unwrap();
+    let b = create_site_backup(&e.pool, e._dir.path(), out.path())
+        .await
+        .unwrap();
+    // The work folder cannot be created: a file is in the way.
+    let blocker = out.path().join("blocker");
+    std::fs::write(&blocker, b"x").unwrap();
+    match verify_site_archive(&out.path().join(&b.name), &blocker.join("tmp")) {
+        Err(e @ TransferError::Storage(_)) => assert_eq!(
+            e.to_string(),
+            "Espace disque insuffisant ou dossier non inscriptible."
+        ),
+        other => panic!("{other:?}"),
+    }
+}
+
+/// Moves `item` of the data directory into `aside` (as a restore does).
+fn move_aside(d: &Path, aside: &Path, item: &str) {
+    let dest = aside.join(item);
+    std::fs::create_dir_all(dest.parent().unwrap()).unwrap();
+    std::fs::rename(d.join(item), dest).unwrap();
+}
+
+fn marker(d: &Path, aside: &str, phase: &str) {
+    std::fs::write(
+        d.join("restore-in-progress.json"),
+        json!({"aside": aside, "phase": phase, "startedAt": NOW}).to_string(),
+    )
+    .unwrap();
+}
+
+#[tokio::test]
+async fn a_crash_while_unpacking_puts_the_original_data_back() {
+    let (e, owner) = populated().await;
+    let d = e._dir.path().to_path_buf();
+    let out = tempfile::tempdir().unwrap();
+    let b = create_site_backup(&e.pool, &d, out.path()).await.unwrap();
+    stage_restore(&d, &out.path().join(&b.name)).unwrap();
+    add_project(&e.pool, "cp2000000000000000000000000", "Après", &owner).await;
+    e.pool.close().await;
+
+    // State left by a crash: all moved aside, the archive half unpacked.
+    let aside_dir = d.join("before-restore-20261108-030000");
+    for item in [
+        "arkyo.db",
+        "arkyo.db-wal",
+        "arkyo.db-shm",
+        "config.json",
+        "uploads",
+        "backups/projects",
+    ] {
+        if d.join(item).exists() {
+            move_aside(&d, &aside_dir, item);
+        }
+    }
+    write(&d.join("arkyo.db"), b"half");
+    write(&d.join("uploads/half.png"), b"half");
+    marker(&d, "before-restore-20261108-030000", "unpacking");
+
+    let err = apply_pending_restore(&d).unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        "La restauration a été interrompue ; les données d'origine ont été remises en place."
+    );
+    assert_eq!(projects(&d).await, ["Après", "Match"]);
+    assert_eq!(
+        std::fs::read(d.join("config.json")).unwrap(),
+        br#"{"port":9100,"bind":"0.0.0.0"}"#
+    );
+    assert_eq!(
+        std::fs::read(d.join("uploads/projects/plan.png")).unwrap(),
+        b"PNG"
+    );
+    assert!(!d.join("uploads/half.png").exists());
+    assert!(d
+        .join("backups/projects/cp1000000000000000000000000/20261107-100000-auto.arkyo")
+        .is_file());
+    assert!(!aside_dir.exists());
+    assert!(!d.join("restore-in-progress.json").exists());
+    assert!(!d.join(PENDING).exists());
+    assert_eq!(aside(&d, "restore-failed-").len(), 1, "{:?}", names(&d));
+    let status = read_restore_status(&d).unwrap();
+    assert!(!status.ok);
+    assert_eq!(status.error.as_deref(), Some(err.to_string().as_str()));
+    // Nothing left to do.
+    assert!(!apply_pending_restore(&d).unwrap());
+}
+
+#[tokio::test]
+async fn a_crash_while_moving_keeps_what_was_not_moved() {
+    let (e, owner) = populated().await;
+    let d = e._dir.path().to_path_buf();
+    let out = tempfile::tempdir().unwrap();
+    let b = create_site_backup(&e.pool, &d, out.path()).await.unwrap();
+    stage_restore(&d, &out.path().join(&b.name)).unwrap();
+    add_project(&e.pool, "cp2000000000000000000000000", "Après", &owner).await;
+    e.pool.close().await;
+
+    // Only the base had been moved.
+    let aside_dir = d.join("before-restore-20261108-030000");
+    move_aside(&d, &aside_dir, "arkyo.db");
+    marker(&d, "before-restore-20261108-030000", "moving");
+
+    assert!(apply_pending_restore(&d).is_err());
+    assert_eq!(projects(&d).await, ["Après", "Match"]);
+    assert_eq!(
+        std::fs::read(d.join("config.json")).unwrap(),
+        br#"{"port":9100,"bind":"0.0.0.0"}"#
+    );
+    assert_eq!(
+        std::fs::read(d.join("uploads/projects/plan.png")).unwrap(),
+        b"PNG"
+    );
+    assert!(!aside_dir.exists());
+}
+
+#[tokio::test]
+async fn a_crash_after_the_commit_point_keeps_the_restored_data() {
+    let (e, _) = populated().await;
+    let d = e._dir.path().to_path_buf();
+    e.pool.close().await;
+    std::fs::create_dir(d.join("before-restore-20261108-030000")).unwrap();
+    marker(&d, "before-restore-20261108-030000", "unpacking");
+    // No `restore-pending.zip`: it had been renamed.
+    assert!(!apply_pending_restore(&d).unwrap());
+    assert_eq!(projects(&d).await, ["Match"]);
+    assert_eq!(
+        std::fs::read(d.join("uploads/projects/plan.png")).unwrap(),
+        b"PNG"
+    );
+    assert!(!d.join("restore-in-progress.json").exists());
+    assert!(d.join("before-restore-20261108-030000").is_dir());
+    assert!(read_restore_status(&d).unwrap().ok);
+}
+
+#[tokio::test]
+async fn an_archive_marked_applied_is_not_applied_again() {
+    let (e, owner) = populated().await;
+    let d = e._dir.path().to_path_buf();
+    let out = tempfile::tempdir().unwrap();
+    let b = create_site_backup(&e.pool, &d, out.path()).await.unwrap();
+    add_project(&e.pool, "cp2000000000000000000000000", "Après", &owner).await;
+    stage_restore(&d, &out.path().join(&b.name)).unwrap();
+    e.pool.close().await;
+
+    // A previous start applied it but could neither rename nor remove it.
+    let m = std::fs::metadata(d.join(PENDING)).unwrap();
+    let ns = m
+        .modified()
+        .unwrap()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_nanos() as u64;
+    std::fs::write(
+        d.join("restore-status.json"),
+        json!({"ok": true, "at": NOW, "archive": PENDING,
+               "pending": {"size": m.len(), "modifiedNs": ns}})
+        .to_string(),
+    )
+    .unwrap();
+    assert!(!apply_pending_restore(&d).unwrap());
+    assert!(!d.join(PENDING).exists());
+    assert!(aside(&d, "before-restore-").is_empty());
+    assert_eq!(projects(&d).await, ["Après", "Match"]);
+}
+
+/// The project names of the base of `d` (opened, then closed). The base is
+/// compared by content: its bytes may change when the pool closes.
+async fn projects(d: &Path) -> Vec<String> {
+    let pool = arkyo_server::db::open(d).await.unwrap();
+    let names = sqlx::query_scalar(r#"SELECT "name" FROM "Project" ORDER BY "name""#)
+        .fetch_all(&pool)
+        .await
+        .unwrap();
+    pool.close().await;
+    names
+}
+
+fn make_stale(path: &Path) {
+    write(path, b"old");
+    let f = std::fs::File::options().write(true).open(path).unwrap();
+    f.set_modified(std::time::SystemTime::now() - std::time::Duration::from_secs(2 * 3600))
+        .unwrap();
+}
+
+#[tokio::test]
+async fn restore_route_warns_sweeps_and_reports_the_last_restore() {
+    let (e, _) = populated().await;
+    let d = e._dir.path().to_path_buf();
+    let token = login(&e.app, "o@b.fr").await;
+    let r = call(
+        &e.app,
+        "GET",
+        "/api/system/backups/site",
+        LOCAL,
+        Some(&token),
+        None,
+    )
+    .await;
+    assert_eq!(r.body["lastRestore"], Value::Null);
+
+    // Stale temporaries, and a fresh one that stays.
+    make_stale(&d.join("tmp/site-old.db"));
+    make_stale(&d.join("tmp/verify-old.db"));
+    make_stale(&d.join("backups/site/Arkyo-site-20261101-030000.zip.part"));
+    make_stale(&d.join("restore-pending.zip.part"));
+    write(
+        &d.join("backups/site/Arkyo-site-20261102-030000.zip.part"),
+        b"busy",
+    );
+
+    // A base newer than this binary: restorable, with a warning.
+    let out = tempfile::tempdir().unwrap();
+    let b = create_site_backup(&e.pool, &d, out.path()).await.unwrap();
+    let db = entry(&out.path().join(&b.name), "arkyo.db");
+    let mut m: Value = serde_json::from_slice(&site_manifest()).unwrap();
+    m["migration"] = json!(arkyo_server::db::latest_migration() + 1);
+    let newer = out.path().join("newer.zip");
+    zip_of(
+        &newer,
+        &[
+            ("manifest.json", m.to_string().as_bytes()),
+            ("arkyo.db", &db),
+        ],
+    );
+    arkyo_server::update::disable_restart();
+    let (status, _, body) = raw(
+        &e.app,
+        "POST",
+        "/api/system/backups/site/restore",
+        &token,
+        std::fs::read(&newer).unwrap(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{}", String::from_utf8_lossy(&body));
+    assert_eq!(
+        serde_json::from_slice::<Value>(&body).unwrap(),
+        json!({"restarting": true,
+               "warning": "Cette sauvegarde vient d'une version plus récente de Strata Arkyo."})
+    );
+    assert!(!d.join("tmp/site-old.db").exists());
+    assert!(!d.join("tmp/verify-old.db").exists());
+    assert!(!d
+        .join("backups/site/Arkyo-site-20261101-030000.zip.part")
+        .exists());
+    assert!(!d.join("restore-pending.zip.part").exists());
+    assert!(d
+        .join("backups/site/Arkyo-site-20261102-030000.zip.part")
+        .exists());
+
+    std::fs::write(
+        d.join("restore-status.json"),
+        json!({"ok": true, "at": NOW, "archive": "restore-applied-20261108-030000.zip"})
+            .to_string(),
+    )
+    .unwrap();
+    let r = call(
+        &e.app,
+        "GET",
+        "/api/system/backups/site",
+        LOCAL,
+        Some(&token),
+        None,
+    )
+    .await;
+    assert_eq!(
+        r.body["lastRestore"],
+        json!({"ok": true, "at": NOW, "archive": "restore-applied-20261108-030000.zip"})
+    );
+}
+
+#[tokio::test]
+async fn settings_dir_must_be_outside_the_saved_data() {
+    let (e, _) = populated().await;
+    let token = login(&e.app, "o@b.fr").await;
+    let d = e._dir.path();
+    std::fs::create_dir_all(d.join("uploads/sub")).unwrap();
+    for dir in [
+        d.join("uploads"),
+        d.join("uploads/sub"),
+        d.join("backups/projects"),
+    ] {
+        let r = call(
+            &e.app,
+            "PUT",
+            "/api/system/backups/settings/site",
+            LOCAL,
+            Some(&token),
+            Some(json!({"enabled": true, "hour": 3, "dir": dir, "keep": 7})),
+        )
+        .await;
+        assert_eq!(r.status, StatusCode::BAD_REQUEST, "{}", dir.display());
+        assert_eq!(
+            r.body["error"],
+            "Ce dossier fait partie des données sauvegardées."
+        );
+    }
+    // The default folder's parent is fine.
+    std::fs::create_dir_all(d.join("backups/site")).unwrap();
+    let r = call(
+        &e.app,
+        "PUT",
+        "/api/system/backups/settings/site",
+        LOCAL,
+        Some(&token),
+        Some(json!({"enabled": true, "hour": 3, "dir": d.join("backups/site"), "keep": 7})),
+    )
+    .await;
+    assert_eq!(r.status, StatusCode::OK, "{:?}", r.body);
+}
+
+#[tokio::test]
+async fn cli_backup_refuses_a_missing_configured_folder() {
+    let (e, _) = populated().await;
+    let d = e._dir.path().to_path_buf();
+    let missing = d.join("nas-absent");
+    arkyo_server::transfer::site::save_settings(
+        &e.pool,
+        &arkyo_server::transfer::site::SiteSettings {
+            enabled: true,
+            hour: 3,
+            dir: Some(missing.to_string_lossy().into_owned()),
+            keep: 7,
+        },
+    )
+    .await
+    .unwrap();
+    let o = std::process::Command::new(env!("CARGO_BIN_EXE_arkyo-server"))
+        .args(["backup", "--data-dir"])
+        .arg(&d)
+        .output()
+        .unwrap();
+    assert!(!o.status.success());
+    let err = String::from_utf8_lossy(&o.stderr);
+    assert!(err.contains("inaccessible"), "{err}");
+    assert!(err.contains("--out"), "{err}");
+    assert!(!missing.exists());
 }

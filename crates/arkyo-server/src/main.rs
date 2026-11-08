@@ -168,7 +168,20 @@ async fn backup_command(out: Option<PathBuf>, data_dir: Option<PathBuf>) -> anyh
         let r = async {
             let out = match out {
                 Some(out) => out,
-                None => site::backup_dir(&dir, &site::load_settings(&pool).await),
+                None => {
+                    let settings = site::load_settings(&pool).await;
+                    let out = site::backup_dir(&dir, &settings);
+                    // Same rule as the automatic backups: a folder set but
+                    // missing may be an unmounted share, never created.
+                    if settings.dir.is_some() && !out.is_dir() {
+                        anyhow::bail!(
+                            "le dossier de sauvegarde réglé dans Système est inaccessible : {} \
+                             (choisissez un dossier avec --out)",
+                            out.display()
+                        );
+                    }
+                    out
+                }
             };
             Ok::<_, anyhow::Error>(site::create_site_backup(&pool, &dir, &out).await?)
         }

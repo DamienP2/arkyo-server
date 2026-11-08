@@ -72,6 +72,20 @@ pub enum TransferError {
     Invalid(String),
     Db(sqlx::Error),
     Io(std::io::Error),
+    /// A write that failed (disk full, folder not writable).
+    Storage(std::io::Error),
+}
+
+/// The message of [`TransferError::Storage`].
+pub const STORAGE: &str = "Espace disque insuffisant ou dossier non inscriptible.";
+
+/// Removes the file when dropped.
+pub struct RemoveOnDrop(pub std::path::PathBuf);
+
+impl Drop for RemoveOnDrop {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_file(&self.0);
+    }
 }
 
 impl fmt::Display for TransferError {
@@ -86,6 +100,7 @@ impl fmt::Display for TransferError {
             TransferError::Invalid(msg) => f.write_str(msg),
             TransferError::Db(e) => write!(f, "Erreur de base de données : {e}"),
             TransferError::Io(e) => write!(f, "Erreur de fichier : {e}"),
+            TransferError::Storage(_) => f.write_str(STORAGE),
         }
     }
 }
@@ -94,7 +109,7 @@ impl std::error::Error for TransferError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
             TransferError::Db(e) => Some(e),
-            TransferError::Io(e) => Some(e),
+            TransferError::Io(e) | TransferError::Storage(e) => Some(e),
             _ => None,
         }
     }
