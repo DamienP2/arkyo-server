@@ -122,14 +122,19 @@ Trois mécanismes, dans **Administration › Système › Sauvegardes**, protèg
 | **Export / import `.arkyo`** (projets, contenants, régies, panels) | le besoin de déplacer ou de partager des objets d'un serveur à un autre | le fichier téléchargé |
 | **Sauvegarde complète du site** (base, fichiers déposés, `config.json`, points de restauration) | la perte ou la corruption du serveur | par défaut `<données>/backups/site/` |
 
+- **Points de restauration** : un point ne contient que les données du projet ; les fichiers déposés restent dans `<données>/uploads` (le serveur n'en supprime jamais). « Télécharger » un point produit un `.arkyo` complet, avec les fichiers actuels. Un point automatique n'est écrit que si le projet lui-même a changé : une modification du catalogue n'en crée pas. « Créer un point » accepte un libellé facultatif.
+- **Remplacer à l'import** : remplacer un projet crée d'abord un point « avant restauration » ; remplacer un contenant, une régie ou un panel en garde une copie, `<données>/backups/objects/<type>-<id>/<horodatage>-avant-import.arkyo` (les 10 dernières par objet), nommée dans le rapport d'import. L'écran demande confirmation avant tout remplacement.
+- **Échecs automatiques** : si un point automatique ou une sauvegarde automatique du site échoue, le message s'affiche en rouge dans le bloc concerné jusqu'au succès suivant.
 - **Dossier des sauvegardes du site** : réglable dans Système › Sauvegardes. Préférez un autre disque ou un partage réseau : une sauvegarde sur le disque qui tombe en panne ne protège de rien. Le dossier doit être accessible en écriture au compte du service et ne pas faire partie des données sauvegardées. Par défaut : une sauvegarde par jour à 3 h, les 7 dernières gardées.
 - **Ligne de commande** (service arrêté ou non) :
   - `arkyo-server backup [--out <dossier>]` produit l'archive `Arkyo-site-<horodatage>.zip` ;
-  - `arkyo-server restore <fichier>` vérifie l'archive et la dépose ; elle est appliquée **au prochain démarrage du service**.
+  - `arkyo-server restore <fichier>` vérifie l'archive et la dépose ; elle est appliquée **au prochain démarrage du service**. Le service continue de tourner d'ici là : redémarrez-le (`arkyo-server service stop` puis `arkyo-server service start`) pour l'appliquer.
+- **Restauration en attente** : tant qu'elle n'est pas appliquée, Système › Sauvegardes l'annonce et propose « Annuler » (ou supprimez `<données>/restore-pending.zip`).
 - **Restaurer le site** : depuis Système (envoi de l'archive, confirmation, le serveur redémarre) ou par la commande `restore`. L'archive est vérifiée avant tout (manifeste, base lisible). Une archive issue d'une version plus récente est acceptée avec un avertissement.
 - **Ce que devient l'état actuel** : les données actuelles sont déplacées dans `<données>/before-restore-<horodatage>/`, rien n'est supprimé. Une fois la restauration appliquée, l'archive est conservée sous `restore-applied-<horodatage>.zip` ; en cas d'échec, sous `restore-failed-<horodatage>.zip`, et le résultat s'affiche dans Système › Sauvegardes.
 - Le `config.json` de l'archive **remplace** le `config.json` actuel : le port et l'adresse d'écoute redeviennent ceux du serveur sauvegardé. Les sauvegardes du site elles-mêmes, `update/` et `logs/` ne sont ni sauvegardés ni remplacés.
-- Les dossiers `before-restore-*` et les archives `restore-*` ne sont jamais purgés automatiquement : supprimez-les quand vous êtes sûr de la restauration.
+- **Restes des restaurations** : après une restauration réussie, le serveur ne garde que les 2 dossiers `before-restore-*` les plus récents, la dernière archive `restore-applied-*.zip` et la dernière `restore-failed-*.zip`. Une restauration ratée ne supprime rien.
+- Si une restauration échoue et que les données d'origine n'ont pas pu être toutes remises en place, le serveur refuse de démarrer et nomme le dossier `before-restore-*` où elles se trouvent : remettez-les en place à la main, puis relancez-le.
 
 ## Mettre à jour sans désinstaller
 
