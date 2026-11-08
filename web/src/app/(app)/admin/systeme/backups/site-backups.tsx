@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/icons";
 import { LoadingState } from "@/components/ui/loading-state";
 import { useToast } from "@/components/ui/toast";
-import { api, getApiErrorMessage } from "@/lib/api-client";
+import { ApiError, api, getApiErrorMessage } from "@/lib/api-client";
 import { backupsApi, type SiteList, type SiteSettings } from "./api";
 import { BackupBlock } from "./backup-block";
 import { formatDate, formatSize } from "./format";
@@ -34,14 +34,21 @@ function RestartingScreen({ warning }: { warning?: string }) {
     const started = Date.now();
     let wentDown = false;
     const id = setInterval(async () => {
+      let down = false;
       try {
         await api.get("/api/system");
-        if (wentDown || Date.now() - started >= MAX_WAIT_MS) {
-          clearInterval(id);
-          window.location.reload();
-        }
-      } catch {
+      } catch (e) {
+        // Erreur réseau ou passerelle : le serveur est encore coupé. Toute autre
+        // réponse HTTP (401 : la session n'existe plus dans la base restaurée)
+        // prouve qu'il répond : la page rechargée affichera la connexion au besoin.
+        down =
+          !(e instanceof ApiError) || [502, 503, 504].includes(e.status);
+      }
+      if (down) {
         wentDown = true;
+      } else if (wentDown || Date.now() - started >= MAX_WAIT_MS) {
+        clearInterval(id);
+        window.location.reload();
       }
     }, POLL_MS);
     return () => clearInterval(id);
@@ -294,7 +301,12 @@ export function SiteBackups() {
           Restaurer une sauvegarde du site
         </button>
       </div>
-      {(creating || restoring) && <LoadingState className="py-2" />}
+      {(creating || restoring) && (
+        <LoadingState
+          className="py-2"
+          label={restoring ? "Envoi en cours…" : "Sauvegarde en cours…"}
+        />
+      )}
       {data.backups.length === 0 ? (
         <EmptyState
           icon={<Archive className="h-10 w-10" />}

@@ -138,6 +138,41 @@ describe("Système › sauvegarde du site", () => {
     }
   }, 15000);
 
+  for (const [status, reloads] of [[401, true], [503, false]] as const) {
+    test(`attente : après coupure, un ${status} ${reloads ? "recharge" : "ne recharge pas"}`, async () => {
+      let calls = 0;
+      const reload = vi.fn();
+      const realLocation = window.location;
+      Object.defineProperty(window, "location", { configurable: true, value: { ...realLocation, reload } });
+      try {
+        renderApp(
+          "/admin/systeme",
+          api({
+            "POST /api/system/backups/site/restore": { body: { restarting: true } },
+            "GET /api/system": () => {
+              calls++;
+              if (calls === 2) throw new TypeError("network");
+              if (calls > 2) return { status, body: { error: "x" } };
+              return { body: { version: "0.1.0", dataDir: "/d", urls: [] } };
+            },
+          }),
+        );
+        const input = await screen.findByLabelText("Archive du site à restaurer");
+        fireEvent.change(input, { target: { files: [new File(["z"], "site.zip")] } });
+        const dialog = await screen.findByRole("dialog");
+        fireEvent.click(within(dialog).getByRole("button", { name: "Restaurer" }));
+        if (reloads) {
+          await waitFor(() => expect(reload).toHaveBeenCalledTimes(1), { timeout: 8000 });
+        } else {
+          await waitFor(() => expect(calls).toBeGreaterThan(3), { timeout: 8000 });
+          expect(reload).not.toHaveBeenCalled();
+        }
+      } finally {
+        Object.defineProperty(window, "location", { configurable: true, value: realLocation });
+      }
+    }, 15000);
+  }
+
   test("restaurer : refus de la confirmation, rien n'est envoyé", async () => {
     const restore = vi.fn(() => ({ status: 200, body: { restarting: true } }));
     renderApp("/admin/systeme", api({ "POST /api/system/backups/site/restore": restore }));
