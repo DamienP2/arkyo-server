@@ -267,6 +267,10 @@ pub fn router(state: AppState) -> Router {
             post(backups::site_restore).layer(DefaultBodyLimit::max(backups::MAX_SITE_RESTORE)),
         )
         .route(
+            "/system/backups/site/pending",
+            axum::routing::delete(backups::site_cancel_pending),
+        )
+        .route(
             "/system/backups/site/{name}",
             axum::routing::delete(backups::site_delete),
         )

@@ -74,10 +74,73 @@ pub enum TransferError {
     Io(std::io::Error),
     /// A write that failed (disk full, folder not writable).
     Storage(std::io::Error),
+    /// A site restore failed and the original data could not all be put
+    /// back: it is (partly) still in this folder.
+    Stranded(std::path::PathBuf),
 }
 
 /// The message of [`TransferError::Storage`].
 pub const STORAGE: &str = "Espace disque insuffisant ou dossier non inscriptible.";
+
+/// The last failure of an automatic mechanism (AppConfig
+/// `backups.projects.lastError`, `backups.site.lastError`), cleared on its
+/// next success.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct LastError {
+    pub at: String,
+    /// French, for the user.
+    pub message: String,
+}
+
+/// The AppConfig key of the last error of the mechanism `key`.
+fn last_error_key(key: &str) -> String {
+    format!("{key}.lastError")
+}
+
+pub async fn load_last_error(pool: &sqlx::SqlitePool, key: &str) -> Option<LastError> {
+    let v: Option<String> =
+        sqlx::query_scalar(r#"SELECT "value" FROM "AppConfig" WHERE "key" = ?"#)
+            .bind(last_error_key(key))
+            .fetch_optional(pool)
+            .await
+            .ok()
+            .flatten();
+    v.and_then(|v| serde_json::from_str(&v).ok())
+}
+
+/// Keeps `message` as the last error of `key` (`None` clears it). A
+/// failure is only logged.
+pub async fn record_last_error(pool: &sqlx::SqlitePool, key: &str, message: Option<String>) {
+    let key = last_error_key(key);
+    let res = match message {
+        Some(message) => {
+            let value = serde_json::to_string(&LastError {
+                at: crate::ids::now_iso(),
+                message,
+            })
+            .unwrap_or_default();
+            sqlx::query(
+                r#"INSERT INTO "AppConfig" ("id","key","value","updatedAt") VALUES (?,?,?,?)
+                   ON CONFLICT("key") DO UPDATE SET "value" = excluded."value", "updatedAt" = excluded."updatedAt""#,
+            )
+            .bind(crate::ids::new_id())
+            .bind(&key)
+            .bind(value)
+            .bind(crate::ids::now_iso())
+            .execute(pool)
+            .await
+        }
+        None => {
+            sqlx::query(r#"DELETE FROM "AppConfig" WHERE "key" = ?"#)
+                .bind(&key)
+                .execute(pool)
+                .await
+        }
+    };
+    if let Err(e) = res {
+        tracing::warn!("cannot record {key}: {e}");
+    }
+}
 
 /// Removes the file when dropped.
 pub struct RemoveOnDrop(pub std::path::PathBuf);
@@ -101,6 +164,12 @@ impl fmt::Display for TransferError {
             TransferError::Db(e) => write!(f, "Erreur de base de données : {e}"),
             TransferError::Io(e) => write!(f, "Erreur de fichier : {e}"),
             TransferError::Storage(_) => f.write_str(STORAGE),
+            TransferError::Stranded(dir) => write!(
+                f,
+                "La restauration a échoué et les données d'origine n'ont pas pu être toutes \
+                 remises en place : elles sont dans « {} ».",
+                dir.display()
+            ),
         }
     }
 }

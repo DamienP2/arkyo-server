@@ -417,7 +417,7 @@ async fn settings_roundtrip_and_validation() {
     assert_eq!(r.status, StatusCode::OK, "{:?}", r.body);
     assert_eq!(
         r.body,
-        json!({ "enabled": true, "intervalHours": 1, "keep": 48 })
+        json!({ "enabled": true, "intervalHours": 1, "keep": 48, "lastError": null })
     );
 
     let new = json!({ "enabled": false, "intervalHours": 6, "keep": 10 });
@@ -433,7 +433,9 @@ async fn settings_roundtrip_and_validation() {
     let r = t
         .call("GET", "/api/system/backups/settings/projects", None)
         .await;
-    assert_eq!(r.body, new);
+    let mut listed = new.clone();
+    listed["lastError"] = Value::Null;
+    assert_eq!(r.body, listed);
     assert_eq!(
         load_settings(&t.e.pool).await,
         ProjectSettings {
@@ -606,4 +608,38 @@ async fn catalogue_edit_creates_no_automatic_point() {
     // A change of the project itself still does.
     rename(&t.e.pool, P1, "Renommé").await;
     assert_eq!(run_auto_pass(&t.st).await, 1);
+}
+
+#[tokio::test]
+async fn a_failed_automatic_pass_is_shown_until_the_next_success() {
+    let t = setup().await;
+    let r = t
+        .call("GET", "/api/system/backups/settings/projects", None)
+        .await;
+    assert_eq!(r.status, StatusCode::OK, "{:?}", r.body);
+    assert_eq!(r.body["lastError"], Value::Null);
+    assert_eq!(r.body["intervalHours"], 1);
+
+    // The folder of the points cannot be created.
+    let root = t.e._dir.path().join("backups/projects");
+    std::fs::create_dir_all(root.parent().unwrap()).unwrap();
+    std::fs::write(&root, b"not a folder").unwrap();
+    assert_eq!(run_auto_pass(&t.st).await, 0);
+    let r = t
+        .call("GET", "/api/system/backups/settings/projects", None)
+        .await;
+    let message = r.body["lastError"]["message"].as_str().unwrap_or_default();
+    assert!(message.starts_with("Projet « "), "{:?}", r.body);
+    assert!(
+        r.body["lastError"]["at"].as_str().unwrap().ends_with('Z'),
+        "{:?}",
+        r.body
+    );
+
+    std::fs::remove_file(&root).unwrap();
+    assert_eq!(run_auto_pass(&t.st).await, 2);
+    let r = t
+        .call("GET", "/api/system/backups/settings/projects", None)
+        .await;
+    assert_eq!(r.body["lastError"], Value::Null);
 }

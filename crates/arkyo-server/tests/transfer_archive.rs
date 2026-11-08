@@ -235,3 +235,31 @@ fn digest_is_order_independent() {
     c.tables.get_mut("Panel").unwrap()[0].insert("name".into(), json!("changed"));
     assert_ne!(data_digest(&a), data_digest(&c));
 }
+
+#[test]
+fn extract_checks_the_crc_of_each_file() {
+    let dir = tempfile::tempdir().unwrap();
+    let p = dir.path().join("a.arkyo");
+    let mut z = zip::ZipWriter::new(std::fs::File::create(&p).unwrap());
+    let stored = SimpleFileOptions::default().compression_method(zip::CompressionMethod::Stored);
+    z.start_file("manifest.json", stored).unwrap();
+    z.write_all(MANIFEST.as_bytes()).unwrap();
+    z.start_file("data.json", stored).unwrap();
+    z.write_all(b"{}").unwrap();
+    z.start_file("uploads/a.png", stored).unwrap();
+    z.write_all(b"ABCDEFGH-original").unwrap();
+    z.finish().unwrap();
+    // Same size, other bytes: only the CRC tells.
+    let mut bytes = std::fs::read(&p).unwrap();
+    let at = bytes.windows(8).position(|w| w == b"original").unwrap();
+    bytes[at..at + 8].copy_from_slice(b"tampered");
+    std::fs::write(&p, &bytes).unwrap();
+
+    let target = dir.path().join("target");
+    assert_eq!(invalid(extract_uploads(&p, &target)), "Archive invalide.");
+    assert!(!target.join("a.png").exists());
+    let left: Vec<_> = std::fs::read_dir(&target)
+        .map(|d| d.flatten().map(|e| e.file_name()).collect())
+        .unwrap_or_default();
+    assert!(left.is_empty(), "{left:?}");
+}

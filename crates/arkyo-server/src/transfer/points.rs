@@ -32,7 +32,7 @@ use crate::http::AppState;
 use crate::users::User;
 
 const INDEX: &str = "points.json";
-const SETTINGS_KEY: &str = "backups.projects";
+pub const SETTINGS_KEY: &str = "backups.projects";
 /// Delay before the first automatic pass after the start.
 const FIRST_PASS: Duration = Duration::from_secs(5 * 60);
 /// How often the scheduler rereads the settings.
@@ -570,27 +570,33 @@ async fn prune(data_dir: &Path, project_id: &str, keep: u32) -> usize {
 /// projects included). Returns how many points were written.
 pub async fn run_auto_pass(st: &AppState) -> usize {
     let settings = load_settings(&st.pool).await;
-    let ids: Vec<String> =
-        match sqlx::query_scalar(r#"SELECT "id" FROM "Project" ORDER BY "createdAt", "id""#)
+    let mut failure: Option<String> = None;
+    let projects: Vec<(String, String)> =
+        match sqlx::query_as(r#"SELECT "id", "name" FROM "Project" ORDER BY "createdAt", "id""#)
             .fetch_all(&st.pool)
             .await
         {
             Ok(v) => v,
             Err(e) => {
                 tracing::warn!("automatic restore points: {e}");
+                failure = Some(TransferError::Db(e).to_string());
                 Vec::new()
             }
         };
     let mut created = 0;
-    for id in ids {
+    for (id, name) in projects {
         match create_point(st, &id, PointKind::Auto, None, None).await {
             Ok(Some(_)) => created += 1,
             Ok(None) => {}
             // Deleted meanwhile.
             Err(TransferError::NotFound(..)) => {}
-            Err(e) => tracing::warn!("automatic restore point of {id}: {e}"),
+            Err(e) => {
+                tracing::warn!("automatic restore point of {id}: {e}");
+                failure = Some(format!("Projet « {name} » : {e}"));
+            }
         }
     }
+    super::record_last_error(&st.pool, SETTINGS_KEY, failure).await;
     let folders: Vec<String> = std::fs::read_dir(root_dir(&st.data_dir))
         .map(|d| {
             d.flatten()

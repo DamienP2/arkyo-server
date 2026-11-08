@@ -206,7 +206,16 @@ fn restore_command(file: PathBuf, data_dir: Option<PathBuf>) -> anyhow::Result<(
             m.app_version
         );
     }
-    println!("Restauration prête : elle sera appliquée au prochain démarrage du service.");
+    println!("Restauration prête : elle sera appliquée au prochain démarrage du serveur.");
+    println!(
+        "Le service continue de tourner sur les données actuelles. Pour appliquer la \
+         restauration, redémarrez-le : `arkyo-server service stop` puis \
+         `arkyo-server service start` (ou relancez `arkyo-server` s'il tourne au premier plan)."
+    );
+    println!(
+        "Pour annuler : Administration › Système › Sauvegardes, ou supprimez {}.",
+        dir.join(site::PENDING).display()
+    );
     Ok(())
 }
 
@@ -382,11 +391,7 @@ async fn serve(
     update::startup_guard(&dir);
     // A staged site restore replaces the data before the base is opened
     // (Windows cannot move an open base); on failure the data stays.
-    match site::apply_pending_restore(&dir) {
-        Ok(true) => tracing::info!("site backup restored"),
-        Ok(false) => {}
-        Err(e) => tracing::error!("site restore not applied: {e}"),
-    }
+    apply_staged_restore(&dir)?;
     let cfg = config::Config::load(&dir);
     let pool = db::open(&dir).await?;
     // The service always writes config.json: it marks its data directory for
@@ -420,6 +425,25 @@ async fn serve(
     })
     .await?;
     tracing::info!("shut down");
+    Ok(())
+}
+
+/// Applies a staged site restore. A failed one whose original data could
+/// not all be put back stops the start: opening the base then would create
+/// an empty one over the missing data.
+fn apply_staged_restore(dir: &std::path::Path) -> anyhow::Result<()> {
+    match site::apply_pending_restore(dir) {
+        Ok(true) => tracing::info!("site backup restored"),
+        Ok(false) => {}
+        Err(e @ arkyo_server::transfer::TransferError::Stranded(_)) => {
+            tracing::error!("{e}");
+            anyhow::bail!(
+                "{e} Le serveur ne démarre pas : remettez ces données dans {} puis relancez-le.",
+                dir.display()
+            );
+        }
+        Err(e) => tracing::error!("site restore not applied: {e}"),
+    }
     Ok(())
 }
 
@@ -537,6 +561,37 @@ fn main() -> anyhow::Result<()> {
 mod tests {
     use super::*;
     use std::time::Duration;
+
+    /// A failed restore whose data stays partly aside: the start stops.
+    #[cfg(unix)]
+    #[test]
+    fn a_stranded_restore_stops_the_start() {
+        use std::os::unix::fs::PermissionsExt;
+        let d = tempfile::tempdir().unwrap();
+        let aside = d.path().join("before-restore-20261108-030000");
+        std::fs::create_dir(&aside).unwrap();
+        std::fs::write(aside.join("arkyo.db"), b"original").unwrap();
+        std::fs::write(d.path().join(site::PENDING), b"staged").unwrap();
+        std::fs::write(
+            d.path().join("restore-in-progress.json"),
+            r#"{"aside":"before-restore-20261108-030000","phase":"moving","startedAt":"2026-11-08T03:00:00.000Z"}"#,
+        )
+        .unwrap();
+        // Nothing can leave the folder aside.
+        std::fs::set_permissions(&aside, std::fs::Permissions::from_mode(0o555)).unwrap();
+        let res = apply_staged_restore(d.path());
+        std::fs::set_permissions(&aside, std::fs::Permissions::from_mode(0o755)).unwrap();
+        let err = res.unwrap_err().to_string();
+        assert!(err.contains("before-restore-20261108-030000"), "{err}");
+        assert!(err.contains("ne démarre pas"), "{err}");
+        assert!(!d.path().join("arkyo.db").exists());
+    }
+
+    #[test]
+    fn a_clean_start_without_restore_goes_on() {
+        let d = tempfile::tempdir().unwrap();
+        apply_staged_restore(d.path()).unwrap();
+    }
 
     #[tokio::test]
     async fn bind_retry_waits_for_the_port_to_be_released() {

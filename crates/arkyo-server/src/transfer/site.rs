@@ -35,7 +35,7 @@ use crate::http::AppState;
 
 const FORMAT: &str = "arkyo-server-site";
 const VERSION: u32 = 1;
-const SETTINGS_KEY: &str = "backups.site";
+pub const SETTINGS_KEY: &str = "backups.site";
 /// The staged archive, applied at the next start.
 pub const PENDING: &str = "restore-pending.zip";
 const PREFIX: &str = "Arkyo-site-";
@@ -619,7 +619,7 @@ pub fn spawn_scheduler(st: AppState) {
             if !is_due(jiff::Zoned::now().datetime(), s.hour, &names) {
                 continue;
             }
-            match run_backup(&st, &s).await {
+            match run_recorded(&st, &s).await {
                 Ok(b) => {
                     failed = None;
                     tracing::info!(name = b.name, size = b.size, "automatic site backup");
@@ -633,6 +633,15 @@ pub fn spawn_scheduler(st: AppState) {
     });
 }
 
+/// [`run_backup`], its outcome kept as the last error of the site backups
+/// (set on failure, cleared on success).
+pub async fn run_recorded(st: &AppState, s: &SiteSettings) -> Result<SiteBackup, TransferError> {
+    let res = run_backup(st, s).await;
+    let message = res.as_ref().err().map(ToString::to_string);
+    super::record_last_error(&st.pool, SETTINGS_KEY, message).await;
+    res
+}
+
 // ── Verification ────────────────────────────────────────────────────────────
 
 fn open(path: &Path) -> Result<ZipArchive<File>, TransferError> {
@@ -644,12 +653,18 @@ fn open(path: &Path) -> Result<ZipArchive<File>, TransferError> {
 fn check(z: &mut ZipArchive<File>) -> Result<SiteManifest, TransferError> {
     let mut total: u64 = 0;
     let mut has_db = false;
+    // Two files differing only by case would clash on a case-insensitive
+    // disk (macOS, Windows).
+    let mut files = std::collections::HashSet::new();
     for i in 0..z.len() {
         let e = z.by_index_raw(i).map_err(zip_err)?;
         total = total.saturating_add(e.size());
         let name = e.name().map_err(zip_err)?;
         let rel = name.strip_suffix('/').unwrap_or(&name);
         if !safe_rel(rel) {
+            return Err(bad());
+        }
+        if !e.is_dir() && !files.insert(rel.to_lowercase()) {
             return Err(bad());
         }
         has_db |= rel == DB && !e.is_dir();
@@ -705,7 +720,11 @@ fn pump(
 /// Copies exactly the declared `size` bytes of `entry` to `out`, then reads
 /// it to its end (which checks its CRC). A read or format error is
 /// « Archive invalide. », a write error [`TransferError::Storage`].
-fn copy_entry(entry: &mut impl Read, size: u64, out: &mut impl Write) -> Result<(), TransferError> {
+pub(crate) fn copy_entry(
+    entry: &mut impl Read,
+    size: u64,
+    out: &mut impl Write,
+) -> Result<(), TransferError> {
     let n = pump(entry, out, size, |_| bad())?;
     let mut more = [0u8; 1];
     if n != size || entry.read(&mut more).map_err(|_| bad())? != 0 {
@@ -867,6 +886,55 @@ fn pending_id(path: &Path) -> Option<PendingId> {
     })
 }
 
+/// A restore staged and not applied yet (`pending` of `GET
+/// /api/system/backups/site`).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PendingRestore {
+    /// When it was staged (the file's modification time).
+    pub created_at: String,
+    /// `createdAt` of the backup it holds.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub backup_created_at: Option<String>,
+    pub size: u64,
+}
+
+/// The staged restore, if any (not one already applied whose archive could
+/// not be removed).
+pub fn pending_restore(data_dir: &Path) -> Option<PendingRestore> {
+    let path = data_dir.join(PENDING);
+    let meta = std::fs::metadata(&path).ok().filter(|m| m.is_file())?;
+    if already_applied(data_dir, &path) {
+        return None;
+    }
+    let created_at = meta
+        .modified()
+        .ok()
+        .and_then(|t| jiff::Timestamp::try_from(t).ok())
+        .map(|t| t.strftime("%Y-%m-%dT%H:%M:%S%.3fZ").to_string())
+        .unwrap_or_default();
+    let backup_created_at = open(&path).ok().and_then(|mut z| {
+        let e = z.by_name(MANIFEST).ok()?;
+        let size = e.size();
+        let m: Value = serde_json::from_reader(io::BufReader::new(e.take(size))).ok()?;
+        m.get("createdAt")?.as_str().map(str::to_string)
+    });
+    Some(PendingRestore {
+        created_at,
+        backup_created_at,
+        size: meta.len(),
+    })
+}
+
+/// Cancels the staged restore; `false` when there is none.
+pub fn cancel_pending_restore(data_dir: &Path) -> io::Result<bool> {
+    match std::fs::remove_file(data_dir.join(PENDING)) {
+        Ok(()) => Ok(true),
+        Err(e) if e.kind() == io::ErrorKind::NotFound => Ok(false),
+        Err(e) => Err(e),
+    }
+}
+
 /// `<data>/restore-status.json`: the outcome of the last restore applied at
 /// startup (`lastRestore` of `GET /api/system/backups/site`).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -1000,6 +1068,7 @@ pub fn apply_pending_restore(data_dir: &Path) -> Result<bool, TransferError> {
             write_status(data_dir, &status, owner);
             let _ = std::fs::remove_file(data_dir.join(IN_PROGRESS));
             tracing::info!("site backup restored; previous data in {}", aside.display());
+            purge_leftovers(data_dir);
             Ok(true)
         }
         Err(e) => {
@@ -1018,6 +1087,96 @@ pub fn apply_pending_restore(data_dir: &Path) -> Result<bool, TransferError> {
             );
             tracing::error!("site restore failed, data kept: {e}");
             Err(e)
+        }
+    }
+}
+
+/// What earlier restores leave in the data directory and how many of each
+/// are kept: `(prefix, suffix, keep, folder)`.
+const LEFTOVERS: [(&str, &str, usize, bool); 3] = [
+    ("before-restore-", "", 2, true),
+    ("restore-applied-", ".zip", 1, false),
+    ("restore-failed-", ".zip", 1, false),
+];
+
+/// `<prefix><stamp>[-<n>]<suffix>` → `(stamp, n)`, to sort oldest first.
+fn leftover_order(name: &str, prefix: &str, suffix: &str) -> (String, u32) {
+    let base = name
+        .strip_prefix(prefix)
+        .and_then(|n| n.strip_suffix(suffix))
+        .unwrap_or(name);
+    let (stamp, n) = match base.get(15..) {
+        Some(rest) => (
+            &base[..15],
+            rest.strip_prefix('-').and_then(|n| n.parse().ok()),
+        ),
+        None => (base, None),
+    };
+    (stamp.to_string(), n.unwrap_or(0))
+}
+
+/// After a restore committed (never after a failure: the data aside may be
+/// the only good copy), keeps the 2 latest `before-restore-*` folders, the
+/// latest `restore-applied-*.zip` and the latest `restore-failed-*.zip`.
+fn purge_leftovers(data_dir: &Path) {
+    let Ok(entries) = std::fs::read_dir(data_dir) else {
+        return;
+    };
+    let entries: Vec<(String, bool)> = entries
+        .flatten()
+        .filter_map(|e| {
+            let is_dir = e.file_type().ok()?.is_dir();
+            Some((e.file_name().into_string().ok()?, is_dir))
+        })
+        .collect();
+    for (prefix, suffix, keep, folder) in LEFTOVERS {
+        let mut names: Vec<&String> = entries
+            .iter()
+            .filter(|(n, d)| *d == folder && n.starts_with(prefix) && n.ends_with(suffix))
+            .map(|(n, _)| n)
+            .collect();
+        names.sort_by_key(|n| leftover_order(n, prefix, suffix));
+        let excess = names.len().saturating_sub(keep);
+        for name in &names[..excess] {
+            let path = data_dir.join(name);
+            let res = if folder {
+                std::fs::remove_dir_all(&path)
+            } else {
+                std::fs::remove_file(&path)
+            };
+            match res {
+                Ok(()) => tracing::info!("removed {name} (older restore)"),
+                Err(e) => tracing::warn!("cannot remove {name}: {e}"),
+            }
+        }
+    }
+}
+
+/// How long the first move of a restore waits for a base still held.
+const HELD_WAIT: Duration = Duration::from_secs(10);
+const HELD_STEP: Duration = Duration::from_millis(250);
+
+/// Windows: a file another process still holds (sharing violation, lock
+/// violation, access denied). Never elsewhere.
+fn held_by_another_process(e: &io::Error) -> bool {
+    cfg!(windows)
+        && (e.kind() == io::ErrorKind::PermissionDenied
+            || matches!(e.raw_os_error(), Some(32 | 33)))
+}
+
+/// Runs `f` again every `step` while it fails with an error `retry`
+/// accepts, for at most `total`.
+fn retrying(
+    mut f: impl FnMut() -> io::Result<()>,
+    retry: impl Fn(&io::Error) -> bool,
+    total: Duration,
+    step: Duration,
+) -> io::Result<()> {
+    let start = Instant::now();
+    loop {
+        match f() {
+            Err(e) if retry(&e) && start.elapsed() + step <= total => std::thread::sleep(step),
+            res => return res,
         }
     }
 }
@@ -1076,11 +1235,17 @@ fn recover(
     let plain = progress.aside.starts_with("before-restore-")
         && !progress.aside.contains(['/', '\\'])
         && !progress.aside.contains("..");
-    if plain {
-        put_back(data_dir, &data_dir.join(&progress.aside), progress.phase);
+    let err = if plain {
+        undo_restore(
+            data_dir,
+            &data_dir.join(&progress.aside),
+            progress.phase,
+            TransferError::Invalid(INTERRUPTED.into()),
+        )
     } else {
         tracing::error!("{IN_PROGRESS}: invalid folder {}", progress.aside);
-    }
+        TransferError::Invalid(INTERRUPTED.into())
+    };
     let _ = std::fs::remove_file(&marker);
     let archive = fail_pending(data_dir, pending, stamp);
     write_status(
@@ -1089,14 +1254,14 @@ fn recover(
             ok: false,
             at: crate::ids::now_iso(),
             archive,
-            error: Some(INTERRUPTED.into()),
+            error: Some(err.to_string()),
             backup_created_at: None,
             pending: None,
         },
         owner,
     );
-    tracing::error!("{INTERRUPTED}");
-    Err(TransferError::Invalid(INTERRUPTED.into()))
+    tracing::error!("{err}");
+    Err(err)
 }
 
 /// A free `<data>/before-restore-<stamp>[-n]` folder.
@@ -1123,13 +1288,16 @@ fn remove_any(path: &Path) -> io::Result<()> {
 /// Puts the original data back from `aside`: each item found there replaces
 /// what is in place; while `Unpacking`, an item absent from `aside` (absent
 /// before the restore) is removed. The emptied folder aside is removed.
-fn put_back(data_dir: &Path, aside: &Path, phase: Phase) {
+/// Returns `false` when something could not be put back (or cleared).
+fn put_back(data_dir: &Path, aside: &Path, phase: Phase) -> bool {
+    let mut complete = true;
     for item in REPLACED {
         let (saved, target) = (aside.join(item), data_dir.join(item));
         let is_saved = std::fs::symlink_metadata(&saved).is_ok();
         if is_saved || phase == Phase::Unpacking {
             if let Err(e) = remove_any(&target) {
                 tracing::error!("cannot clear {item} after a failed restore: {e}");
+                complete = false;
             }
         }
         if is_saved {
@@ -1138,12 +1306,30 @@ fn put_back(data_dir: &Path, aside: &Path, phase: Phase) {
             }
             if let Err(e) = std::fs::rename(&saved, &target) {
                 tracing::error!("cannot put {item} back from {}: {e}", aside.display());
+                complete = false;
             }
         }
     }
     // Only empty folders are left (`backups/`).
     let _ = std::fs::remove_dir(aside.join("backups"));
     let _ = std::fs::remove_dir(aside);
+    complete
+}
+
+/// [`put_back`], or [`TransferError::Stranded`] when the original data is
+/// not all back in place (`failure` is only logged then).
+fn undo_restore(
+    data_dir: &Path,
+    aside: &Path,
+    phase: Phase,
+    failure: TransferError,
+) -> TransferError {
+    if put_back(data_dir, aside, phase) {
+        failure
+    } else {
+        tracing::error!("site restore failed ({failure}); the original data is not all back");
+        TransferError::Stranded(aside.to_path_buf())
+    }
 }
 
 fn apply(
@@ -1167,7 +1353,7 @@ fn apply(
     };
     let marker = data_dir.join(IN_PROGRESS);
     let undo = |phase: Phase, e: TransferError| {
-        put_back(data_dir, &aside, phase);
+        let e = undo_restore(data_dir, &aside, phase, e);
         let _ = std::fs::remove_file(&marker);
         e
     };
@@ -1185,7 +1371,20 @@ fn apply(
             Some(parent) => std::fs::create_dir_all(parent),
             None => Ok(()),
         }
-        .and_then(|()| std::fs::rename(&src, &dest));
+        .and_then(|()| {
+            if item == DB {
+                // The first move: the base may still be held a moment by
+                // the process that stopped (Windows).
+                retrying(
+                    || std::fs::rename(&src, &dest),
+                    held_by_another_process,
+                    HELD_WAIT,
+                    HELD_STEP,
+                )
+            } else {
+                std::fs::rename(&src, &dest)
+            }
+        });
         if let Err(e) = res {
             return Err(undo(Phase::Moving, TransferError::Storage(e)));
         }
@@ -1313,6 +1512,74 @@ mod tests {
         let mut out = Vec::new();
         copy_entry(&mut &b"abc"[..], 3, &mut out).unwrap();
         assert_eq!(out, b"abc");
+    }
+
+    #[test]
+    fn retrying_waits_only_for_the_errors_it_accepts() {
+        let step = Duration::from_millis(1);
+        let mut calls = 0;
+        let res = retrying(
+            || {
+                calls += 1;
+                if calls < 3 {
+                    Err(io::Error::from(io::ErrorKind::PermissionDenied))
+                } else {
+                    Ok(())
+                }
+            },
+            |e| e.kind() == io::ErrorKind::PermissionDenied,
+            Duration::from_secs(1),
+            step,
+        );
+        assert!(res.is_ok());
+        assert_eq!(calls, 3);
+        // Another error fails at once.
+        let mut calls = 0;
+        let res = retrying(
+            || {
+                calls += 1;
+                Err(io::Error::from(io::ErrorKind::NotFound))
+            },
+            |e| e.kind() == io::ErrorKind::PermissionDenied,
+            Duration::from_secs(1),
+            step,
+        );
+        assert!(res.is_err());
+        assert_eq!(calls, 1);
+        // Up to the time allowed.
+        let started = Instant::now();
+        let res = retrying(
+            || Err(io::Error::from(io::ErrorKind::PermissionDenied)),
+            |_| true,
+            Duration::from_millis(30),
+            Duration::from_millis(5),
+        );
+        assert!(res.is_err());
+        assert!(started.elapsed() < Duration::from_secs(1));
+        // Only Windows waits for a held file.
+        let held = io::Error::from(io::ErrorKind::PermissionDenied);
+        assert_eq!(held_by_another_process(&held), cfg!(windows));
+    }
+
+    #[test]
+    fn leftovers_sort_by_stamp_then_counter() {
+        let p = "before-restore-";
+        let mut v = [
+            "before-restore-20261108-030000-10",
+            "before-restore-20261108-030000-2",
+            "before-restore-20261108-030000",
+            "before-restore-20261107-230000",
+        ];
+        v.sort_by_key(|n| leftover_order(n, p, ""));
+        assert_eq!(
+            v,
+            [
+                "before-restore-20261107-230000",
+                "before-restore-20261108-030000",
+                "before-restore-20261108-030000-2",
+                "before-restore-20261108-030000-10",
+            ]
+        );
     }
 
     #[test]

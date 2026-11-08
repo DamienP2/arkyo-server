@@ -17,8 +17,8 @@
 //!
 //! Backups of the site (§6), under `/api/system/backups/`: `site` (list,
 //! create), `site/{name}` (delete), `site/{name}/download`, `site/restore`
-//! (raw body = the archive, checked, staged, then the server restarts) and
-//! `settings/site`.
+//! (raw body = the archive, checked, staged, then the server restarts),
+//! `site/pending` (delete: cancels a staged restore) and `settings/site`.
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -41,7 +41,7 @@ use crate::transfer::archive::read_archive;
 use crate::transfer::import::{export_to_file, import as run_import, preview, ImportOptions, Mode};
 use crate::transfer::points::{self, Point, PointKind, ProjectSettings};
 use crate::transfer::site::{self, SiteSettings};
-use crate::transfer::{RemoveOnDrop, RootKind, TransferError};
+use crate::transfer::{load_last_error, record_last_error, RemoveOnDrop, RootKind, TransferError};
 
 /// Maximum size of an inspected file (2 Gio).
 pub const MAX_INSPECT: usize = 2 * 1024 * 1024 * 1024;
@@ -57,19 +57,66 @@ fn tmp_dir(st: &AppState) -> PathBuf {
     st.data_dir.join("tmp")
 }
 
+/// What a database error means to the user, when it means something.
+#[derive(Debug, PartialEq, Eq)]
+enum DbFailure {
+    /// Another writer holds the base (SQLITE_BUSY, SQLITE_LOCKED) or no
+    /// connection is free.
+    Busy,
+    /// SQLITE_FULL.
+    Full,
+    /// A constraint the file breaks (SQLITE_CONSTRAINT).
+    Constraint,
+}
+
+fn db_failure(e: &sqlx::Error) -> Option<DbFailure> {
+    match e {
+        sqlx::Error::PoolTimedOut => Some(DbFailure::Busy),
+        sqlx::Error::Database(db) => {
+            // Extended result codes keep the primary code in the low byte.
+            let primary = db.code()?.parse::<i64>().ok()? & 0xff;
+            match primary {
+                5 | 6 => Some(DbFailure::Busy),
+                13 => Some(DbFailure::Full),
+                19 => Some(DbFailure::Constraint),
+                _ => None,
+            }
+        }
+        _ => None,
+    }
+}
+
 fn transfer_error(e: TransferError) -> Response {
-    match &e {
-        TransferError::NotFound(..) => error(StatusCode::NOT_FOUND, &e.to_string()),
-        TransferError::Invalid(m) => error(StatusCode::BAD_REQUEST, m),
+    let db = match &e {
+        TransferError::Db(d) => db_failure(d),
+        _ => None,
+    };
+    match (&e, db) {
+        (TransferError::NotFound(..), _) => error(StatusCode::NOT_FOUND, &e.to_string()),
+        (TransferError::Invalid(m), _) => error(StatusCode::BAD_REQUEST, m),
+        (_, Some(DbFailure::Busy)) => {
+            tracing::warn!("transfer: {e}");
+            error(
+                StatusCode::SERVICE_UNAVAILABLE,
+                "Serveur occupé, réessayez dans un instant.",
+            )
+        }
+        (_, Some(DbFailure::Full)) => {
+            tracing::error!("transfer: {e}");
+            error(
+                StatusCode::INSUFFICIENT_STORAGE,
+                "Espace disque insuffisant.",
+            )
+        }
         // A constraint of the base the file breaks.
-        TransferError::Db(sqlx::Error::Database(_)) => {
+        (_, Some(DbFailure::Constraint)) => {
             tracing::warn!("transfer: {e}");
             error(
                 StatusCode::BAD_REQUEST,
                 "Le fichier ne peut pas être importé : ses données sont incohérentes.",
             )
         }
-        TransferError::Storage(io) => {
+        (TransferError::Storage(io), _) => {
             tracing::error!("transfer: {e} ({io})");
             error(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string())
         }
@@ -617,12 +664,16 @@ pub async fn point_delete(
     }
 }
 
-/// `GET /api/system/backups/settings/projects`.
+/// `GET /api/system/backups/settings/projects`: the settings and
+/// `lastError`, the last failure of the automatic points (or `null`).
 pub async fn point_settings(State(st): State<AppState>, CurrentUser(me): CurrentUser) -> Response {
     if let Err(r) = require(&me, &st.pool, Domain::Settings, Level::Admin).await {
         return r;
     }
-    Json(points::load_settings(&st.pool).await).into_response()
+    let settings = points::load_settings(&st.pool).await;
+    let mut v = serde_json::to_value(settings).unwrap_or_default();
+    v["lastError"] = json!(load_last_error(&st.pool, points::SETTINGS_KEY).await);
+    Json(v).into_response()
 }
 
 /// `PUT /api/system/backups/settings/projects` `{ enabled, intervalHours,
@@ -653,20 +704,24 @@ pub async fn set_point_settings(
 const NO_BACKUP: &str = "Sauvegarde introuvable";
 const BAD_DIR: &str = "Dossier inaccessible";
 
-/// `GET /api/system/backups/site`: `{ settings, backups, dir, lastRestore }`,
-/// the backups newest first, `lastRestore` the outcome of the last restore
-/// applied at startup (or `null`).
+/// `GET /api/system/backups/site`: `{ settings, backups, dir, lastRestore,
+/// lastError, pending }`, the backups newest first, `lastRestore` the
+/// outcome of the last restore applied at startup, `lastError` the last
+/// failure of the automatic backups, `pending` a restore staged for the
+/// next start (each `null` when none).
 pub async fn site_list(State(st): State<AppState>, CurrentUser(me): CurrentUser) -> Response {
     if let Err(r) = require(&me, &st.pool, Domain::Settings, Level::Admin).await {
         return r;
     }
     let settings = site::load_settings(&st.pool).await;
+    let last_error = load_last_error(&st.pool, site::SETTINGS_KEY).await;
     let dir = site::backup_dir(&st.data_dir, &settings);
     let (listed, data_dir) = (dir.clone(), st.data_dir.clone());
-    let Ok((backups, last)) = tokio::task::spawn_blocking(move || {
+    let Ok((backups, last, pending)) = tokio::task::spawn_blocking(move || {
         (
             site::list_site_backups(&listed),
             site::read_restore_status(&data_dir),
+            site::pending_restore(&data_dir),
         )
     })
     .await
@@ -678,8 +733,33 @@ pub async fn site_list(State(st): State<AppState>, CurrentUser(me): CurrentUser)
         "backups": backups,
         "dir": dir.to_string_lossy(),
         "lastRestore": last,
+        "lastError": last_error,
+        "pending": pending,
     }))
     .into_response()
+}
+
+/// `DELETE /api/system/backups/site/pending`: cancels the staged restore.
+pub async fn site_cancel_pending(
+    State(st): State<AppState>,
+    CurrentUser(me): CurrentUser,
+) -> Response {
+    if let Err(r) = require(&me, &st.pool, Domain::Settings, Level::Admin).await {
+        return r;
+    }
+    let data_dir = st.data_dir.clone();
+    match tokio::task::spawn_blocking(move || site::cancel_pending_restore(&data_dir)).await {
+        Ok(Ok(true)) => {
+            tracing::info!("staged site restore cancelled");
+            StatusCode::NO_CONTENT.into_response()
+        }
+        Ok(Ok(false)) => error(StatusCode::NOT_FOUND, "Aucune restauration en attente"),
+        Ok(Err(e)) => {
+            tracing::error!("cannot cancel the staged restore: {e}");
+            server_error()
+        }
+        Err(_) => server_error(),
+    }
 }
 
 /// `POST /api/system/backups/site`: a backup now, in the folder of the
@@ -691,7 +771,11 @@ pub async fn site_create(State(st): State<AppState>, CurrentUser(me): CurrentUse
     let settings = site::load_settings(&st.pool).await;
     sweep_all(&st, &settings).await;
     match site::run_backup(&st, &settings).await {
-        Ok(b) => Json(b).into_response(),
+        Ok(b) => {
+            // The folder works again: the last automatic failure is over.
+            record_last_error(&st.pool, site::SETTINGS_KEY, None).await;
+            Json(b).into_response()
+        }
         Err(e) => transfer_error(e),
     }
 }
@@ -844,8 +928,64 @@ pub async fn site_restore(
 
 #[cfg(test)]
 mod tests {
-    use super::{ascii_name, sweep};
+    use super::{ascii_name, db_failure, sweep, DbFailure};
     use std::time::{Duration, SystemTime};
+
+    /// The errors SQLite really returns, classified.
+    #[tokio::test]
+    async fn database_errors_are_told_apart() {
+        use sqlx::sqlite::SqliteConnectOptions;
+        use sqlx::{ConnectOptions, Connection};
+        let d = tempfile::tempdir().unwrap();
+        let opts = SqliteConnectOptions::new()
+            .filename(d.path().join("t.db"))
+            .create_if_missing(true)
+            .busy_timeout(Duration::ZERO);
+        let mut a = opts.connect().await.unwrap();
+        let mut b = opts.connect().await.unwrap();
+        sqlx::query("CREATE TABLE t (id INTEGER PRIMARY KEY, v BLOB)")
+            .execute(&mut a)
+            .await
+            .unwrap();
+        sqlx::query("INSERT INTO t (id) VALUES (1)")
+            .execute(&mut a)
+            .await
+            .unwrap();
+        // A primary key taken.
+        let e = sqlx::query("INSERT INTO t (id) VALUES (1)")
+            .execute(&mut a)
+            .await
+            .unwrap_err();
+        assert_eq!(db_failure(&e), Some(DbFailure::Constraint), "{e}");
+        // Another writer holds the base.
+        sqlx::query("BEGIN IMMEDIATE")
+            .execute(&mut a)
+            .await
+            .unwrap();
+        let e = sqlx::query("BEGIN IMMEDIATE")
+            .execute(&mut b)
+            .await
+            .unwrap_err();
+        assert_eq!(db_failure(&e), Some(DbFailure::Busy), "{e}");
+        sqlx::query("ROLLBACK").execute(&mut a).await.unwrap();
+        // The base may not grow.
+        sqlx::query("PRAGMA max_page_count = 3")
+            .execute(&mut a)
+            .await
+            .unwrap();
+        let e = sqlx::query("INSERT INTO t (id, v) VALUES (2, zeroblob(1000000))")
+            .execute(&mut a)
+            .await
+            .unwrap_err();
+        assert_eq!(db_failure(&e), Some(DbFailure::Full), "{e}");
+        assert_eq!(
+            db_failure(&sqlx::Error::PoolTimedOut),
+            Some(DbFailure::Busy)
+        );
+        assert_eq!(db_failure(&sqlx::Error::RowNotFound), None);
+        let _ = a.close().await;
+        let _ = b.close().await;
+    }
 
     #[test]
     fn sweep_removes_stale_temporaries_but_not_an_import_in_progress() {

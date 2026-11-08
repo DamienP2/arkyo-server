@@ -258,16 +258,17 @@ pub fn extract_uploads(path: &Path, uploads_dir: &Path) -> Result<usize, Transfe
         }
         let part = dest.with_extension("part-transfer");
         let mut entry = z.by_index(i).map_err(zip_err)?;
-        let written = {
-            let mut f = File::create(&part)?;
-            // Never write more than declared.
-            let n = io::copy(&mut (&mut entry).take(size), &mut f)?;
-            f.flush()?;
-            n
-        };
-        if written != size {
+        // Exactly the declared size, then the end of the entry (its CRC).
+        let written = File::create(&part)
+            .map_err(TransferError::Storage)
+            .and_then(|f| {
+                let mut f = io::BufWriter::new(f);
+                super::site::copy_entry(&mut entry, size, &mut f)?;
+                f.flush().map_err(TransferError::Storage)
+            });
+        if let Err(e) = written {
             let _ = std::fs::remove_file(&part);
-            return Err(bad());
+            return Err(e);
         }
         std::fs::rename(&part, &dest)?;
         copied += 1;

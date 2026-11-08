@@ -7,7 +7,8 @@ use std::path::{Path, PathBuf};
 use arkyo_server::transfer::archive::write_archive;
 use arkyo_server::transfer::site::{
     apply_pending_restore, create_site_backup, is_due, list_site_backups, prune_site_backups,
-    read_restore_status, stage_restore, verify_site_archive, SiteManifest, PENDING,
+    read_restore_status, run_recorded, save_settings, stage_restore, verify_site_archive,
+    SiteManifest, SiteSettings, PENDING,
 };
 use arkyo_server::transfer::{Bundle, TransferError};
 use axum::body::Body;
@@ -782,9 +783,22 @@ async fn cli_backup_writes_archive() {
         .output()
         .unwrap();
     assert!(o.status.success(), "{}", String::from_utf8_lossy(&o.stderr));
-    assert_eq!(
-        String::from_utf8(o.stdout).unwrap().trim(),
-        "Restauration prête : elle sera appliquée au prochain démarrage du service."
+    let said = String::from_utf8(o.stdout).unwrap();
+    assert!(
+        said.starts_with(
+            "Restauration prête : elle sera appliquée au prochain démarrage du serveur.\n"
+        ),
+        "{said}"
+    );
+    // The service keeps running: how to restart it, how to cancel.
+    assert!(said.contains("Le service continue de tourner"), "{said}");
+    assert!(
+        said.contains("`arkyo-server service stop` puis `arkyo-server service start`"),
+        "{said}"
+    );
+    assert!(
+        said.contains(&d.join(PENDING).display().to_string()),
+        "{said}"
     );
     assert_eq!(
         std::fs::read(d.join(PENDING)).unwrap(),
@@ -1147,4 +1161,202 @@ async fn cli_backup_refuses_a_missing_configured_folder() {
     assert!(err.contains("inaccessible"), "{err}");
     assert!(err.contains("--out"), "{err}");
     assert!(!missing.exists());
+}
+
+/// The `AppState` of an [`Env`].
+fn state_of(e: &Env) -> arkyo_server::http::AppState {
+    arkyo_server::http::AppState {
+        pool: e.pool.clone(),
+        data_dir: e._dir.path().to_path_buf(),
+        events: e.events.clone(),
+        config: std::sync::Arc::new(std::sync::RwLock::new(
+            arkyo_server::config::Config::default(),
+        )),
+    }
+}
+
+async fn get_site(e: &Env, token: &str) -> Value {
+    let r = call(
+        &e.app,
+        "GET",
+        "/api/system/backups/site",
+        LOCAL,
+        Some(token),
+        None,
+    )
+    .await;
+    assert_eq!(r.status, StatusCode::OK, "{:?}", r.body);
+    r.body
+}
+
+#[tokio::test]
+async fn a_failed_automatic_backup_is_shown_until_the_next_success() {
+    let (e, _) = populated().await;
+    let token = login(&e.app, "o@b.fr").await;
+    let st = state_of(&e);
+    assert_eq!(get_site(&e, &token).await["lastError"], Value::Null);
+
+    // The folder set is gone (an unmounted share).
+    let gone = SiteSettings {
+        dir: Some(e._dir.path().join("absent").to_string_lossy().into_owned()),
+        ..SiteSettings::default()
+    };
+    save_settings(&e.pool, &gone).await.unwrap();
+    assert!(run_recorded(&st, &gone).await.is_err());
+    let err = &get_site(&e, &token).await["lastError"];
+    assert_eq!(err["message"], "Dossier inaccessible", "{err}");
+    assert!(err["at"].as_str().unwrap().ends_with('Z'), "{err}");
+
+    let ok = SiteSettings::default();
+    save_settings(&e.pool, &ok).await.unwrap();
+    run_recorded(&st, &ok).await.unwrap();
+    assert_eq!(get_site(&e, &token).await["lastError"], Value::Null);
+}
+
+#[tokio::test]
+async fn a_staged_restore_is_listed_and_can_be_cancelled() {
+    let (e, _) = populated().await;
+    let d = e._dir.path().to_path_buf();
+    let token = login(&e.app, "o@b.fr").await;
+    assert_eq!(get_site(&e, &token).await["pending"], Value::Null);
+    let out = tempfile::tempdir().unwrap();
+    let b = create_site_backup(&e.pool, &d, out.path()).await.unwrap();
+    let m = stage_restore(&d, &out.path().join(&b.name)).unwrap();
+
+    let pending = get_site(&e, &token).await["pending"].clone();
+    assert_eq!(
+        pending["backupCreatedAt"],
+        m.created_at.as_str(),
+        "{pending}"
+    );
+    assert_eq!(
+        pending["size"],
+        std::fs::metadata(d.join(PENDING)).unwrap().len()
+    );
+    assert!(
+        pending["createdAt"].as_str().unwrap().ends_with('Z'),
+        "{pending}"
+    );
+
+    let r = call(
+        &e.app,
+        "DELETE",
+        "/api/system/backups/site/pending",
+        LOCAL,
+        Some(&token),
+        None,
+    )
+    .await;
+    assert_eq!(r.status, StatusCode::NO_CONTENT, "{:?}", r.body);
+    assert!(!d.join(PENDING).exists());
+    assert_eq!(get_site(&e, &token).await["pending"], Value::Null);
+    let r = call(
+        &e.app,
+        "DELETE",
+        "/api/system/backups/site/pending",
+        LOCAL,
+        Some(&token),
+        None,
+    )
+    .await;
+    assert_eq!(r.status, StatusCode::NOT_FOUND);
+    assert_eq!(r.body, json!({"error": "Aucune restauration en attente"}));
+
+    // Admin only.
+    add_user(&e.pool, "m@b.fr", "technicien", false).await;
+    let member = login(&e.app, "m@b.fr").await;
+    let r = call(
+        &e.app,
+        "DELETE",
+        "/api/system/backups/site/pending",
+        LOCAL,
+        Some(&member),
+        None,
+    )
+    .await;
+    assert_eq!(r.status, StatusCode::FORBIDDEN);
+}
+
+#[tokio::test]
+async fn names_differing_only_by_case_are_an_invalid_archive() {
+    let (e, _) = populated().await;
+    let out = tempfile::tempdir().unwrap();
+    let b = create_site_backup(&e.pool, e._dir.path(), out.path())
+        .await
+        .unwrap();
+    let db = entry(&out.path().join(&b.name), "arkyo.db");
+    let p = out.path().join("case.zip");
+    zip_of(
+        &p,
+        &[
+            ("manifest.json", &site_manifest()),
+            ("arkyo.db", &db),
+            ("uploads/Plan.png", b"A"),
+            ("uploads/plan.png", b"B"),
+        ],
+    );
+    assert_eq!(invalid(verify(&p)), "Archive invalide.");
+}
+
+/// Earlier leftovers of restores in `d`.
+fn old_leftovers(d: &Path) {
+    for n in ["20200101-000000", "20200102-000000", "20200103-000000"] {
+        std::fs::create_dir_all(d.join(format!("before-restore-{n}/uploads"))).unwrap();
+    }
+    for n in ["20200101-000000", "20200102-000000"] {
+        write(&d.join(format!("restore-applied-{n}.zip")), b"old");
+        write(&d.join(format!("restore-failed-{n}.zip")), b"old");
+    }
+}
+
+#[tokio::test]
+async fn a_committed_restore_purges_older_leftovers() {
+    let (e, _) = populated().await;
+    let d = e._dir.path().to_path_buf();
+    let out = tempfile::tempdir().unwrap();
+    let b = create_site_backup(&e.pool, &d, out.path()).await.unwrap();
+    stage_restore(&d, &out.path().join(&b.name)).unwrap();
+    e.pool.close().await;
+    old_leftovers(&d);
+    assert!(apply_pending_restore(&d).unwrap());
+
+    let before = aside(&d, "before-restore-");
+    assert_eq!(before.len(), 2, "{:?}", names(&d));
+    assert!(
+        before[0].ends_with("before-restore-20200103-000000"),
+        "{before:?}"
+    );
+    // The one of this restore holds the data it replaced.
+    assert!(before[1].join("arkyo.db").is_file());
+    let applied = aside(&d, "restore-applied-");
+    assert_eq!(applied.len(), 1, "{:?}", names(&d));
+    assert_eq!(
+        applied[0].file_name().unwrap().to_str().unwrap(),
+        read_restore_status(&d).unwrap().archive
+    );
+    let failed = aside(&d, "restore-failed-");
+    assert_eq!(failed.len(), 1, "{:?}", names(&d));
+    assert!(failed[0].ends_with("restore-failed-20200102-000000.zip"));
+}
+
+#[tokio::test]
+async fn a_failed_restore_purges_nothing() {
+    let (e, _) = populated().await;
+    let d = e._dir.path().to_path_buf();
+    e.pool.close().await;
+    // `uploads/a` is a file, then `uploads/a/b` needs it as a folder.
+    zip_of(
+        &d.join(PENDING),
+        &[
+            ("manifest.json", &site_manifest()),
+            ("arkyo.db", b"base"),
+            ("uploads/a", b"file"),
+            ("uploads/a/b", b"under a file"),
+        ],
+    );
+    old_leftovers(&d);
+    assert!(apply_pending_restore(&d).is_err());
+    assert_eq!(aside(&d, "before-restore-").len(), 3, "{:?}", names(&d));
+    assert_eq!(aside(&d, "restore-applied-").len(), 2);
+    assert_eq!(aside(&d, "restore-failed-").len(), 3);
 }
