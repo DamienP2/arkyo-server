@@ -1,0 +1,924 @@
+//! Full backup of the site (spec 2026-11-07-sauvegardes-design §6): a zip
+//! `Arkyo-site-<AAAAMMJJ-HHMMSS>.zip` (local time of the server) holding
+//! `manifest.json`, `arkyo.db` (a consistent copy made by `VACUUM INTO`),
+//! `config.json`, `uploads/**` and `backups/projects/**`.
+//!
+//! Restore: the archive is checked, then staged as `<data>/restore-pending.zip`
+//! and applied at the next start, before the base is opened
+//! ([`apply_pending_restore`]): the current data moves to
+//! `<data>/before-restore-<horodatage>/`, the archive is unpacked, then
+//! `db::open` runs the (additive) migrations. The `config.json` of the
+//! archive replaces the current one as is: port and address are settings of
+//! the site, restored with it. `backups/site/` (the site backups themselves),
+//! `update/`, `logs/` and `tmp/` are neither saved nor replaced.
+//!
+//! Automatic backups: every day once the local hour set has passed, when no
+//! backup of that day is in the folder; the `keep` latest are kept.
+
+use std::fs::File;
+use std::io::{self, BufWriter, Read, Write};
+use std::path::{Path, PathBuf};
+use std::time::{Duration, Instant};
+
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
+use sqlx::SqlitePool;
+use zip::write::SimpleFileOptions;
+use zip::{CompressionMethod, ZipArchive, ZipWriter};
+
+use super::archive::safe_rel;
+use super::import::blocking;
+use super::TransferError;
+use crate::http::AppState;
+
+const FORMAT: &str = "arkyo-server-site";
+const VERSION: u32 = 1;
+const SETTINGS_KEY: &str = "backups.site";
+/// The staged archive, applied at the next start.
+pub const PENDING: &str = "restore-pending.zip";
+const PREFIX: &str = "Arkyo-site-";
+const DB: &str = "arkyo.db";
+const CONFIG: &str = "config.json";
+const MANIFEST: &str = "manifest.json";
+/// The folders of the data directory a backup carries.
+const TREES: [&str; 2] = ["uploads", "backups/projects"];
+/// What a restore replaces (and sets aside), relative to the data directory.
+const REPLACED: [&str; 6] = [
+    "arkyo.db",
+    "arkyo.db-wal",
+    "arkyo.db-shm",
+    CONFIG,
+    "uploads",
+    "backups/projects",
+];
+/// Maximum sum of the declared uncompressed sizes of a site archive.
+const MAX_TOTAL: u64 = 64 * 1024 * 1024 * 1024;
+/// Upper bound of the retention setting.
+const MAX_KEEP: u32 = 1000;
+/// How often the scheduler checks whether the daily backup is due.
+const TICK: Duration = Duration::from_secs(60);
+/// Delay before a failed automatic backup is tried again.
+const RETRY: Duration = Duration::from_secs(3600);
+const BAD_DIR: &str = "Dossier inaccessible";
+
+fn bad() -> TransferError {
+    TransferError::Invalid("Archive invalide.".into())
+}
+
+fn zip_err(_: zip::result::ZipError) -> TransferError {
+    bad()
+}
+
+/// Removes the file when dropped.
+struct RemoveOnDrop(PathBuf);
+
+impl Drop for RemoveOnDrop {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_file(&self.0);
+    }
+}
+
+// ── Settings ────────────────────────────────────────────────────────────────
+
+/// AppConfig `backups.site`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SiteSettings {
+    pub enabled: bool,
+    /// Local hour of the daily backup (0–23).
+    pub hour: u32,
+    /// Destination folder; `None` = `<data>/backups/site`.
+    #[serde(default)]
+    pub dir: Option<String>,
+    /// Backups kept in the folder.
+    pub keep: u32,
+}
+
+impl Default for SiteSettings {
+    fn default() -> Self {
+        SiteSettings {
+            enabled: true,
+            hour: 3,
+            dir: None,
+            keep: 7,
+        }
+    }
+}
+
+impl SiteSettings {
+    /// Hour and retention in range, folder absolute (its existence is
+    /// checked by [`check_dir`] when it is set).
+    pub fn is_valid(&self) -> bool {
+        self.hour < 24
+            && (1..=MAX_KEEP).contains(&self.keep)
+            && self
+                .dir
+                .as_deref()
+                .is_none_or(|d| Path::new(d).is_absolute())
+    }
+
+    /// A blank folder means the default one.
+    pub fn normalized(mut self) -> Self {
+        self.dir = self
+            .dir
+            .map(|d| d.trim().to_string())
+            .filter(|d| !d.is_empty());
+        self
+    }
+}
+
+/// The stored settings, or the defaults when absent or invalid.
+pub async fn load_settings(pool: &SqlitePool) -> SiteSettings {
+    let v: Option<String> =
+        sqlx::query_scalar(r#"SELECT "value" FROM "AppConfig" WHERE "key" = ?"#)
+            .bind(SETTINGS_KEY)
+            .fetch_optional(pool)
+            .await
+            .unwrap_or_default();
+    v.and_then(|v| serde_json::from_str::<SiteSettings>(&v).ok())
+        .filter(SiteSettings::is_valid)
+        .unwrap_or_default()
+}
+
+pub async fn save_settings(pool: &SqlitePool, s: &SiteSettings) -> Result<(), sqlx::Error> {
+    let value = serde_json::to_string(s).unwrap_or_default();
+    sqlx::query(
+        r#"INSERT INTO "AppConfig" ("id","key","value","updatedAt") VALUES (?,?,?,?)
+           ON CONFLICT("key") DO UPDATE SET "value" = excluded."value", "updatedAt" = excluded."updatedAt""#,
+    )
+    .bind(crate::ids::new_id())
+    .bind(SETTINGS_KEY)
+    .bind(value)
+    .bind(crate::ids::now_iso())
+    .execute(pool)
+    .await?;
+    Ok(())
+}
+
+/// The folder the backups of the site go to.
+pub fn backup_dir(data_dir: &Path, s: &SiteSettings) -> PathBuf {
+    match &s.dir {
+        Some(d) => PathBuf::from(d),
+        None => data_dir.join("backups").join("site"),
+    }
+}
+
+/// Whether `dir` is an absolute path to an existing folder this process can
+/// write in (a probe file is created then removed).
+pub fn check_dir(dir: &str) -> bool {
+    let dir = Path::new(dir);
+    if !dir.is_absolute() || !dir.is_dir() {
+        return false;
+    }
+    let probe = dir.join(format!(".arkyo-probe-{}", crate::ids::new_id()));
+    let ok = std::fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&probe)
+        .and_then(|mut f| f.write_all(b"x"))
+        .is_ok();
+    let _ = std::fs::remove_file(&probe);
+    ok
+}
+
+// ── Names and listing ───────────────────────────────────────────────────────
+
+/// One backup of the site in its folder.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SiteBackup {
+    pub name: String,
+    /// Size of the file, in bytes.
+    pub size: u64,
+    /// From the name (local time of the server), in UTC.
+    pub created_at: String,
+    #[serde(skip)]
+    pub path: PathBuf,
+}
+
+/// The `AAAAMMJJ-HHMMSS` of a backup name (`^Arkyo-site-\d{8}-\d{6}\.zip$`).
+fn stamp_of(name: &str) -> Option<&str> {
+    let stamp = name.strip_prefix(PREFIX)?.strip_suffix(".zip")?;
+    let b = stamp.as_bytes();
+    let ok = b.len() == 15
+        && b[8] == b'-'
+        && b.iter()
+            .enumerate()
+            .all(|(i, c)| i == 8 || c.is_ascii_digit());
+    ok.then_some(stamp)
+}
+
+/// Whether `name` is the name of a backup of the site.
+pub fn is_backup_name(name: &str) -> bool {
+    stamp_of(name).is_some()
+}
+
+fn local_datetime(stamp: &str) -> Option<jiff::civil::DateTime> {
+    jiff::civil::DateTime::strptime("%Y%m%d-%H%M%S", stamp).ok()
+}
+
+/// The UTC ISO date of a local stamp.
+fn created_at(stamp: &str) -> Option<String> {
+    let zoned = local_datetime(stamp)?
+        .to_zoned(jiff::tz::TimeZone::system())
+        .ok()?;
+    Some(
+        zoned
+            .timestamp()
+            .strftime("%Y-%m-%dT%H:%M:%S%.3fZ")
+            .to_string(),
+    )
+}
+
+/// The backup names of the folder, oldest first.
+fn backup_names(dir: &Path) -> Vec<String> {
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return Vec::new();
+    };
+    let mut names: Vec<String> = entries
+        .flatten()
+        .filter(|e| e.file_type().is_ok_and(|t| t.is_file()))
+        .filter_map(|e| e.file_name().into_string().ok())
+        .filter(|n| stamp_of(n).is_some_and(|s| local_datetime(s).is_some()))
+        .collect();
+    names.sort();
+    names
+}
+
+/// The backups of the folder, newest first.
+pub fn list_site_backups(dir: &Path) -> Vec<SiteBackup> {
+    let mut out: Vec<SiteBackup> = backup_names(dir)
+        .into_iter()
+        .filter_map(|name| {
+            let path = dir.join(&name);
+            let size = std::fs::metadata(&path).ok()?.len();
+            let created_at = created_at(stamp_of(&name)?)?;
+            Some(SiteBackup {
+                name,
+                size,
+                created_at,
+                path,
+            })
+        })
+        .collect();
+    out.reverse();
+    out
+}
+
+/// Keeps the `keep` latest backups of the folder; returns how many were
+/// removed.
+pub fn prune_site_backups(dir: &Path, keep: u32) -> usize {
+    let names = backup_names(dir);
+    let excess = names.len().saturating_sub(keep as usize);
+    let mut removed = 0;
+    for name in names.iter().take(excess) {
+        match std::fs::remove_file(dir.join(name)) {
+            Ok(()) => removed += 1,
+            Err(e) => tracing::warn!("cannot remove site backup {name}: {e}"),
+        }
+    }
+    removed
+}
+
+/// Whether the daily backup is due at `now` (local time): the hour set has
+/// passed and no backup of the day is among `names`.
+pub fn is_due(now: jiff::civil::DateTime, hour: u32, names: &[String]) -> bool {
+    if u32::try_from(now.hour()).unwrap_or(0) < hour {
+        return false;
+    }
+    let today = now.date().strftime("%Y%m%d").to_string();
+    !names
+        .iter()
+        .filter_map(|n| stamp_of(n))
+        .any(|s| s.starts_with(&today))
+}
+
+// ── Ownership ───────────────────────────────────────────────────────────────
+
+/// The owner the written files are given back to: the data directory's,
+/// when root writes in a directory it does not own (`sudo arkyo-server
+/// backup` in `/var/lib/arkyo`); otherwise nothing changes.
+#[derive(Debug, Clone, Copy)]
+struct Owner {
+    #[cfg(unix)]
+    ids: Option<(u32, u32)>,
+}
+
+impl Owner {
+    fn of(data_dir: &Path) -> Owner {
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::MetadataExt;
+            // SAFETY: geteuid has no preconditions and cannot fail.
+            let euid = unsafe { libc::geteuid() };
+            let ids = std::fs::metadata(data_dir)
+                .ok()
+                .filter(|m| crate::db::should_chown(euid, m.uid()))
+                .map(|m| (m.uid(), m.gid()));
+            Owner { ids }
+        }
+        #[cfg(not(unix))]
+        {
+            let _ = data_dir;
+            Owner {}
+        }
+    }
+
+    /// A file just written, through its descriptor.
+    fn file(&self, f: &File) {
+        #[cfg(unix)]
+        if let Some((uid, gid)) = self.ids {
+            let _ = std::os::unix::fs::fchown(f, Some(uid), Some(gid));
+        }
+        #[cfg(not(unix))]
+        let _ = f;
+    }
+
+    /// The folders from `base` (excluded) to `dir` (included), never
+    /// following a symlink.
+    fn dirs(&self, base: &Path, dir: &Path) {
+        #[cfg(unix)]
+        if let (Some((uid, gid)), Ok(rel)) = (self.ids, dir.strip_prefix(base)) {
+            let mut cur = base.to_path_buf();
+            for c in rel.components() {
+                cur.push(c);
+                let _ = std::os::unix::fs::lchown(&cur, Some(uid), Some(gid));
+            }
+        }
+        #[cfg(not(unix))]
+        let _ = (base, dir);
+    }
+}
+
+// ── Backup ──────────────────────────────────────────────────────────────────
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SiteManifest {
+    pub format: String,
+    pub version: u32,
+    pub app_version: String,
+    pub created_at: String,
+    /// The latest migration applied to the saved base.
+    pub migration: i64,
+}
+
+fn local_stamp() -> String {
+    jiff::Zoned::now().strftime("%Y%m%d-%H%M%S").to_string()
+}
+
+/// Writes a backup of the site in `out_dir` (created when absent):
+/// `<name>.part`, then renamed. One backup at a time.
+pub async fn create_site_backup(
+    pool: &SqlitePool,
+    data_dir: &Path,
+    out_dir: &Path,
+) -> Result<SiteBackup, TransferError> {
+    static LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+    let _guard = LOCK.lock().await;
+    let owner = Owner::of(data_dir);
+    let tmp = data_dir.join("tmp");
+    std::fs::create_dir_all(&tmp)?;
+    owner.dirs(data_dir, &tmp);
+    let copy = tmp.join(format!("site-{}.db", crate::ids::new_id()));
+    let _remove = RemoveOnDrop(copy.clone());
+    let target = copy
+        .to_str()
+        .ok_or_else(|| TransferError::Invalid(BAD_DIR.into()))?
+        .to_string();
+    let migration: i64 =
+        sqlx::query_scalar(r#"SELECT COALESCE(MAX("version"), 0) FROM "_sqlx_migrations""#)
+            .fetch_one(pool)
+            .await?;
+    // One read snapshot, on a connection of its own: writers go on (WAL).
+    sqlx::query("VACUUM INTO ?")
+        .bind(target)
+        .execute(pool)
+        .await?;
+    let manifest = SiteManifest {
+        format: FORMAT.into(),
+        version: VERSION,
+        app_version: env!("CARGO_PKG_VERSION").into(),
+        created_at: crate::ids::now_iso(),
+        migration,
+    };
+    let (data_dir, out_dir) = (data_dir.to_path_buf(), out_dir.to_path_buf());
+    blocking(move || {
+        std::fs::create_dir_all(&out_dir)?;
+        let owner = if out_dir.starts_with(&data_dir) {
+            owner.dirs(&data_dir, &out_dir);
+            owner
+        } else {
+            Owner::of(&out_dir)
+        };
+        let (name, stamp) = free_name(&out_dir)?;
+        let path = out_dir.join(&name);
+        let part = out_dir.join(format!("{name}.part"));
+        if let Err(e) = write_site_zip(&part, &manifest, &copy, &data_dir, &out_dir, owner) {
+            let _ = std::fs::remove_file(&part);
+            return Err(e);
+        }
+        if let Err(e) = std::fs::rename(&part, &path) {
+            let _ = std::fs::remove_file(&part);
+            return Err(e.into());
+        }
+        Ok(SiteBackup {
+            size: std::fs::metadata(&path)?.len(),
+            created_at: created_at(&stamp).unwrap_or_else(crate::ids::now_iso),
+            name,
+            path,
+        })
+    })
+    .await
+}
+
+/// A name not taken in `dir` (a backup in the same second waits for the
+/// next one).
+fn free_name(dir: &Path) -> Result<(String, String), TransferError> {
+    for _ in 0..5 {
+        let stamp = local_stamp();
+        let name = format!("{PREFIX}{stamp}.zip");
+        if !dir.join(&name).exists() && !dir.join(format!("{name}.part")).exists() {
+            return Ok((name, stamp));
+        }
+        std::thread::sleep(Duration::from_millis(1000));
+    }
+    Err(TransferError::Io(io::Error::from(
+        io::ErrorKind::AlreadyExists,
+    )))
+}
+
+fn write_site_zip(
+    out: &Path,
+    manifest: &SiteManifest,
+    db_copy: &Path,
+    data_dir: &Path,
+    out_dir: &Path,
+    owner: Owner,
+) -> Result<(), TransferError> {
+    let opts = SimpleFileOptions::default()
+        .compression_method(CompressionMethod::Deflated)
+        .large_file(true);
+    let file = File::create(out)?;
+    owner.file(&file);
+    let mut z = ZipWriter::new(BufWriter::new(file));
+    z.start_file(MANIFEST, opts).map_err(zip_err)?;
+    serde_json::to_writer(&mut z, manifest).map_err(|_| bad())?;
+    z.start_file(DB, opts).map_err(zip_err)?;
+    io::copy(&mut File::open(db_copy)?, &mut z)?;
+    let config = data_dir.join(CONFIG);
+    if std::fs::symlink_metadata(&config).is_ok_and(|m| m.is_file()) {
+        z.start_file(CONFIG, opts).map_err(zip_err)?;
+        io::copy(&mut File::open(&config)?, &mut z)?;
+    }
+    // The destination folder is never saved into itself.
+    let skip = std::fs::canonicalize(out_dir).ok();
+    for tree in TREES {
+        add_tree(&mut z, &data_dir.join(tree), tree, skip.as_deref(), opts)?;
+    }
+    let file = z
+        .finish()
+        .map_err(zip_err)?
+        .into_inner()
+        .map_err(|e| e.into_error())?;
+    file.sync_all()?;
+    Ok(())
+}
+
+/// Adds the regular files under `dir` as `<prefix>/<relative path>`
+/// (symlinks and temporary files left aside).
+fn add_tree<W: Write + io::Seek>(
+    z: &mut ZipWriter<W>,
+    dir: &Path,
+    prefix: &str,
+    skip: Option<&Path>,
+    opts: SimpleFileOptions,
+) -> Result<(), TransferError> {
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return Ok(());
+    };
+    let mut entries: Vec<_> = entries.flatten().collect();
+    entries.sort_by_key(|e| e.file_name());
+    for e in entries {
+        let Ok(name) = e.file_name().into_string() else {
+            continue;
+        };
+        let Ok(kind) = e.file_type() else {
+            continue;
+        };
+        let rel = format!("{prefix}/{name}");
+        if kind.is_dir() {
+            let path = e.path();
+            if skip.is_some_and(|s| std::fs::canonicalize(&path).is_ok_and(|p| p == s)) {
+                continue;
+            }
+            add_tree(z, &path, &rel, skip, opts)?;
+        } else if kind.is_file() {
+            let temporary = [".part", ".tmp", ".part-transfer"]
+                .iter()
+                .any(|s| name.ends_with(s));
+            if temporary || !safe_rel(&rel) {
+                continue;
+            }
+            z.start_file(rel.as_str(), opts).map_err(zip_err)?;
+            io::copy(&mut File::open(e.path())?, z)?;
+        }
+    }
+    Ok(())
+}
+
+/// Creates a backup in the folder of the settings, then applies the
+/// retention. A folder set but missing is an error (never created: it may
+/// be an unmounted share).
+pub async fn run_backup(st: &AppState, s: &SiteSettings) -> Result<SiteBackup, TransferError> {
+    let dir = backup_dir(&st.data_dir, s);
+    if s.dir.is_some() && !dir.is_dir() {
+        return Err(TransferError::Invalid(BAD_DIR.into()));
+    }
+    let backup = create_site_backup(&st.pool, &st.data_dir, &dir).await?;
+    let keep = s.keep;
+    blocking(move || Ok(prune_site_backups(&dir, keep))).await?;
+    Ok(backup)
+}
+
+/// Starts the daily backups: every minute, a backup when it is due
+/// ([`is_due`]); a failure is tried again an hour later.
+pub fn spawn_scheduler(st: AppState) {
+    tokio::spawn(async move {
+        let mut failed: Option<Instant> = None;
+        loop {
+            tokio::time::sleep(TICK).await;
+            let s = load_settings(&st.pool).await;
+            if !s.enabled || failed.is_some_and(|t| t.elapsed() < RETRY) {
+                continue;
+            }
+            let dir = backup_dir(&st.data_dir, &s);
+            let names = blocking(move || Ok(backup_names(&dir)))
+                .await
+                .unwrap_or_default();
+            if !is_due(jiff::Zoned::now().datetime(), s.hour, &names) {
+                continue;
+            }
+            match run_backup(&st, &s).await {
+                Ok(b) => {
+                    failed = None;
+                    tracing::info!(name = b.name, size = b.size, "automatic site backup");
+                }
+                Err(e) => {
+                    failed = Some(Instant::now());
+                    tracing::warn!("automatic site backup: {e}");
+                }
+            }
+        }
+    });
+}
+
+// ── Verification ────────────────────────────────────────────────────────────
+
+fn open(path: &Path) -> Result<ZipArchive<File>, TransferError> {
+    ZipArchive::new(File::open(path)?).map_err(zip_err)
+}
+
+/// Checks the entry names (safe relative paths), the total declared size,
+/// the manifest and the presence of the base.
+fn check(z: &mut ZipArchive<File>) -> Result<SiteManifest, TransferError> {
+    let mut total: u64 = 0;
+    let mut has_db = false;
+    for i in 0..z.len() {
+        let e = z.by_index_raw(i).map_err(zip_err)?;
+        total = total.saturating_add(e.size());
+        let name = e.name().map_err(zip_err)?;
+        let rel = name.strip_suffix('/').unwrap_or(&name);
+        if !safe_rel(rel) {
+            return Err(bad());
+        }
+        has_db |= rel == DB && !e.is_dir();
+    }
+    if total > MAX_TOTAL {
+        return Err(TransferError::Invalid("Archive trop volumineuse.".into()));
+    }
+    let m: Value = {
+        let e = z.by_name(MANIFEST).map_err(zip_err)?;
+        let size = e.size();
+        serde_json::from_reader(io::BufReader::new(e.take(size))).map_err(|_| bad())?
+    };
+    if m.get("format").and_then(Value::as_str) != Some(FORMAT) {
+        return Err(TransferError::Invalid(
+            "Ce fichier n'est pas une sauvegarde du site Strata Arkyo.".into(),
+        ));
+    }
+    if m.get("version").and_then(Value::as_u64).unwrap_or(0) > u64::from(VERSION) {
+        return Err(TransferError::Invalid(
+            "Cette sauvegarde vient d'une version plus récente de Strata Arkyo.".into(),
+        ));
+    }
+    let manifest: SiteManifest = serde_json::from_value(m).map_err(|_| bad())?;
+    if !has_db {
+        return Err(bad());
+    }
+    Ok(manifest)
+}
+
+/// Copies exactly the declared `size` bytes of `entry` to `out`, then reads
+/// it to its end (which checks its CRC).
+fn copy_entry(entry: &mut impl Read, size: u64, out: &mut impl Write) -> Result<(), TransferError> {
+    let n = io::copy(&mut entry.take(size), out).map_err(|_| bad())?;
+    let mut more = [0u8; 1];
+    if n != size || entry.read(&mut more).map_err(|_| bad())? != 0 {
+        return Err(bad());
+    }
+    Ok(())
+}
+
+/// Opens the base read-only: a SQLite file holding the migrations table,
+/// whose quick check passes.
+fn check_base(path: &Path) -> Result<(), TransferError> {
+    let mut head = [0u8; 16];
+    File::open(path)?.read_exact(&mut head).map_err(|_| bad())?;
+    if &head != b"SQLite format 3\0" {
+        return Err(bad());
+    }
+    let path = path.to_path_buf();
+    // A runtime of its own, on a thread of its own: callable from anywhere
+    // (CLI, blocking task, test).
+    let ok = std::thread::spawn(move || -> Result<bool, String> {
+        let rt = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .map_err(|e| e.to_string())?;
+        rt.block_on(async {
+            use sqlx::{Connection, SqliteConnection};
+            let opts = sqlx::sqlite::SqliteConnectOptions::new()
+                .filename(&path)
+                .read_only(true);
+            let mut c = SqliteConnection::connect_with(&opts)
+                .await
+                .map_err(|e| e.to_string())?;
+            let tables: i64 = sqlx::query_scalar(
+                "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = '_sqlx_migrations'",
+            )
+            .fetch_one(&mut c)
+            .await
+            .map_err(|e| e.to_string())?;
+            let check: String = sqlx::query_scalar("PRAGMA quick_check")
+                .fetch_one(&mut c)
+                .await
+                .map_err(|e| e.to_string())?;
+            let _ = c.close().await;
+            Ok(tables == 1 && check == "ok")
+        })
+    })
+    .join();
+    match ok {
+        Ok(Ok(true)) => Ok(()),
+        Ok(Err(e)) => {
+            tracing::warn!("site backup base unreadable: {e}");
+            Err(bad())
+        }
+        _ => Err(bad()),
+    }
+}
+
+/// Checks a site archive: format, safe paths, and a base SQLite opens
+/// read-only (from a copy extracted to the temporary folder).
+pub fn verify_site_archive(path: &Path) -> Result<SiteManifest, TransferError> {
+    let mut z = open(path)?;
+    let manifest = check(&mut z)?;
+    let tmp = std::env::temp_dir().join(format!("arkyo-verify-{}.db", crate::ids::new_id()));
+    let _remove = RemoveOnDrop(tmp.clone());
+    {
+        let mut e = z.by_name(DB).map_err(zip_err)?;
+        let size = e.size();
+        let mut f = BufWriter::new(File::create(&tmp)?);
+        copy_entry(&mut e, size, &mut f)?;
+        f.flush()?;
+    }
+    check_base(&tmp)?;
+    Ok(manifest)
+}
+
+// ── Restore ─────────────────────────────────────────────────────────────────
+
+/// Checks `archive` and copies it to `<data>/restore-pending.zip`, applied
+/// at the next start.
+pub fn stage_restore(data_dir: &Path, archive: &Path) -> Result<SiteManifest, TransferError> {
+    stage(data_dir, archive, false)
+}
+
+/// [`stage_restore`] of a file of `<data>/tmp`, moved rather than copied.
+pub fn stage_restore_moving(
+    data_dir: &Path,
+    archive: &Path,
+) -> Result<SiteManifest, TransferError> {
+    stage(data_dir, archive, true)
+}
+
+fn stage(data_dir: &Path, archive: &Path, moving: bool) -> Result<SiteManifest, TransferError> {
+    let manifest = verify_site_archive(archive)?;
+    std::fs::create_dir_all(data_dir)?;
+    let dest = data_dir.join(PENDING);
+    if moving && std::fs::rename(archive, &dest).is_ok() {
+        return Ok(manifest);
+    }
+    let part = data_dir.join(format!("{PENDING}.part"));
+    let copied = (|| -> io::Result<()> {
+        let mut out = File::create(&part)?;
+        Owner::of(data_dir).file(&out);
+        io::copy(&mut File::open(archive)?, &mut out)?;
+        out.sync_all()?;
+        std::fs::rename(&part, &dest)
+    })();
+    if let Err(e) = copied {
+        let _ = std::fs::remove_file(&part);
+        return Err(e.into());
+    }
+    Ok(manifest)
+}
+
+/// Applies `<data>/restore-pending.zip` when there is one (at startup,
+/// before the base is opened); `Ok(false)` when there is none. On failure
+/// the data is put back as it was and the archive renamed
+/// `restore-failed-<horodatage>.zip`.
+pub fn apply_pending_restore(data_dir: &Path) -> Result<bool, TransferError> {
+    let pending = data_dir.join(PENDING);
+    if !pending.is_file() {
+        return Ok(false);
+    }
+    let stamp = local_stamp();
+    match apply(data_dir, &pending, &stamp) {
+        Ok(aside) => {
+            let _ = std::fs::remove_file(&pending);
+            tracing::info!("site backup restored; previous data in {}", aside.display());
+            Ok(true)
+        }
+        Err(e) => {
+            let failed = data_dir.join(format!("restore-failed-{stamp}.zip"));
+            if std::fs::rename(&pending, &failed).is_err() {
+                let _ = std::fs::remove_file(&pending);
+            }
+            tracing::error!("site restore failed, data kept: {e}");
+            Err(e)
+        }
+    }
+}
+
+/// A free `<data>/before-restore-<stamp>[-n]` folder.
+fn aside_dir(data_dir: &Path, stamp: &str) -> PathBuf {
+    let mut dir = data_dir.join(format!("before-restore-{stamp}"));
+    let mut n = 1;
+    while dir.exists() {
+        dir = data_dir.join(format!("before-restore-{stamp}-{n}"));
+        n += 1;
+    }
+    dir
+}
+
+/// Removes what is at `path` (a file, a symlink or a folder), if anything.
+fn remove_any(path: &Path) -> io::Result<()> {
+    match std::fs::symlink_metadata(path) {
+        Ok(m) if m.is_dir() => std::fs::remove_dir_all(path),
+        Ok(_) => std::fs::remove_file(path),
+        Err(e) if e.kind() == io::ErrorKind::NotFound => Ok(()),
+        Err(e) => Err(e),
+    }
+}
+
+/// Moves the items set aside back to their place.
+fn put_back(data_dir: &Path, aside: &Path, moved: &[&str]) {
+    for item in moved.iter().rev() {
+        if let Err(e) = std::fs::rename(aside.join(item), data_dir.join(item)) {
+            tracing::error!("cannot put {item} back from {}: {e}", aside.display());
+        }
+    }
+    // Only empty folders are left (`backups/`).
+    let _ = std::fs::remove_dir(aside.join("backups"));
+    let _ = std::fs::remove_dir(aside);
+}
+
+fn apply(data_dir: &Path, pending: &Path, stamp: &str) -> Result<PathBuf, TransferError> {
+    let mut z = open(pending)?;
+    check(&mut z)?;
+    let aside = aside_dir(data_dir, stamp);
+    std::fs::create_dir(&aside)?;
+    let owner = Owner::of(data_dir);
+    owner.dirs(data_dir, &aside);
+    let mut moved: Vec<&str> = Vec::new();
+    for item in REPLACED {
+        let src = data_dir.join(item);
+        if std::fs::symlink_metadata(&src).is_err() {
+            continue;
+        }
+        let dest = aside.join(item);
+        let res = match dest.parent() {
+            Some(parent) => std::fs::create_dir_all(parent),
+            None => Ok(()),
+        }
+        .and_then(|()| std::fs::rename(&src, &dest));
+        if let Err(e) = res {
+            put_back(data_dir, &aside, &moved);
+            return Err(e.into());
+        }
+        moved.push(item);
+    }
+    if let Err(e) = unpack(&mut z, data_dir, owner) {
+        for item in REPLACED {
+            if let Err(e) = remove_any(&data_dir.join(item)) {
+                tracing::error!("cannot clear {item} after a failed restore: {e}");
+            }
+        }
+        put_back(data_dir, &aside, &moved);
+        return Err(e);
+    }
+    Ok(aside)
+}
+
+/// Whether an entry of a site archive is restored (`manifest.json` and
+/// unknown entries are not).
+fn restored(name: &str) -> bool {
+    name == DB
+        || name == CONFIG
+        || TREES
+            .iter()
+            .any(|t| name.strip_prefix(t).is_some_and(|r| r.starts_with('/')))
+}
+
+fn unpack(z: &mut ZipArchive<File>, data_dir: &Path, owner: Owner) -> Result<(), TransferError> {
+    for i in 0..z.len() {
+        let mut e = z.by_index(i).map_err(zip_err)?;
+        let name = e.name().map_err(zip_err)?.to_string();
+        if !restored(&name) {
+            continue;
+        }
+        let rel = name.strip_suffix('/').unwrap_or(&name);
+        if !safe_rel(rel) {
+            return Err(bad());
+        }
+        let dest = data_dir.join(rel);
+        if e.is_dir() {
+            std::fs::create_dir_all(&dest)?;
+            owner.dirs(data_dir, &dest);
+            continue;
+        }
+        if let Some(parent) = dest.parent() {
+            std::fs::create_dir_all(parent)?;
+            owner.dirs(data_dir, parent);
+        }
+        let size = e.size();
+        let file = std::fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&dest)?;
+        owner.file(&file);
+        let mut out = BufWriter::new(file);
+        copy_entry(&mut e, size, &mut out)?;
+        out.flush()?;
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn backup_names_are_strict() {
+        assert!(is_backup_name("Arkyo-site-20261108-030000.zip"));
+        assert!(!is_backup_name("Arkyo-site-20261108-030000.zip.part"));
+        assert!(!is_backup_name("Arkyo-site-2026110-030000.zip"));
+        assert!(!is_backup_name("Arkyo-site-20261108_030000.zip"));
+        assert!(!is_backup_name("../Arkyo-site-20261108-030000.zip"));
+        assert!(!is_backup_name("Arkyo-site-2026110a-030000.zip"));
+    }
+
+    #[test]
+    fn restored_entries() {
+        assert!(restored("arkyo.db"));
+        assert!(restored("config.json"));
+        assert!(restored("uploads/a.png"));
+        assert!(restored("backups/projects/p/x.arkyo"));
+        assert!(!restored("manifest.json"));
+        assert!(!restored("backups/site/x.zip"));
+        assert!(!restored("uploadsx/a"));
+        assert!(!restored("arkyo.db-wal"));
+    }
+
+    #[test]
+    fn settings_validation() {
+        assert!(SiteSettings::default().is_valid());
+        let bad_hour = SiteSettings {
+            hour: 24,
+            ..SiteSettings::default()
+        };
+        assert!(!bad_hour.is_valid());
+        let relative = SiteSettings {
+            dir: Some("backups".into()),
+            ..SiteSettings::default()
+        };
+        assert!(!relative.is_valid());
+        let blank = SiteSettings {
+            dir: Some("  ".into()),
+            ..SiteSettings::default()
+        };
+        assert_eq!(blank.normalized().dir, None);
+    }
+}

@@ -44,6 +44,16 @@ pub async fn open(data_dir: &Path) -> anyhow::Result<SqlitePool> {
     Ok(pool)
 }
 
+/// The version of the latest migration this binary knows (the one a site
+/// backup records in its manifest).
+pub fn latest_migration() -> i64 {
+    sqlx::migrate!("./migrations")
+        .iter()
+        .map(|m| m.version)
+        .max()
+        .unwrap_or(0)
+}
+
 /// Starts a write transaction: `BEGIN IMMEDIATE` takes the write lock before
 /// the guards read, and a concurrent writer waits up to the 5 s
 /// `busy_timeout` instead of failing on a stale snapshot. The only entry

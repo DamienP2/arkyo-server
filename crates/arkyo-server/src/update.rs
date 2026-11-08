@@ -900,8 +900,20 @@ pub fn rollback(data_dir: &Path, outcome: &str) -> Result<String> {
 
 // -------------------------------------------------------------- restart ----
 
+/// Set by [`disable_restart`].
+static NO_RESTART: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// Turns [`restart_soon`] into a no-op for the rest of the process: the
+/// integration tests call the routes that restart in their own process.
+pub fn disable_restart() {
+    NO_RESTART.store(true, std::sync::atomic::Ordering::SeqCst);
+}
+
 /// Lets the HTTP answer leave, then restarts on the new binary.
 pub fn restart_soon() {
+    if NO_RESTART.load(std::sync::atomic::Ordering::SeqCst) {
+        return;
+    }
     std::thread::spawn(|| {
         std::thread::sleep(Duration::from_millis(800));
         restart_now();

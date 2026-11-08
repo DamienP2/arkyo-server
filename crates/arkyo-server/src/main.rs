@@ -1,5 +1,6 @@
 use arkyo_core::password;
 use arkyo_server::http::{self, AppState};
+use arkyo_server::transfer::site;
 use arkyo_server::{config, db, paths, service, update, users};
 
 use std::net::{IpAddr, SocketAddr};
@@ -30,6 +31,24 @@ enum Command {
     User {
         #[command(subcommand)]
         cmd: UserCmd,
+    },
+    /// Write a full backup of the site (base, uploads, settings, restore
+    /// points) and print its path. The service may keep running.
+    Backup {
+        /// Destination folder [default: the folder set in Système, else
+        /// <data>/backups/site].
+        #[arg(long)]
+        out: Option<PathBuf>,
+        #[arg(long, env = "ARKYO_DATA_DIR")]
+        data_dir: Option<PathBuf>,
+    },
+    /// Check a site backup and stage it: it replaces the data at the next
+    /// start of the service (the current data is set aside).
+    Restore {
+        /// The `Arkyo-site-….zip` file.
+        file: PathBuf,
+        #[arg(long, env = "ARKYO_DATA_DIR")]
+        data_dir: Option<PathBuf>,
     },
 }
 
@@ -135,6 +154,47 @@ enum UserCmd {
         #[arg(long, env = "ARKYO_DATA_DIR")]
         data_dir: Option<PathBuf>,
     },
+}
+
+async fn backup_command(out: Option<PathBuf>, data_dir: Option<PathBuf>) -> anyhow::Result<()> {
+    let dir = paths::cli_data_dir(data_dir)?;
+    if !dir.join("arkyo.db").is_file() {
+        anyhow::bail!("aucune base dans {}", dir.display());
+    }
+    #[cfg(unix)]
+    db::check_root_open(&dir)?;
+    let result = async {
+        let pool = db::open(&dir).await?;
+        let r = async {
+            let out = match out {
+                Some(out) => out,
+                None => site::backup_dir(&dir, &site::load_settings(&pool).await),
+            };
+            Ok::<_, anyhow::Error>(site::create_site_backup(&pool, &dir, &out).await?)
+        }
+        .await;
+        pool.close().await;
+        r
+    }
+    .await;
+    #[cfg(unix)]
+    db::restore_owner(&dir);
+    println!("{}", result?.path.display());
+    Ok(())
+}
+
+fn restore_command(file: PathBuf, data_dir: Option<PathBuf>) -> anyhow::Result<()> {
+    let dir = paths::cli_data_dir(data_dir)?;
+    let m = site::stage_restore(&dir, &file)?;
+    if m.migration > db::latest_migration() {
+        eprintln!(
+            "Attention : cette sauvegarde vient d'une version plus récente de Strata Arkyo ({}). \
+             Elle sera ouverte telle quelle ; mettez le serveur à jour dès que possible.",
+            m.app_version
+        );
+    }
+    println!("Restauration prête : elle sera appliquée au prochain démarrage du service.");
+    Ok(())
 }
 
 fn prompt_password() -> anyhow::Result<String> {
@@ -307,6 +367,13 @@ async fn serve(
 ) -> anyhow::Result<()> {
     // A fresh update that keeps failing is rolled back here.
     update::startup_guard(&dir);
+    // A staged site restore replaces the data before the base is opened
+    // (Windows cannot move an open base); on failure the data stays.
+    match site::apply_pending_restore(&dir) {
+        Ok(true) => tracing::info!("site backup restored"),
+        Ok(false) => {}
+        Err(e) => tracing::error!("site restore not applied: {e}"),
+    }
     let cfg = config::Config::load(&dir);
     let pool = db::open(&dir).await?;
     // The service always writes config.json: it marks its data directory for
@@ -327,6 +394,7 @@ async fn serve(
     update::confirm_after(dir.clone(), std::time::Duration::from_secs(60));
     update::spawn_auto_check(dir.clone());
     arkyo_server::transfer::points::spawn_scheduler(state.clone());
+    site::spawn_scheduler(state.clone());
     tracing::info!("listening on http://{addr} (data dir {})", dir.display());
     axum::serve(
         listener,
@@ -438,6 +506,10 @@ fn main() -> anyhow::Result<()> {
         None => run(cli.run),
         Some(Command::Run(args)) => run(args),
         Some(Command::User { cmd }) => tokio::runtime::Runtime::new()?.block_on(user_command(cmd)),
+        Some(Command::Backup { out, data_dir }) => {
+            tokio::runtime::Runtime::new()?.block_on(backup_command(out, data_dir))
+        }
+        Some(Command::Restore { file, data_dir }) => restore_command(file, data_dir),
         Some(Command::Service(cmd)) => {
             if let Err(e) = service_command(cmd) {
                 eprintln!("error: {e:#}");

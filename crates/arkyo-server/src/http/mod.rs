@@ -258,6 +258,26 @@ pub fn router(state: AppState) -> Router {
             "/system/backups/settings/projects",
             get(backups::point_settings).put(backups::set_point_settings),
         )
+        .route(
+            "/system/backups/site",
+            get(backups::site_list).post(backups::site_create),
+        )
+        .route(
+            "/system/backups/site/restore",
+            post(backups::site_restore).layer(DefaultBodyLimit::max(backups::MAX_SITE_RESTORE)),
+        )
+        .route(
+            "/system/backups/site/{name}",
+            axum::routing::delete(backups::site_delete),
+        )
+        .route(
+            "/system/backups/site/{name}/download",
+            get(backups::site_download),
+        )
+        .route(
+            "/system/backups/settings/site",
+            put(backups::set_site_settings),
+        )
         .merge(parametres::router())
         .merge(admin::router())
         .merge(catalogue::router())

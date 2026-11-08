@@ -52,7 +52,7 @@ fn zip_err(_: zip::result::ZipError) -> TransferError {
 }
 
 /// An upload path (relative to `<data>/uploads`) that stays inside it.
-fn safe_rel(rel: &str) -> bool {
+pub(crate) fn safe_rel(rel: &str) -> bool {
     !rel.is_empty()
         && !rel.contains('\\')
         && !rel.contains('\0')

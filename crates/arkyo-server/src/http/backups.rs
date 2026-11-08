@@ -14,6 +14,11 @@
 //! `projects`, `projects/{id}/points` (list, create),
 //! `projects/{id}/points/{pointId}` (delete, `restore`, `download`) and
 //! `settings/projects`.
+//!
+//! Backups of the site (§6), under `/api/system/backups/`: `site` (list,
+//! create), `site/{name}` (delete), `site/{name}/download`, `site/restore`
+//! (raw body = the archive, checked, staged, then the server restarts) and
+//! `settings/site`.
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -35,10 +40,13 @@ use crate::ids::new_id;
 use crate::transfer::archive::read_archive;
 use crate::transfer::import::{export_to_file, import as run_import, preview, ImportOptions, Mode};
 use crate::transfer::points::{self, Point, PointKind, ProjectSettings};
+use crate::transfer::site::{self, SiteSettings};
 use crate::transfer::{RootKind, TransferError};
 
 /// Maximum size of an inspected file (2 Gio).
 pub const MAX_INSPECT: usize = 2 * 1024 * 1024 * 1024;
+/// Maximum size of a site backup sent for a restore (8 Gio).
+pub const MAX_SITE_RESTORE: usize = 8 * 1024 * 1024 * 1024;
 /// Lifetime of an inspected file not imported.
 const TMP_TTL: Duration = Duration::from_secs(3600);
 /// Age past which a file left `.importing` (a crash) is removed.
@@ -236,8 +244,9 @@ pub async fn objects(State(st): State<AppState>, CurrentUser(me): CurrentUser) -
 
 /// Removes the temporary files older than [`TMP_TTL`] (left by a restart):
 /// inspected files (`.arkyo`) and exports (`.export`). A file being
-/// imported (`.importing`) is only removed after [`STALE_IMPORT`], far
-/// beyond any import (left by a crash).
+/// imported (`.importing`) or a site backup being received (`.site`) is
+/// only removed after [`STALE_IMPORT`], far beyond any import or upload
+/// (left by a crash).
 fn sweep(dir: &Path) {
     let Ok(entries) = std::fs::read_dir(dir) else {
         return;
@@ -251,7 +260,7 @@ fn sweep(dir: &Path) {
             .and_then(|t| t.elapsed().ok());
         let ttl = match path.extension().and_then(|e| e.to_str()) {
             Some("arkyo" | "export") => TMP_TTL,
-            Some("importing") => STALE_IMPORT,
+            Some("importing" | "site") => STALE_IMPORT,
             _ => continue,
         };
         if old.is_some_and(|age| age > ttl) {
@@ -261,9 +270,9 @@ fn sweep(dir: &Path) {
 }
 
 /// Streams the body to `path`; `Err(response)` (the file removed) when it
-/// breaks or exceeds [`MAX_INSPECT`].
+/// breaks or exceeds `max` bytes.
 #[allow(clippy::result_large_err)]
-async fn receive(body: Body, path: &Path) -> Result<(), Response> {
+async fn receive(body: Body, path: &Path, max: usize) -> Result<(), Response> {
     let fail = |r: Response| {
         let _ = std::fs::remove_file(path);
         r
@@ -278,7 +287,7 @@ async fn receive(body: Body, path: &Path) -> Result<(), Response> {
             return Err(fail(error(StatusCode::BAD_REQUEST, "Envoi interrompu.")));
         };
         total = total.saturating_add(chunk.len());
-        if total > MAX_INSPECT {
+        if total > max {
             return Err(fail(error(
                 StatusCode::PAYLOAD_TOO_LARGE,
                 "Fichier trop volumineux.",
@@ -309,7 +318,7 @@ pub async fn inspect(
     sweep(&dir);
     let token = new_id();
     let path = dir.join(format!("{token}.arkyo"));
-    if let Err(r) = receive(body, &path).await {
+    if let Err(r) = receive(body, &path, MAX_INSPECT).await {
         return r;
     }
     let read = {
@@ -614,6 +623,172 @@ pub async fn set_point_settings(
             tracing::error!("restore points settings: {e}");
             server_error()
         }
+    }
+}
+
+// ── Backups of the site (§6) ─────────────────────────────────────────────────
+
+const NO_BACKUP: &str = "Sauvegarde introuvable";
+const BAD_DIR: &str = "Dossier inaccessible";
+
+/// `GET /api/system/backups/site`: `{ settings, backups, dir }`, the
+/// backups newest first.
+pub async fn site_list(State(st): State<AppState>, CurrentUser(me): CurrentUser) -> Response {
+    if let Err(r) = require(&me, &st.pool, Domain::Settings, Level::Admin).await {
+        return r;
+    }
+    let settings = site::load_settings(&st.pool).await;
+    let dir = site::backup_dir(&st.data_dir, &settings);
+    let listed = dir.clone();
+    let Ok(backups) = tokio::task::spawn_blocking(move || site::list_site_backups(&listed)).await
+    else {
+        return server_error();
+    };
+    Json(json!({
+        "settings": settings,
+        "backups": backups,
+        "dir": dir.to_string_lossy(),
+    }))
+    .into_response()
+}
+
+/// `POST /api/system/backups/site`: a backup now, in the folder of the
+/// settings (retention applied) → the backup.
+pub async fn site_create(State(st): State<AppState>, CurrentUser(me): CurrentUser) -> Response {
+    if let Err(r) = require(&me, &st.pool, Domain::Settings, Level::Admin).await {
+        return r;
+    }
+    let settings = site::load_settings(&st.pool).await;
+    match site::run_backup(&st, &settings).await {
+        Ok(b) => Json(b).into_response(),
+        Err(e) => transfer_error(e),
+    }
+}
+
+/// The file of the backup `name` in the folder of the settings.
+async fn site_file(st: &AppState, name: &str) -> Option<PathBuf> {
+    if !site::is_backup_name(name) {
+        return None;
+    }
+    let settings = site::load_settings(&st.pool).await;
+    let path = site::backup_dir(&st.data_dir, &settings).join(name);
+    path.is_file().then_some(path)
+}
+
+/// `GET /api/system/backups/site/{name}/download`.
+pub async fn site_download(
+    State(st): State<AppState>,
+    CurrentUser(me): CurrentUser,
+    AxumPath(name): AxumPath<String>,
+) -> Response {
+    if let Err(r) = require(&me, &st.pool, Domain::Settings, Level::Admin).await {
+        return r;
+    }
+    match site_file(&st, &name).await {
+        Some(path) => file_response(&path, &name, None).await,
+        None => error(StatusCode::NOT_FOUND, NO_BACKUP),
+    }
+}
+
+/// `DELETE /api/system/backups/site/{name}`.
+pub async fn site_delete(
+    State(st): State<AppState>,
+    CurrentUser(me): CurrentUser,
+    AxumPath(name): AxumPath<String>,
+) -> Response {
+    if let Err(r) = require(&me, &st.pool, Domain::Settings, Level::Admin).await {
+        return r;
+    }
+    let Some(path) = site_file(&st, &name).await else {
+        return error(StatusCode::NOT_FOUND, NO_BACKUP);
+    };
+    match std::fs::remove_file(&path) {
+        Ok(()) => StatusCode::NO_CONTENT.into_response(),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+            error(StatusCode::NOT_FOUND, NO_BACKUP)
+        }
+        Err(e) => {
+            tracing::error!("site backup delete: {e}");
+            server_error()
+        }
+    }
+}
+
+/// `PUT /api/system/backups/settings/site` `{ enabled, hour, dir, keep }`
+/// → the settings. A folder set must be an absolute path to an existing
+/// folder the server can write in (« Dossier inaccessible »); blank means
+/// the default.
+pub async fn set_site_settings(
+    State(st): State<AppState>,
+    CurrentUser(me): CurrentUser,
+    body: Bytes,
+) -> Response {
+    if let Err(r) = require(&me, &st.pool, Domain::Settings, Level::Admin).await {
+        return r;
+    }
+    let Ok(s) = serde_json::from_slice::<SiteSettings>(&body).map(SiteSettings::normalized) else {
+        return error(StatusCode::BAD_REQUEST, BAD_SETTINGS);
+    };
+    if s.hour >= 24 || !(1..=1000).contains(&s.keep) {
+        return error(StatusCode::BAD_REQUEST, BAD_SETTINGS);
+    }
+    if let Some(dir) = s.dir.clone() {
+        let ok = tokio::task::spawn_blocking(move || site::check_dir(&dir))
+            .await
+            .unwrap_or(false);
+        if !ok {
+            return error(StatusCode::BAD_REQUEST, BAD_DIR);
+        }
+    }
+    if !s.is_valid() {
+        return error(StatusCode::BAD_REQUEST, BAD_SETTINGS);
+    }
+    match site::save_settings(&st.pool, &s).await {
+        Ok(()) => Json(s).into_response(),
+        Err(e) => {
+            tracing::error!("site backup settings: {e}");
+            server_error()
+        }
+    }
+}
+
+/// `POST /api/system/backups/site/restore` (raw body = the archive, at
+/// most 8 Gio): checked, staged as `<data>/restore-pending.zip`, then the
+/// server restarts to apply it (as after an update) → `{ restarting: true }`.
+pub async fn site_restore(
+    State(st): State<AppState>,
+    CurrentUser(me): CurrentUser,
+    body: Body,
+) -> Response {
+    if let Err(r) = require(&me, &st.pool, Domain::Settings, Level::Admin).await {
+        return r;
+    }
+    let dir = tmp_dir(&st);
+    if std::fs::create_dir_all(&dir).is_err() {
+        return server_error();
+    }
+    let path = dir.join(format!("{}.site", new_id()));
+    let _guard = RemoveOnDrop(path.clone());
+    if let Err(r) = receive(body, &path, MAX_SITE_RESTORE).await {
+        return r;
+    }
+    let data_dir = st.data_dir.clone();
+    let staged =
+        tokio::task::spawn_blocking(move || site::stage_restore_moving(&data_dir, &path)).await;
+    match staged {
+        Ok(Ok(m)) => {
+            if m.migration > crate::db::latest_migration() {
+                tracing::warn!(
+                    app_version = m.app_version,
+                    "the site backup comes from a newer version; restored under the additive rule"
+                );
+            }
+            tracing::info!("site restore staged; restarting");
+            crate::update::restart_soon();
+            Json(json!({ "restarting": true })).into_response()
+        }
+        Ok(Err(e)) => transfer_error(e),
+        Err(_) => server_error(),
     }
 }
 
