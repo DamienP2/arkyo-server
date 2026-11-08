@@ -26,7 +26,7 @@ export type Manifest = {
   appVersion: string;
   createdAt: string;
   createdBy?: Author | null;
-  roots: { kind: RootKind; id: string; name?: string }[];
+  roots: { kind: RootKind; id: string; name: string }[];
   counts: Record<string, number>;
   label?: string | null;
 };
@@ -149,7 +149,8 @@ export async function downloadFile(
   document.body.appendChild(a);
   a.click();
   a.remove();
-  setTimeout(() => URL.revokeObjectURL(href), 0);
+  // Safari/Firefox peuvent annuler le téléchargement si l'URL est révoquée trop tôt.
+  setTimeout(() => URL.revokeObjectURL(href), 1000);
 }
 
 // ── Routes ───────────────────────────────────────────────────────────────────

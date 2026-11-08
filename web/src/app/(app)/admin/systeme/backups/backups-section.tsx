@@ -4,6 +4,7 @@
  */
 
 import { RestorePoints } from "./restore-points";
+import { TransferBlock } from "./transfer";
 
 export function BackupBlock({
   title,
@@ -27,6 +28,7 @@ export function BackupsSection() {
         Sauvegardes
       </h2>
       <RestorePoints />
+      <TransferBlock />
     </section>
   );
 }
