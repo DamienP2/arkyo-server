@@ -856,8 +856,9 @@ async fn panel_root_replace_keeps_its_users_and_copy_duplicates_it() {
         .await,
         Some(pn1.clone())
     );
-    // No restore point for anything but a project.
-    assert!(!t.file("backups").exists());
+    // No restore point for anything but a project (a safety copy instead).
+    assert!(!t.file("backups/projects").exists());
+    assert!(t.file("backups/objects").is_dir());
 
     let rep = run(&t, &file, modes(&[(&pn1, Mode::Copy)])).await.unwrap();
     assert_eq!(rep.roots[0].name, "Patch 1 (copie)");
@@ -1607,4 +1608,130 @@ async fn large_project_exports_quickly() {
     let secs = started.elapsed().as_secs_f64();
     assert_eq!(rep.roots[0].inserted["RackConnection"], 5001);
     assert!(secs < limit, "{secs:.2} s");
+}
+
+/// The `.arkyo` files of a folder, sorted.
+fn arkyo_files(dir: &Path) -> Vec<String> {
+    let mut v: Vec<String> = std::fs::read_dir(dir)
+        .map(|d| {
+            d.flatten()
+                .filter_map(|e| e.file_name().into_string().ok())
+                .filter(|n| n.ends_with(".arkyo"))
+                .collect()
+        })
+        .unwrap_or_default();
+    v.sort();
+    v
+}
+
+#[tokio::test]
+async fn replace_snapshot_is_taken_before_the_write_lock() {
+    let t = setup().await;
+    let p1 = cid("p1");
+    let file = export(&t, &[(RootKind::Project, &p1)], "p.arkyo").await;
+    // Another writer holds the write lock meanwhile.
+    let mut other = arkyo_server::db::begin_immediate(&t.e.pool).await.unwrap();
+    sqlx::query(r#"UPDATE "Project" SET "name" = 'Autre' WHERE "id" = ?"#)
+        .bind(&p1)
+        .execute(&mut *other)
+        .await
+        .unwrap();
+    let (st, owner, f) = (t.st.clone(), t.owner.clone(), file.clone());
+    let opts = modes(&[(&p1, Mode::Replace)]);
+    let job = tokio::spawn(async move { import(&st, &owner, &f, opts).await });
+    // The point « avant restauration » is written while the lock is held:
+    // the import does not hold the write lock while it writes it.
+    let dir = t.dir().join("backups/projects").join(&p1);
+    let mut found = false;
+    for _ in 0..60 {
+        if arkyo_files(&dir)
+            .iter()
+            .any(|n| n.ends_with("-avant-restauration.arkyo"))
+        {
+            found = true;
+            break;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+    }
+    other.commit().await.unwrap();
+    assert!(found, "no point written while another writer held the lock");
+    let report = job.await.unwrap().unwrap();
+    assert_eq!(report.roots[0].mode, Mode::Replace);
+}
+
+#[tokio::test]
+async fn import_publishes_root_and_rack_events() {
+    let t = setup().await;
+    let p1 = cid("p1");
+    let file = export(&t, &[(RootKind::Project, &p1)], "p.arkyo").await;
+    let mut rx = t.e.events.subscribe();
+    run(&t, &file, modes(&[(&p1, Mode::Replace)]))
+        .await
+        .unwrap();
+    let mut events = Vec::new();
+    while let Ok(m) = rx.try_recv() {
+        events.push(serde_json::from_str::<Value>(&m).unwrap());
+    }
+    assert!(
+        events.contains(&json!({
+            "type": "update", "entity": "project", "action": "updated",
+            "id": p1, "projectId": p1,
+        })),
+        "{events:?}"
+    );
+    for rack in [cid("ra"), cid("rb")] {
+        assert!(
+            events.contains(&json!({
+                "type": "update", "entity": "rack", "action": "updated",
+                "id": rack, "projectId": p1, "rackId": rack,
+            })),
+            "{rack}: {events:?}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn replace_of_a_panel_keeps_a_safety_copy() {
+    let t = setup().await;
+    let pn1 = cid("pn1");
+    let file = export(&t, &[(RootKind::Panel, &pn1)], "panel.arkyo").await;
+    sqlx::query(r#"UPDATE "Panel" SET "name" = 'Patch modifié' WHERE "id" = ?"#)
+        .bind(&pn1)
+        .execute(&t.e.pool)
+        .await
+        .unwrap();
+    let report = run(&t, &file, modes(&[(&pn1, Mode::Replace)]))
+        .await
+        .unwrap();
+    let dir = t.dir().join("backups/objects").join(format!("panel-{pn1}"));
+    let files = arkyo_files(&dir);
+    assert_eq!(files.len(), 1, "{files:?}");
+    assert!(files[0].ends_with("-avant-import.arkyo"), "{files:?}");
+    assert_eq!(
+        report.safety_copies,
+        [dir.join(&files[0]).to_string_lossy().into_owned()]
+    );
+    // The copy holds the state before the import.
+    let (m, b) = read_archive(&dir.join(&files[0])).unwrap();
+    assert_eq!(m.roots[0].name, "Patch modifié");
+    assert_eq!(b.tables["Panel"][0]["name"], "Patch modifié");
+    assert_eq!(
+        text(
+            &t.e.pool,
+            r#"SELECT "name" FROM "Panel" WHERE "id" = ?"#,
+            &pn1
+        )
+        .await
+        .as_deref(),
+        Some("Patch 1")
+    );
+    // Copy and insert take none; the last 10 copies are kept.
+    let r = run(&t, &file, modes(&[(&pn1, Mode::Copy)])).await.unwrap();
+    assert!(r.safety_copies.is_empty());
+    for _ in 0..11 {
+        run(&t, &file, modes(&[(&pn1, Mode::Replace)]))
+            .await
+            .unwrap();
+    }
+    assert_eq!(arkyo_files(&dir).len(), 10);
 }

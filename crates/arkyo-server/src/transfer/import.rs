@@ -5,7 +5,7 @@
 //! existing ones), then copies the missing uploads.
 
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -68,6 +68,9 @@ pub struct RootReport {
     pub mode: Mode,
     /// Rows written, by table.
     pub inserted: BTreeMap<String, usize>,
+    /// The racks of its graph written by the import (final ids).
+    #[serde(skip)]
+    pub racks: Vec<String>,
 }
 
 #[derive(Debug, Clone, Default, Serialize)]
@@ -78,6 +81,9 @@ pub struct Report {
     pub catalogue_added: BTreeMap<String, usize>,
     pub uploads_copied: usize,
     pub warnings: Vec<String>,
+    /// The safety copies of the containers, rigs and panels replaced
+    /// (paths on the server).
+    pub safety_copies: Vec<String>,
 }
 
 /// Columns holding a user id: an author unknown here becomes the importer.
@@ -658,6 +664,35 @@ pub async fn import(
     let path = archive_path.to_path_buf();
     let (manifest, bundle) = blocking(move || archive::read_archive(&path)).await?;
 
+    // Before the write transaction (other writers are not held while the
+    // current states are written to disk): a restore point of each project
+    // about to be replaced, a safety copy of each other root. Existence is
+    // checked on a plain connection; a root created or deleted in between
+    // is handled by the transaction below.
+    let mut safety_copies = Vec::new();
+    {
+        let mut conn = st.pool.acquire().await?;
+        let mut replaced = Vec::new();
+        for root in unique_roots(&bundle) {
+            if !plain_id(&root.id) {
+                return Err(TransferError::Invalid("Archive invalide.".into()));
+            }
+            if opts.modes.get(&root.id) == Some(&Mode::Replace)
+                && root_exists(&mut conn, root.kind, &root.id).await?
+            {
+                replaced.push((root.kind, root.id.clone()));
+            }
+        }
+        drop(conn);
+        for (kind, id) in replaced {
+            if kind == RootKind::Project {
+                points::snapshot_before_restore(st, &id, user).await?;
+            } else {
+                safety_copies.push(safety_copy(st, user, kind, &id).await?);
+            }
+        }
+    }
+
     let mut tx = crate::db::begin_immediate(&st.pool).await?;
     // Self references (RackSlot.parentSlotId, RackInventoryItem.hostItemId,
     // TenantEquipmentCategory.parentId) come in rowid order, not parents
@@ -699,14 +734,6 @@ pub async fn import(
             part,
             map,
         });
-    }
-
-    // A restore point of each project about to be replaced (its own read,
-    // on another connection: this transaction has written nothing yet).
-    for plan in &plans {
-        if plan.mode == Mode::Replace && plan.root.kind == RootKind::Project {
-            points::snapshot_before_restore(st, &plan.root.id, user).await?;
-        }
     }
 
     let mut known_users: HashSet<String> = sqlx::query_scalar(r#"SELECT "id" FROM "User""#)
@@ -858,15 +885,29 @@ pub async fn import(
             Some(json!({ "mode": plan.mode, "file": manifest.created_at })),
         )
         .await?;
+        let racks = plan
+            .part
+            .get("Rack")
+            .into_iter()
+            .flatten()
+            .filter(|i| !skip.contains(&("Rack".to_string(), **i)))
+            .filter_map(|i| text(&bundle.tables["Rack"][*i], "id"))
+            .map(|r| plan.final_id(r))
+            .collect();
         report.roots.push(RootReport {
             kind: plan.root.kind,
             id,
             name: plan.final_name(),
             mode: plan.mode,
             inserted,
+            racks,
         });
     }
     tx.commit().await?;
+    report.safety_copies = safety_copies
+        .iter()
+        .map(|p| p.to_string_lossy().into_owned())
+        .collect();
     for (table, n) in kept {
         ctx.warn(format!(
             "{n} ligne(s) de « {table} » existaient déjà ici et ont été gardées telles quelles."
@@ -894,8 +935,18 @@ pub async fn import(
             .push(format!("Fichiers envoyés non copiés : {e}")),
     }
 
+    publish(st, &report);
+    Ok(report)
+}
+
+/// The events of the routes that write the same rows: the root (lists),
+/// then every rack of its graph (`rack` `updated` with `rackId`, and
+/// `projectId` under a project: the Rack and Synoptique tabs reload).
+fn publish(st: &AppState, report: &Report) {
+    use crate::events::EventMeta;
     for r in &report.roots {
         let created = r.mode != Mode::Replace;
+        let project_id = (r.kind == RootKind::Project).then(|| r.id.clone());
         let (entity, action) = match r.kind {
             RootKind::Project => ("project", if created { "created" } else { "updated" }),
             RootKind::Rack => ("rack", if created { "created" } else { "updated" }),
@@ -903,9 +954,130 @@ pub async fn import(
             // Names of http/panels.rs.
             RootKind::Panel => ("panel", if created { "create" } else { "update" }),
         };
-        st.events.publish(entity, action, Some(&r.id));
+        st.events.publish_meta(
+            entity,
+            action,
+            Some(&r.id),
+            EventMeta {
+                project_id: project_id.clone(),
+                rack_id: (r.kind == RootKind::Rack).then(|| r.id.clone()),
+                ..EventMeta::default()
+            },
+        );
+        for rack in &r.racks {
+            if r.kind == RootKind::Rack && *rack == r.id {
+                continue;
+            }
+            st.events.publish_meta(
+                "rack",
+                "updated",
+                Some(rack),
+                EventMeta {
+                    project_id: project_id.clone(),
+                    rack_id: Some(rack.clone()),
+                    ..EventMeta::default()
+                },
+            );
+        }
     }
-    Ok(report)
+}
+
+// ── Safety copies ───────────────────────────────────────────────────────────
+
+/// Safety copies kept per object.
+pub const SAFETY_KEEP: usize = 10;
+const SAFETY_SUFFIX: &str = "-avant-import.arkyo";
+
+/// The folder of the safety copies of an object (`<data>/backups/objects/
+/// <kind>-<id>`).
+pub fn safety_dir(data_dir: &Path, kind: RootKind, id: &str) -> PathBuf {
+    let kind = match kind {
+        RootKind::Project => "project",
+        RootKind::Rack => "rack",
+        RootKind::Rig => "rig",
+        RootKind::Panel => "panel",
+    };
+    data_dir
+        .join("backups")
+        .join("objects")
+        .join(format!("{kind}-{id}"))
+}
+
+/// Exports the current state of a container, rig or panel about to be
+/// replaced (rows and files) to `<AAAAMMJJ-HHMMSS>-avant-import.arkyo` in
+/// its [`safety_dir`], then keeps the [`SAFETY_KEEP`] latest; returns the
+/// file.
+async fn safety_copy(
+    st: &AppState,
+    user: &User,
+    kind: RootKind,
+    id: &str,
+) -> Result<PathBuf, TransferError> {
+    let dir = safety_dir(&st.data_dir, kind, id);
+    let bundle = {
+        let mut tx = crate::db::begin_read(&st.pool).await?;
+        let bundle = collect(&mut tx, &[(kind, id.to_string())]).await;
+        tx.rollback().await?;
+        bundle?
+    };
+    let author = points::author_of(user);
+    let uploads = st.data_dir.join("uploads");
+    blocking(move || {
+        std::fs::create_dir_all(&dir).map_err(TransferError::Storage)?;
+        let stamp = jiff::Timestamp::now().strftime("%Y%m%d-%H%M%S").to_string();
+        let mut path = dir.join(format!("{stamp}{SAFETY_SUFFIX}"));
+        let mut n = 1;
+        while path.exists() {
+            path = dir.join(format!("{stamp}-{n}{SAFETY_SUFFIX}"));
+            n += 1;
+        }
+        let part = path.with_extension("arkyo.part");
+        let written = archive::write_archive(&bundle, Some(author), &uploads, &part)
+            .and_then(|_| std::fs::rename(&part, &path).map_err(TransferError::Storage));
+        if let Err(e) = written {
+            let _ = std::fs::remove_file(&part);
+            return Err(e);
+        }
+        prune_safety(&dir);
+        Ok(path)
+    })
+    .await
+}
+
+/// `<stamp>[-<n>]-avant-import.arkyo` → `(stamp, n)` (0 without counter).
+fn safety_order(name: &str) -> (String, u32) {
+    let base = name.strip_suffix(SAFETY_SUFFIX).unwrap_or(name);
+    let cut = base.len().min(15);
+    let (stamp, rest) = if base.is_char_boundary(cut) {
+        base.split_at(cut)
+    } else {
+        (base, "")
+    };
+    let n = rest
+        .strip_prefix('-')
+        .and_then(|n| n.parse().ok())
+        .unwrap_or(0);
+    (stamp.to_string(), n)
+}
+
+/// Keeps the [`SAFETY_KEEP`] latest safety copies of the folder.
+fn prune_safety(dir: &Path) {
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return;
+    };
+    let mut names: Vec<String> = entries
+        .flatten()
+        .filter_map(|e| e.file_name().into_string().ok())
+        .filter(|n| n.ends_with(SAFETY_SUFFIX))
+        .collect();
+    // Oldest first: the stamp, then the same-second counter.
+    names.sort_by_key(|n| safety_order(n));
+    let excess = names.len().saturating_sub(SAFETY_KEEP);
+    for name in &names[..excess] {
+        if let Err(e) = std::fs::remove_file(dir.join(name)) {
+            tracing::warn!("cannot remove safety copy {name}: {e}");
+        }
+    }
 }
 
 /// Deletes the rows of the root's current graph absent from the file, in
