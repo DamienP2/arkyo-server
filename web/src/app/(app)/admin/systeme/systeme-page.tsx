@@ -25,6 +25,7 @@ import { useToast } from "@/components/ui/toast";
 import { api, getApiErrorMessage } from "@/lib/api-client";
 import { usePageTitle } from "@/lib/hooks/use-page-title";
 import { useRouter } from "next/navigation"; // arkyo-server: interface Strata
+import { BackupsSection } from "./backups/backups-section";
 import { useInterface, type UiInterface } from "@/strata/interface-context"; // arkyo-server: interface Strata
 
 type SystemInfo = { version: string; dataDir: string; urls: string[] };
@@ -389,6 +390,8 @@ export default function SystemePage() {
             }}
           />
         </Section>
+
+        <BackupsSection />
       </div>
     </AdminTabLayout>
   );
