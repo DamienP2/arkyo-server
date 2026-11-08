@@ -557,7 +557,10 @@ pub async fn point_restore(
     }
 }
 
-/// `GET …/points/{pointId}/download`: the `.arkyo` file.
+/// `GET …/points/{pointId}/download`: the point as a self-contained
+/// `.arkyo` file, its rows with the files they reference taken from
+/// `<data>/uploads` (a point keeps rows only), written to a temporary file
+/// removed once sent.
 pub async fn point_download(
     State(st): State<AppState>,
     CurrentUser(me): CurrentUser,
@@ -569,13 +572,33 @@ pub async fn point_download(
     let Some((point, path)) = find(&st, &id, &point_id).await else {
         return no_point();
     };
+    let dir = tmp_dir(&st);
+    if tokio::fs::create_dir_all(&dir).await.is_err() {
+        return server_error();
+    }
+    let out = dir.join(format!("{}.export", new_id()));
+    let guard = RemoveOnDrop(out.clone());
+    let (uploads, packed) = (st.data_dir.join("uploads"), out.clone());
+    let repacked = tokio::task::spawn_blocking(move || {
+        crate::transfer::archive::repack_with_uploads(&path, &uploads, &packed)
+    })
+    .await;
+    match repacked {
+        Ok(Ok(_)) => {}
+        // Removed meanwhile (retention).
+        Ok(Err(TransferError::Io(e))) if e.kind() == std::io::ErrorKind::NotFound => {
+            return no_point()
+        }
+        Ok(Err(e)) => return transfer_error(e),
+        Err(_) => return server_error(),
+    }
     let base = ascii_name(&point.project_name);
     let base = if base.is_empty() {
         "Arkyo-projet".into()
     } else {
         base
     };
-    file_response(&path, &format!("{base}-{}.arkyo", point.id), None).await
+    file_response(&out, &format!("{base}-{}.arkyo", point.id), Some(guard)).await
 }
 
 /// `DELETE …/points/{pointId}`.

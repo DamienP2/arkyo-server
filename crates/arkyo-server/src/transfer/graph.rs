@@ -256,14 +256,7 @@ pub async fn collect(
         });
     }
     dependencies(conn, &mut acc).await?;
-    let mut uploads = BTreeSet::new();
-    for rows in acc.tables.values() {
-        for row in rows {
-            for v in row.values() {
-                scan_value(v, &mut uploads);
-            }
-        }
-    }
+    let uploads = referenced_uploads(&acc.tables);
     Ok(Bundle {
         roots: out_roots,
         tables: acc.tables,
@@ -439,6 +432,20 @@ async fn dependencies(conn: &mut SqliteConnection, acc: &mut Acc) -> Result<(), 
         .await?;
     }
     Ok(())
+}
+
+/// The upload paths referenced by a `"/uploads/…"` text value of the rows
+/// (also inside JSON), without the `/uploads/` prefix.
+pub(crate) fn referenced_uploads(tables: &BTreeMap<String, Vec<Row>>) -> BTreeSet<String> {
+    let mut uploads = BTreeSet::new();
+    for rows in tables.values() {
+        for row in rows {
+            for v in row.values() {
+                scan_value(v, &mut uploads);
+            }
+        }
+    }
+    uploads
 }
 
 fn scan_value(v: &Value, out: &mut BTreeSet<String>) {

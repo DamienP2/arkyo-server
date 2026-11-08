@@ -6,7 +6,7 @@ use std::sync::{Arc, RwLock};
 
 use arkyo_server::config::Config;
 use arkyo_server::http::AppState;
-use arkyo_server::transfer::archive::Author;
+use arkyo_server::transfer::archive::{read_archive, Author};
 use arkyo_server::transfer::points::{
     create_point, list_points, list_projects, load_settings, run_auto_pass, save_settings, Point,
     PointKind, ProjectSettings,
@@ -112,6 +112,35 @@ async fn name_of(pool: &SqlitePool, id: &str) -> Option<String> {
         .fetch_optional(pool)
         .await
         .unwrap()
+}
+
+/// `GET …/points/{point}/download` → the bytes (checks the headers).
+async fn download(t: &T, project: &str, point: &str) -> Vec<u8> {
+    let mut req = Request::builder()
+        .method("GET")
+        .uri(format!(
+            "/api/system/backups/projects/{project}/points/{point}/download"
+        ))
+        .header(header::COOKIE, format!("arkyo_session={}", t.token))
+        .body(Body::empty())
+        .unwrap();
+    req.extensions_mut()
+        .insert(ConnectInfo(LOCAL.parse::<std::net::SocketAddr>().unwrap()));
+    let res = t.e.app.clone().oneshot(req).await.unwrap();
+    assert_eq!(res.status(), StatusCode::OK);
+    assert_eq!(res.headers()[header::CONTENT_TYPE], "application/zip");
+    let disposition = res.headers()[header::CONTENT_DISPOSITION]
+        .to_str()
+        .unwrap()
+        .to_string();
+    assert!(disposition.contains(".arkyo"), "{disposition}");
+    res.into_body().collect().await.unwrap().to_bytes().to_vec()
+}
+
+/// The entry names of a zip file.
+fn entries(path: &std::path::Path) -> Vec<String> {
+    let z = zip::ZipArchive::new(std::fs::File::open(path).unwrap()).unwrap();
+    z.file_names().map(|n| n.unwrap().into_owned()).collect()
 }
 
 fn author(u: &User) -> Option<Author> {
@@ -319,28 +348,14 @@ async fn restore_point_creates_before_restore_point() {
     assert_eq!(list[1]["id"], point.as_str());
     assert_eq!(t.files(P1).len(), 2);
 
-    // Download: the file itself.
-    let mut req = Request::builder()
-        .method("GET")
-        .uri(format!(
-            "/api/system/backups/projects/{P1}/points/{point}/download"
-        ))
-        .header(header::COOKIE, format!("arkyo_session={}", t.token))
-        .body(Body::empty())
-        .unwrap();
-    req.extensions_mut()
-        .insert(ConnectInfo(LOCAL.parse::<std::net::SocketAddr>().unwrap()));
-    let res = t.e.app.clone().oneshot(req).await.unwrap();
-    assert_eq!(res.status(), StatusCode::OK);
-    assert_eq!(res.headers()[header::CONTENT_TYPE], "application/zip");
-    let disposition = res.headers()[header::CONTENT_DISPOSITION]
-        .to_str()
-        .unwrap()
-        .to_string();
-    assert!(disposition.contains(".arkyo"), "{disposition}");
-    let bytes = res.into_body().collect().await.unwrap().to_bytes();
-    let on_disk = std::fs::read(t.dir(P1).join(format!("{point}.arkyo"))).unwrap();
-    assert_eq!(bytes.as_ref(), on_disk.as_slice());
+    // Download: the point's rows.
+    let bytes = download(&t, P1, &point).await;
+    let file = t.e._dir.path().join("downloaded.arkyo");
+    std::fs::write(&file, &bytes).unwrap();
+    let (m, b) = read_archive(&file).unwrap();
+    let (m0, b0) = read_archive(&t.dir(P1).join(format!("{point}.arkyo"))).unwrap();
+    assert_eq!(m, m0);
+    assert_eq!(b.tables, b0.tables);
 
     // Delete: the file and its index entry go.
     let r = t
@@ -512,4 +527,83 @@ async fn point_id_traversal_is_404() {
     assert_eq!(r.body, json!({ "error": "Projet introuvable" }));
     assert_eq!(t.points(P1), [p]);
     assert!(t.e._dir.path().join("backups/secret.arkyo").exists());
+}
+
+#[tokio::test]
+async fn points_keep_rows_only_and_downloads_add_the_files() {
+    let t = setup().await;
+    exec(
+        &t.e.pool,
+        r#"INSERT INTO "ProjectDocument" ("id","projectId","name","url","uploadedById","uploadedAt") VALUES ('cd1000000000000000000000000','cp1000000000000000000000000','Plan','/uploads/documents/a.pdf','<u>',?)"#,
+        &t.owner.id,
+    )
+    .await;
+    let uploads = t.e._dir.path().join("uploads/documents");
+    std::fs::create_dir_all(&uploads).unwrap();
+    std::fs::write(uploads.join("a.pdf"), b"%PDF-plan").unwrap();
+
+    let p = create_point(&t.st, P1, PointKind::Manual, None, author(&t.owner))
+        .await
+        .unwrap()
+        .unwrap();
+    let file = t.dir(P1).join(format!("{}.arkyo", p.id));
+    // No file in the point; the manifest still lists the referenced path.
+    assert!(
+        entries(&file).iter().all(|n| !n.starts_with("uploads/")),
+        "{:?}",
+        entries(&file)
+    );
+    let (m, _) = read_archive(&file).unwrap();
+    assert!(m.uploads.contains("documents/a.pdf"), "{:?}", m.uploads);
+
+    // The download is self-contained: rows and the current file.
+    let bytes = download(&t, P1, &p.id).await;
+    let out = t.e._dir.path().join("dl.arkyo");
+    std::fs::write(&out, &bytes).unwrap();
+    let mut z = zip::ZipArchive::new(std::fs::File::open(&out).unwrap()).unwrap();
+    let mut pdf = Vec::new();
+    std::io::Read::read_to_end(&mut z.by_name("uploads/documents/a.pdf").unwrap(), &mut pdf)
+        .unwrap();
+    assert_eq!(pdf, b"%PDF-plan");
+    // The temporary file of the download is gone.
+    let left: Vec<_> = std::fs::read_dir(t.e._dir.path().join("tmp"))
+        .map(|d| d.flatten().map(|e| e.file_name()).collect())
+        .unwrap_or_default();
+    assert!(left.is_empty(), "{left:?}");
+
+    // A restore copies no file, and the « avant restauration » point holds
+    // rows only too.
+    rename(&t.e.pool, P1, "Renommé").await;
+    let r = t
+        .call(
+            "POST",
+            &format!("/api/system/backups/projects/{P1}/points/{}/restore", p.id),
+            None,
+        )
+        .await;
+    assert_eq!(r.status, StatusCode::OK, "{:?}", r.body);
+    assert_eq!(r.body["uploadsCopied"], 0);
+    let before = t
+        .points(P1)
+        .into_iter()
+        .find(|p| p.kind == PointKind::BeforeRestore)
+        .unwrap();
+    let file = t.dir(P1).join(format!("{}.arkyo", before.id));
+    assert!(entries(&file).iter().all(|n| !n.starts_with("uploads/")));
+}
+
+#[tokio::test]
+async fn catalogue_edit_creates_no_automatic_point() {
+    let t = setup().await;
+    assert_eq!(run_auto_pass(&t.st).await, 2);
+    exec(
+        &t.e.pool,
+        r#"INSERT INTO "TenantBrand" ("id","name","createdAt","updatedAt") VALUES ('cb1000000000000000000000000','Marque d''essai',?,?)"#,
+        &t.owner.id,
+    )
+    .await;
+    assert_eq!(run_auto_pass(&t.st).await, 0);
+    // A change of the project itself still does.
+    rename(&t.e.pool, P1, "Renommé").await;
+    assert_eq!(run_auto_pass(&t.st).await, 1);
 }

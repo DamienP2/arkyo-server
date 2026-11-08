@@ -1,7 +1,7 @@
 //! The `.arkyo` archive (spec 2026-11-07-sauvegardes-design §3): a zip with
 //! `manifest.json`, `data.json` and `uploads/<path>`.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs::File;
 use std::io::{self, Read, Write};
 use std::path::{Component, Path, PathBuf};
@@ -41,6 +41,10 @@ pub struct Manifest {
     /// so that a rebuilt index still has it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub label: Option<String>,
+    /// The upload paths the rows reference (under `<data>/uploads`), listed
+    /// even when the files are not in the archive (restore points).
+    #[serde(default, skip_serializing_if = "BTreeSet::is_empty")]
+    pub uploads: BTreeSet<String>,
 }
 
 fn bad() -> TransferError {
@@ -64,26 +68,51 @@ pub(crate) fn safe_rel(rel: &str) -> bool {
         && !rel.ends_with('/')
 }
 
-/// Writes `bundle` as an archive at `out`. A referenced upload missing from
-/// `uploads_dir` is skipped (the value stays in the rows).
+/// Writes `bundle` as an archive at `out`, with the referenced uploads. A
+/// referenced upload missing from `uploads_dir` is skipped (the value stays
+/// in the rows).
 pub fn write_archive(
     bundle: &Bundle,
     author: Option<Author>,
     uploads_dir: &Path,
     out: &Path,
 ) -> Result<Manifest, TransferError> {
-    write_archive_labeled(bundle, author, None, uploads_dir, out)
+    let manifest = new_manifest(bundle, author, None);
+    write_with_manifest(&manifest, &bundle.tables, Some(uploads_dir), out)?;
+    Ok(manifest)
 }
 
-/// [`write_archive`] with the label of a restore point in the manifest.
-pub fn write_archive_labeled(
+/// Writes the rows of `bundle` only (no `uploads/` entry; the manifest
+/// lists the referenced paths), with the label of a restore point.
+pub fn write_rows_only(
     bundle: &Bundle,
     author: Option<Author>,
     label: Option<String>,
+    out: &Path,
+) -> Result<Manifest, TransferError> {
+    let manifest = new_manifest(bundle, author, label);
+    write_with_manifest(&manifest, &bundle.tables, None, out)?;
+    Ok(manifest)
+}
+
+/// Rewrites the archive `src` at `out` with the files its rows reference,
+/// taken from `uploads_dir` (a restore point made self-contained for a
+/// download). The manifest is kept.
+pub fn repack_with_uploads(
+    src: &Path,
     uploads_dir: &Path,
     out: &Path,
 ) -> Result<Manifest, TransferError> {
-    let manifest = Manifest {
+    let (mut manifest, bundle) = read_archive(src)?;
+    manifest
+        .uploads
+        .extend(super::graph::referenced_uploads(&bundle.tables));
+    write_with_manifest(&manifest, &bundle.tables, Some(uploads_dir), out)?;
+    Ok(manifest)
+}
+
+fn new_manifest(bundle: &Bundle, author: Option<Author>, label: Option<String>) -> Manifest {
+    Manifest {
         format: FORMAT.into(),
         version: VERSION,
         app_version: env!("CARGO_PKG_VERSION").into(),
@@ -96,29 +125,42 @@ pub fn write_archive_labeled(
             .map(|(t, r)| (t.clone(), r.len()))
             .collect(),
         label,
-    };
+        uploads: bundle.uploads.clone(),
+    }
+}
+
+/// Writes `manifest`, the rows and, with `uploads_dir`, the files of
+/// `manifest.uploads` found there.
+fn write_with_manifest(
+    manifest: &Manifest,
+    tables: &BTreeMap<String, Vec<Row>>,
+    uploads_dir: Option<&Path>,
+    out: &Path,
+) -> Result<(), TransferError> {
     let opts = SimpleFileOptions::default()
         .compression_method(CompressionMethod::Deflated)
         .large_file(true);
     let mut z = ZipWriter::new(File::create(out)?);
     z.start_file("manifest.json", opts).map_err(zip_err)?;
-    serde_json::to_writer(&mut z, &manifest).map_err(|_| bad())?;
+    serde_json::to_writer(&mut z, manifest).map_err(|_| bad())?;
     z.start_file("data.json", opts).map_err(zip_err)?;
-    serde_json::to_writer(&mut z, &bundle.tables).map_err(|_| bad())?;
-    for rel in &bundle.uploads {
-        if !safe_rel(rel) {
-            continue;
+    serde_json::to_writer(&mut z, tables).map_err(|_| bad())?;
+    if let Some(uploads_dir) = uploads_dir {
+        for rel in &manifest.uploads {
+            if !safe_rel(rel) {
+                continue;
+            }
+            let src = uploads_dir.join(rel);
+            if !src.is_file() {
+                continue;
+            }
+            z.start_file(format!("uploads/{rel}"), opts)
+                .map_err(zip_err)?;
+            io::copy(&mut File::open(&src)?, &mut z)?;
         }
-        let src = uploads_dir.join(rel);
-        if !src.is_file() {
-            continue;
-        }
-        z.start_file(format!("uploads/{rel}"), opts)
-            .map_err(zip_err)?;
-        io::copy(&mut File::open(&src)?, &mut z)?;
     }
     z.finish().map_err(zip_err)?;
-    Ok(manifest)
+    Ok(())
 }
 
 fn open(path: &Path) -> Result<ZipArchive<File>, TransferError> {
@@ -248,10 +290,16 @@ impl Write for HashWriter {
 /// SHA-256 (hex) of the canonical `data.json`: tables sorted, rows sorted by
 /// `id` then by their JSON, keys sorted.
 pub fn data_digest(bundle: &Bundle) -> String {
+    data_digest_of(bundle, |_| true)
+}
+
+/// [`data_digest`] of the tables `keep` accepts.
+pub fn data_digest_of(bundle: &Bundle, keep: impl Fn(&str) -> bool) -> String {
     let mut w = HashWriter(Sha256::new());
     let canon: BTreeMap<&String, Vec<(String, String)>> = bundle
         .tables
         .iter()
+        .filter(|(t, _)| keep(t))
         .map(|(t, rows)| {
             let mut v: Vec<(String, String)> = rows
                 .iter()

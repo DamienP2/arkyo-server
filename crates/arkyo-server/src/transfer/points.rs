@@ -6,9 +6,13 @@
 //! a removed file leaves it, an unknown one is read). The points of a
 //! deleted project stay.
 //!
+//! A point holds the rows only (no `uploads/` entry, the manifest lists the
+//! referenced paths): the files stay in `<data>/uploads`, which the server
+//! never empties; a download repacks the point with the current files.
+//!
 //! Automatic points: every `intervalHours`, each project is exported; when
-//! the digest of its rows equals the one of its last point, nothing is
-//! written. Retention: the `keep` latest automatic and « avant
+//! the digest of its own rows ([`state_digest`]) equals the one of its last
+//! point, nothing is written. Retention: the `keep` latest automatic and « avant
 //! restauration » points of each project (counted together); the manual
 //! points are kept until deleted.
 
@@ -21,8 +25,9 @@ use serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
 
 use super::archive::{self, Author};
+use super::graph::{classification, Class};
 use super::import::blocking;
-use super::{collect, RootKind, TransferError};
+use super::{collect, Bundle, RootKind, TransferError};
 use crate::http::AppState;
 use crate::users::User;
 
@@ -83,7 +88,7 @@ pub struct Point {
     pub created_at: String,
     #[serde(default)]
     pub author: Option<Author>,
-    /// [`archive::data_digest`] of the point's rows.
+    /// [`state_digest`] of the point's rows.
     pub digest: String,
     /// Size of the file, in bytes.
     pub size: u64,
@@ -245,7 +250,7 @@ fn read_point(dir: &Path, project_id: &str, id: &str, size: u64) -> Option<Point
         label: m.label,
         created_at: m.created_at,
         author: m.created_by,
-        digest: archive::data_digest(&bundle),
+        digest: state_digest(&bundle),
         size,
     })
 }
@@ -341,6 +346,18 @@ pub fn find_point(data_dir: &Path, project_id: &str, point_id: &str) -> Option<(
 
 // ── Creation, deletion, retention ───────────────────────────────────────────
 
+/// The digest of the project's own state: its owned rows and the panels it
+/// uses, not the catalogue (a catalogue edit is not a change of the
+/// project). An unclassified table (a newer file) counts.
+pub fn state_digest(bundle: &Bundle) -> String {
+    archive::data_digest_of(bundle, |table| {
+        classification()
+            .iter()
+            .find(|(t, _)| *t == table)
+            .is_none_or(|(_, c)| matches!(c, Class::Owned | Class::Dependency))
+    })
+}
+
 pub fn author_of(user: &User) -> Author {
     Author {
         id: user.id.clone(),
@@ -382,8 +399,7 @@ pub async fn create_point(
         tx.rollback().await?;
         bundle?
     };
-    let digest = archive::data_digest(&bundle);
-    let uploads = st.data_dir.join("uploads");
+    let digest = state_digest(&bundle);
     let project_id = project_id.to_string();
     blocking(move || {
         let mut points = load(&dir, &project_id);
@@ -393,8 +409,9 @@ pub async fn create_point(
         std::fs::create_dir_all(&dir)?;
         let (id, path) = free_path(&dir, kind);
         let part = dir.join(format!("{id}.arkyo.part"));
-        let manifest = match archive::write_archive_labeled(&bundle, author, label, &uploads, &part)
-        {
+        // Rows only: the files stay in `<data>/uploads` (never deleted by
+        // the server); a download adds them.
+        let manifest = match archive::write_rows_only(&bundle, author, label, &part) {
             Ok(m) => m,
             Err(e) => {
                 let _ = std::fs::remove_file(&part);
