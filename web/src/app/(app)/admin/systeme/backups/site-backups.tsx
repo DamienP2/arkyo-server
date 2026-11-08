@@ -213,6 +213,23 @@ export function SiteBackups() {
     }
   }
 
+  async function cancelPending() {
+    const ok = await confirm({
+      title: "Annuler la restauration en attente ?",
+      description: "Le serveur gardera les données actuelles au prochain redémarrage.",
+      confirmLabel: "Annuler la restauration",
+      cancelLabel: "Garder",
+    });
+    if (!ok) return;
+    try {
+      await backupsApi.site.cancelPending();
+      toast.success("Restauration annulée");
+    } catch (e) {
+      toast.error(getApiErrorMessage(e));
+    }
+    await load();
+  }
+
   async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     e.target.value = "";
@@ -256,6 +273,30 @@ export function SiteBackups() {
 
   return (
     <BackupBlock title="Sauvegarde du site">
+      {data.pending && (
+        <div
+          role="status"
+          className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-[var(--border)] bg-[var(--muted)] px-3 py-2 text-xs"
+        >
+          <span>
+            Une restauration du site est en attente : elle sera appliquée au
+            prochain redémarrage du serveur.
+            {data.pending.backupCreatedAt && (
+              <span className="text-muted-foreground block">
+                Sauvegarde du {formatDate(data.pending.backupCreatedAt)} ·{" "}
+                {formatSize(data.pending.size)}
+              </span>
+            )}
+          </span>
+          <button
+            type="button"
+            onClick={() => void cancelPending()}
+            className={btn}
+          >
+            Annuler
+          </button>
+        </div>
+      )}
       <div className="space-y-1 text-sm">
         <div>
           {last
@@ -272,6 +313,12 @@ export function SiteBackups() {
               {status.error || "La dernière restauration a échoué."}
             </div>
           ))}
+        {data.lastError && (
+          <div role="alert" className="text-[var(--danger-text)] text-xs">
+            Échec de la sauvegarde automatique ({formatDate(data.lastError.at)}) :{" "}
+            {data.lastError.message}
+          </div>
+        )}
       </div>
       <div className="flex flex-wrap gap-2">
         <button

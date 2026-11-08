@@ -21,6 +21,9 @@ function api(extra = {}, list: Record<string, unknown> = {}) {
       body: { current: "0.1.0", repo: "r", autoCheck: true, previous: null, status: { phase: "idle", progress: 0, message: "", latest: null } },
     },
     "GET /api/system/backups/projects": { body: [] },
+    "GET /api/system/backups/settings/projects": {
+      body: { enabled: true, intervalHours: 1, keep: 48, lastError: null },
+    },
     "GET /api/system/transfer/objects": { body: { projects: [], racks: [], rigs: [], panels: [] } },
     "GET /api/system/backups/site": {
       body: { settings, backups, dir: "/d/backups/site", lastRestore: null, ...list },
@@ -36,6 +39,70 @@ describe("Système › sauvegarde du site", () => {
     expect(screen.getByText("Arkyo-site-2026-11-07T03-00-00.zip")).toBeInTheDocument();
     expect(screen.getByText(/2,0 Ko/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Télécharger Arkyo-site-2026-11-06T03-00-00.zip" })).toBeInTheDocument();
+  });
+
+  test("Télécharger : simple lien vers l'archive, sans fetch", async () => {
+    const clicked: string[] = [];
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (
+      this: HTMLAnchorElement,
+    ) {
+      clicked.push(this.getAttribute("href") ?? "");
+    });
+    const { fetchSpy } = renderApp("/admin/systeme", api());
+    fireEvent.click(
+      await screen.findByRole("button", { name: `Télécharger ${backups[0].name}` }),
+    );
+    expect(clicked).toEqual([
+      `/api/system/backups/site/${encodeURIComponent(backups[0].name)}/download`,
+    ]);
+    expect(fetchSpy.mock.calls.some(([u]) => String(u).includes("/download"))).toBe(false);
+  });
+
+  test("échec de la sauvegarde automatique : affiché en rouge", async () => {
+    renderApp(
+      "/admin/systeme",
+      api({}, { lastError: { at: "2026-11-08T03:00:00.000Z", message: "Dossier inaccessible" } }),
+    );
+    const err = await screen.findByText(/Dossier inaccessible/);
+    expect(err.className).toContain("--danger-text");
+    expect(err.textContent).toContain("Échec de la sauvegarde automatique");
+  });
+
+  test("restauration en attente : bandeau, Annuler → DELETE", async () => {
+    let pending = true;
+    const del = vi.fn(() => {
+      pending = false;
+      return { status: 204, body: null };
+    });
+    renderApp(
+      "/admin/systeme",
+      api({
+        "GET /api/system/backups/site": () => ({
+          body: {
+            settings,
+            backups,
+            dir: "/d/backups/site",
+            lastRestore: null,
+            pending: pending
+              ? { createdAt: "2026-11-08T09:00:00.000Z", backupCreatedAt: "2026-11-07T03:00:00.000Z", size: 2048 }
+              : null,
+          },
+        }),
+        "DELETE /api/system/backups/site/pending": del,
+      }),
+    );
+    expect(
+      await screen.findByText(
+        /Une restauration du site est en attente : elle sera appliquée au prochain redémarrage du serveur\./,
+      ),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Annuler" }));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Annuler la restauration" }));
+    await waitFor(() => expect(del).toHaveBeenCalledTimes(1));
+    await waitFor(() =>
+      expect(screen.queryByText(/Une restauration du site est en attente/)).toBeNull(),
+    );
   });
 
   test("Sauvegarder maintenant : POST, bouton désactivé pendant l'attente", async () => {

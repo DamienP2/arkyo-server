@@ -1,11 +1,13 @@
 /** Bloc « Points de restauration » (spec sauvegardes §5 et §7). */
 
 import { useCallback, useEffect, useState } from "react";
+import { z } from "zod";
 import {
   ActionButton,
   ActionSwitch,
 } from "@/components/synoptique/components/property-patterns";
 import { EmptyState } from "@/components/ui/empty-state";
+import { FormDialog, FormSection } from "@/components/ui/form-dialog";
 import {
   ArchiveRestore,
   ArrowLeft,
@@ -28,6 +30,7 @@ import {
   type PointKind,
   type PointProject,
   type ProjectSettings,
+  type ProjectSettingsState,
 } from "./api";
 import { BackupBlock } from "./backup-block";
 import { formatDate, formatSize } from "./format";
@@ -44,26 +47,29 @@ function authorOf(p: Point): string {
   return p.author?.name || p.author?.email || "";
 }
 
-function PointSettings() {
+const labelSchema = z.object({ label: z.string().max(200, "200 caractères au plus") });
+type LabelValues = z.infer<typeof labelSchema>;
+const NO_LABEL: LabelValues = { label: "" };
+
+function PointSettings({ settings }: { settings: ProjectSettings | null }) {
   const toast = useToast();
   const [open, setOpen] = useState(false);
-  const [s, setS] = useState<ProjectSettings | null>(null);
-  const [keep, setKeep] = useState("");
+  const [s, setS] = useState<ProjectSettings | null>(settings);
+  const [keep, setKeep] = useState(settings ? String(settings.keep) : "");
 
   useEffect(() => {
-    if (!open || s) return;
-    backupsApi.points
-      .settings()
-      .then((v) => {
-        setS(v);
-        setKeep(String(v.keep));
-      })
-      .catch((e) => toast.error(getApiErrorMessage(e)));
-  }, [open, s, toast]);
+    if (!settings) return;
+    setS(settings);
+    setKeep(String(settings.keep));
+  }, [settings]);
 
   async function save(next: ProjectSettings) {
     try {
-      const saved = await backupsApi.points.saveSettings(next);
+      const saved = await backupsApi.points.saveSettings({
+        enabled: next.enabled,
+        intervalHours: next.intervalHours,
+        keep: next.keep,
+      });
       setS(saved);
       setKeep(String(saved.keep));
     } catch (e) {
@@ -146,6 +152,8 @@ function ProjectPointsList({
   const confirm = useConfirm();
   const toast = useToast();
   const [points, setPoints] = useState<Point[] | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [warnings, setWarnings] = useState<string[]>([]);
 
   const load = useCallback(async () => {
     try {
@@ -160,27 +168,32 @@ function ProjectPointsList({
     void load();
   }, [load]);
 
-  async function create() {
-    try {
-      await backupsApi.points.create(project.id);
-      toast.success("Point créé");
-      await load();
-      onChanged();
-    } catch (e) {
-      toast.error(getApiErrorMessage(e));
-    }
+  /**
+   * Lève en cas d'échec : le dialogue reste ouvert avec l'erreur. Pendant
+   * l'envoi, FormDialog désactive « Créer » (pas de second envoi).
+   */
+  async function create({ label }: LabelValues) {
+    await backupsApi.points.create(project.id, label.trim() || undefined);
+    toast.success("Point créé");
+    await load();
+    onChanged();
   }
 
   async function restore(p: Point) {
+    const when = formatDate(p.createdAt);
     const ok = await confirm({
       title: "Restaurer ce point ?",
-      description: `Le projet sera remplacé par l'état du ${formatDate(p.createdAt)}. Un point de l'état actuel est créé avant.`,
+      description: project.deleted
+        ? `Le projet sera recréé à l'état du ${when}.`
+        : `Le projet sera remplacé par l'état du ${when}. Un point de l'état actuel est créé avant.`,
       confirmLabel: "Restaurer",
     });
     if (!ok) return;
+    setWarnings([]);
     try {
-      await backupsApi.points.restore(project.id, p.id);
+      const report = await backupsApi.points.restore(project.id, p.id);
       toast.success("Projet restauré");
+      setWarnings(report.warnings ?? []);
       await load();
       onChanged();
     } catch (e) {
@@ -233,8 +246,49 @@ function ProjectPointsList({
         <ActionButton
           icon={<Plus className="h-3.5 w-3.5" />}
           label="Créer un point"
-          onClick={() => void create()}
+          onClick={() => setCreating(true)}
         />
+      )}
+      <FormDialog<LabelValues>
+        open={creating}
+        onOpenChange={setCreating}
+        title="Créer un point"
+        icon={<History />}
+        schema={labelSchema}
+        defaultValues={NO_LABEL}
+        onSubmit={create}
+        submitLabel="Créer"
+        size="sm"
+      >
+        {(form) => (
+          <FormSection>
+            <label className="block space-y-1.5">
+              <span className="text-xs font-medium text-[var(--muted-foreground)]">
+                Libellé
+              </span>
+              <input
+                {...form.register("label")}
+                maxLength={200}
+                className="flex h-9 w-full rounded-lg border border-[var(--border)] bg-transparent px-3 text-sm focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:outline-none"
+              />
+            </label>
+            {form.formState.errors.label && (
+              <p className="text-[11px] text-[var(--danger-text)]">
+                {form.formState.errors.label.message as string}
+              </p>
+            )}
+          </FormSection>
+        )}
+      </FormDialog>
+      {warnings.length > 0 && (
+        <ul
+          aria-label="Avertissements de la restauration"
+          className="list-disc space-y-0.5 pl-4 text-xs text-[var(--warning-text)]"
+        >
+          {warnings.map((w, i) => (
+            <li key={i}>{w}</li>
+          ))}
+        </ul>
       )}
       {points === null ? (
         <LoadingState className="py-6" />
@@ -296,6 +350,7 @@ function ProjectPointsList({
 export function RestorePoints() {
   const toast = useToast();
   const [projects, setProjects] = useState<PointProject[] | null>(null);
+  const [settings, setSettings] = useState<ProjectSettingsState | null>(null);
   const [query, setQuery] = useState("");
   const [openId, setOpenId] = useState<string | null>(null);
 
@@ -312,12 +367,26 @@ export function RestorePoints() {
     void load();
   }, [load]);
 
+  // Réglages et dernier échec des points automatiques.
+  useEffect(() => {
+    backupsApi.points
+      .settings()
+      .then(setSettings)
+      .catch((e) => toast.error(getApiErrorMessage(e)));
+  }, [toast]);
+
   const open = projects?.find((p) => p.id === openId) ?? null;
   const q = query.trim().toLowerCase();
   const shown = (projects ?? []).filter((p) => p.name.toLowerCase().includes(q));
 
   return (
     <BackupBlock title="Points de restauration">
+      {settings?.lastError && (
+        <p role="alert" className="text-xs text-[var(--danger-text)]">
+          Échec des points automatiques ({formatDate(settings.lastError.at)}) :{" "}
+          {settings.lastError.message}
+        </p>
+      )}
       {projects === null ? (
         <LoadingState className="py-8" />
       ) : open ? (
@@ -345,34 +414,42 @@ export function RestorePoints() {
               className="w-full bg-transparent text-sm outline-none"
             />
           </div>
-          <ul className="divide-border/60 border-border/60 divide-y rounded-md border">
-            {shown.map((p) => (
-              <li key={p.id}>
-                <button
-                  type="button"
-                  onClick={() => setOpenId(p.id)}
-                  className="hover:bg-muted/40 flex w-full items-center justify-between gap-3 px-3 py-2 text-left"
-                >
-                  <span className="min-w-0 text-sm">
-                    <span className="font-medium">{p.name}</span>
-                    {p.deleted && (
-                      <span className="text-muted-foreground ml-2 text-xs">
-                        Supprimé
-                      </span>
-                    )}
-                  </span>
-                  <span className="text-muted-foreground shrink-0 text-xs">
-                    {p.lastPoint
-                      ? `${p.count} ${p.count > 1 ? "points" : "point"} · ${formatDate(p.lastPoint.createdAt)}`
-                      : "Aucun point"}
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
+          {shown.length === 0 ? (
+            <EmptyState
+              icon={<Search className="h-10 w-10" />}
+              title="Aucun projet ne correspond"
+              className="py-8"
+            />
+          ) : (
+            <ul className="divide-border/60 border-border/60 divide-y rounded-md border">
+              {shown.map((p) => (
+                <li key={p.id}>
+                  <button
+                    type="button"
+                    onClick={() => setOpenId(p.id)}
+                    className="hover:bg-muted/40 flex w-full items-center justify-between gap-3 px-3 py-2 text-left"
+                  >
+                    <span className="min-w-0 text-sm">
+                      <span className="font-medium">{p.name}</span>
+                      {p.deleted && (
+                        <span className="text-muted-foreground ml-2 text-xs">
+                          Supprimé
+                        </span>
+                      )}
+                    </span>
+                    <span className="text-muted-foreground shrink-0 text-xs">
+                      {p.lastPoint
+                        ? `${p.count} ${p.count > 1 ? "points" : "point"} · ${formatDate(p.lastPoint.createdAt)}`
+                        : "Aucun point"}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       )}
-      <PointSettings />
+      <PointSettings settings={settings} />
     </BackupBlock>
   );
 }

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Download, Upload } from "@/components/ui/icons";
 import { LoadingState } from "@/components/ui/loading-state";
 import { EmptyState } from "@/components/ui/empty-state";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import { useToast } from "@/components/ui/toast";
 import { ApiError, getApiErrorMessage } from "@/lib/api-client";
 import {
@@ -156,6 +157,16 @@ function ReportView({ report }: { report: ImportReport }) {
         <div className="text-xs">Éléments de catalogue ajoutés : {added}</div>
       )}
       <div className="text-xs">Fichiers copiés : {report.uploadsCopied}</div>
+      {(report.safetyCopies ?? []).length > 0 && (
+        <div className="text-xs">
+          État précédent gardé sur le serveur :
+          <ul className="text-muted-foreground mt-0.5 space-y-0.5 break-all">
+            {report.safetyCopies!.map((p) => (
+              <li key={p}>{p}</li>
+            ))}
+          </ul>
+        </div>
+      )}
       {report.warnings.length > 0 && (
         <ul className="text-[var(--warning-text)] list-disc space-y-0.5 pl-4 text-xs">
           {report.warnings.map((w, i) => (
@@ -169,6 +180,7 @@ function ReportView({ report }: { report: ImportReport }) {
 
 function ImportPanel({ onImported }: { onImported: () => void }) {
   const toast = useToast();
+  const confirm = useConfirm();
   const fileRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [session, setSession] = useState<{
@@ -200,6 +212,20 @@ function ImportPanel({ onImported }: { onImported: () => void }) {
 
   async function doImport() {
     if (!session) return;
+    const replaced = session.preview.roots.filter(
+      (r) => r.exists && modes[r.id] === "replace",
+    );
+    if (replaced.length > 0) {
+      const ok = await confirm({
+        title: "Remplacer ces éléments ?",
+        description: `Ces éléments seront remplacés par le contenu du fichier : ${replaced
+          .map((r) => `${KIND_LABEL[r.kind]} « ${r.name} »`)
+          .join(", ")}. Une copie de leur état actuel est gardée sur le serveur.`,
+        variant: "destructive",
+        confirmLabel: "Remplacer",
+      });
+      if (!ok) return;
+    }
     setBusy(true);
     try {
       setReport(await backupsApi.importFile(session.token, modes));

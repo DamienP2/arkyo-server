@@ -67,27 +67,59 @@ describe("Système › points de restauration", () => {
     expect(screen.getByText(/Avant restauration/)).toBeInTheDocument();
   });
 
-  test("Créer un point : POST puis rafraîchissement", async () => {
+  test("Créer un point : libellé facultatif, un seul POST, rafraîchissement", async () => {
     let created = 0;
     let lists = 0;
-    renderApp(
+    let release: () => void = () => {};
+    const { fetchSpy } = renderApp(
       "/admin/systeme",
       api({
-        "POST /api/system/backups/projects/p1/points": () => {
+        "POST /api/system/backups/projects/p1/points": async () => {
           created++;
-          return { body: point() };
+          await new Promise<void>((r) => {
+            release = r;
+          });
+          return { body: point({ label: "Avant le match" }) };
         },
         "GET /api/system/backups/projects/p1/points": () => {
           lists++;
-          return { body: [point()] };
+          return { body: [point({ label: "Avant le match" })] };
         },
       }),
     );
     await openFinale();
     const before = lists;
     fireEvent.click(screen.getByRole("button", { name: "Créer un point" }));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.change(within(dialog).getByLabelText("Libellé"), {
+      target: { value: "  Avant le match  " },
+    });
+    const submit = within(dialog).getByRole("button", { name: "Créer" });
+    fireEvent.click(submit);
+    fireEvent.click(submit);
     await waitFor(() => expect(created).toBe(1));
+    release();
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(created).toBe(1);
+    expect(sentBody(fetchSpy, "POST", "/api/system/backups/projects/p1/points")).toEqual({
+      label: "Avant le match",
+    });
     await waitFor(() => expect(lists).toBeGreaterThan(before));
+    expect(await screen.findByText(/Manuel · Avant le match · Admin/)).toBeInTheDocument();
+  });
+
+  test("Créer un point sans libellé : corps vide", async () => {
+    const { fetchSpy } = renderApp(
+      "/admin/systeme",
+      api({ "POST /api/system/backups/projects/p1/points": { body: point() } }),
+    );
+    await openFinale();
+    fireEvent.click(screen.getByRole("button", { name: "Créer un point" }));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Créer" }));
+    await waitFor(() =>
+      expect(sentBody(fetchSpy, "POST", "/api/system/backups/projects/p1/points")).toEqual({}),
+    );
   });
 
   test("Restaurer : confirmation puis POST puis toast", async () => {
@@ -110,6 +142,88 @@ describe("Système › points de restauration", () => {
     fireEvent.click(within(dialog).getByRole("button", { name: "Restaurer" }));
     await waitFor(() => expect(restored).toBe(true));
     expect(await screen.findByText("Projet restauré")).toBeInTheDocument();
+  });
+
+  test("Restaurer : les avertissements du rapport sont affichés", async () => {
+    renderApp(
+      "/admin/systeme",
+      api({
+        "POST /api/system/backups/projects/p1/points/20261107T100000Z-manuel/restore": {
+          body: {
+            roots: [],
+            catalogueAdded: {},
+            uploadsCopied: 0,
+            warnings: ["Le contenant « Baie A » est aussi utilisé par une autre régie : il garde son état actuel."],
+          },
+        },
+      }),
+    );
+    await openFinale();
+    fireEvent.click(screen.getAllByRole("button", { name: "Restaurer" })[0]);
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Restaurer" }));
+    expect(
+      await screen.findByText(/Le contenant « Baie A » est aussi utilisé/),
+    ).toBeInTheDocument();
+  });
+
+  test("Restaurer un projet supprimé : il est recréé", async () => {
+    renderApp(
+      "/admin/systeme",
+      api({
+        "GET /api/system/backups/projects/p2/points": {
+          body: [point({ projectId: "p2", projectName: "Ancien" })],
+        },
+      }),
+    );
+    fireEvent.click(await screen.findByRole("button", { name: /Ancien/ }));
+    fireEvent.click(await screen.findByRole("button", { name: "Restaurer" }));
+    const dialog = await screen.findByRole("dialog");
+    expect(dialog.textContent).toContain("Le projet sera recréé à l'état du");
+    expect(dialog.textContent).not.toContain("Un point de l'état actuel");
+  });
+
+  test("Télécharger : simple lien vers le fichier, sans fetch", async () => {
+    const clicked: { href: string; download: string }[] = [];
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (
+      this: HTMLAnchorElement,
+    ) {
+      clicked.push({ href: this.getAttribute("href") ?? "", download: this.download });
+    });
+    const { fetchSpy } = renderApp("/admin/systeme", api());
+    await openFinale();
+    fireEvent.click(screen.getAllByRole("button", { name: "Télécharger" })[0]);
+    await waitFor(() => expect(clicked.length).toBe(1));
+    expect(clicked[0].href).toBe(
+      "/api/system/backups/projects/p1/points/20261107T100000Z-manuel/download",
+    );
+    expect(
+      fetchSpy.mock.calls.some(([u]) => String(u).includes("/download")),
+    ).toBe(false);
+  });
+
+  test("recherche sans résultat : EmptyState", async () => {
+    renderApp("/admin/systeme", api());
+    fireEvent.change(await screen.findByLabelText("Rechercher un projet"), {
+      target: { value: "zzz" },
+    });
+    expect(await screen.findByText("Aucun projet ne correspond")).toBeInTheDocument();
+  });
+
+  test("échec des points automatiques : affiché en rouge", async () => {
+    renderApp(
+      "/admin/systeme",
+      api({
+        "GET /api/system/backups/settings/projects": {
+          body: {
+            ...settings,
+            lastError: { at: "2026-11-08T10:00:00.000Z", message: "Projet « Finale » : disque plein" },
+          },
+        },
+      }),
+    );
+    const err = await screen.findByText(/Projet « Finale » : disque plein/);
+    expect(err.className).toContain("--danger-text");
   });
 
   test("Supprimer : confirmation puis DELETE", async () => {

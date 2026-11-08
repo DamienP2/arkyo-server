@@ -89,6 +89,7 @@ describe("Système › exporter / importer", () => {
             catalogueAdded: { TenantBrand: 2 },
             uploadsCopied: 4,
             warnings: ["Fichier manquant"],
+            safetyCopies: ["/d/backups/objects/rack-r1/20261107-100000-avant-import.arkyo"],
           },
         },
       }),
@@ -104,6 +105,14 @@ describe("Système › exporter / importer", () => {
     expect(screen.queryByRole("radiogroup", { name: /Nouveau/ })).toBeNull();
     fireEvent.click(replace);
     fireEvent.click(screen.getByRole("button", { name: "Importer" }));
+    // Remplacer : confirmation listant les éléments remplacés.
+    const dialog = await screen.findByRole("dialog");
+    expect(dialog.textContent).toContain(
+      "Ces éléments seront remplacés par le contenu du fichier : Projet « Finale ».",
+    );
+    expect(dialog.textContent).toContain("Une copie de leur état actuel est gardée sur le serveur.");
+    expect(dialog.textContent).not.toContain("Nouveau");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Remplacer" }));
     await screen.findByText("Import terminé");
     expect(sentBody(fetchSpy, "POST", "/api/system/transfer/import")).toEqual({
       token: "tok",
@@ -113,6 +122,52 @@ describe("Système › exporter / importer", () => {
     expect(screen.getByText(/Marques 2/)).toBeInTheDocument();
     expect(screen.getByText("Fichiers copiés : 4")).toBeInTheDocument();
     expect(screen.getByText("Fichier manquant")).toBeInTheDocument();
+    expect(
+      screen.getByText("/d/backups/objects/rack-r1/20261107-100000-avant-import.arkyo"),
+    ).toBeInTheDocument();
+  });
+
+  test("Remplacer refusé à la confirmation : rien n'est importé", async () => {
+    let imported = false;
+    renderApp(
+      "/admin/systeme",
+      api({
+        "POST /api/system/transfer/inspect": { body: preview },
+        "POST /api/system/transfer/import": () => {
+          imported = true;
+          return { body: { roots: [], catalogueAdded: {}, uploadsCopied: 0, warnings: [] } };
+        },
+      }),
+    );
+    await screen.findByRole("button", { name: "Exporter (0)" });
+    pickFile();
+    const group = await screen.findByRole("radiogroup", { name: "Mode d'import de Finale" });
+    fireEvent.click(within(group).getAllByRole("radio")[0]);
+    fireEvent.click(screen.getByRole("button", { name: "Importer" }));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Annuler" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(imported).toBe(false);
+    expect(screen.getByRole("button", { name: "Importer" })).toBeInTheDocument();
+  });
+
+  test("Copie : import sans confirmation", async () => {
+    let imported = false;
+    renderApp(
+      "/admin/systeme",
+      api({
+        "POST /api/system/transfer/inspect": { body: preview },
+        "POST /api/system/transfer/import": () => {
+          imported = true;
+          return { body: { roots: [], catalogueAdded: {}, uploadsCopied: 0, warnings: [] } };
+        },
+      }),
+    );
+    await screen.findByRole("button", { name: "Exporter (0)" });
+    pickFile();
+    fireEvent.click(await screen.findByRole("button", { name: "Importer" }));
+    await waitFor(() => expect(imported).toBe(true));
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 
   test("fichier refusé : message du serveur en toast", async () => {

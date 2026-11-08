@@ -55,6 +55,8 @@ export type ImportReport = {
   catalogueAdded: Record<string, number>;
   uploadsCopied: number;
   warnings: string[];
+  /** Copies de l'état des contenants, régies et panels remplacés (chemins sur le serveur). */
+  safetyCopies?: string[];
 };
 
 export type PointKind = "auto" | "manual" | "beforeRestore";
@@ -82,6 +84,11 @@ export type ProjectSettings = {
   intervalHours: number;
   keep: number;
 };
+/** Dernier échec d'un mécanisme automatique, effacé au succès suivant. */
+export type LastError = { at: string; message: string };
+export type ProjectSettingsState = ProjectSettings & {
+  lastError: LastError | null;
+};
 
 export type SiteSettings = {
   enabled: boolean;
@@ -99,15 +106,37 @@ export type RestoreStatus = {
   backupCreatedAt?: string;
   pending?: { size: number; modifiedNs: number };
 };
+export type PendingRestore = {
+  createdAt: string;
+  backupCreatedAt?: string;
+  size: number;
+};
 export type SiteList = {
   settings: SiteSettings;
   backups: SiteBackup[];
   dir: string;
   lastRestore: RestoreStatus | null;
+  lastError?: LastError | null;
+  pending?: PendingRestore | null;
 };
 export type SiteRestoreResult = { restarting: boolean; warning?: string };
 
 // ── Téléchargement ───────────────────────────────────────────────────────────
+
+/**
+ * Télécharge `url` (GET, mêmes cookies) par une simple navigation : le
+ * navigateur écrit le fichier sur le disque au fil de l'eau, sans le garder
+ * en mémoire (sauvegardes du site de plusieurs Go). Le nom vient du
+ * `Content-Disposition` du serveur.
+ */
+export function navigateDownload(url: string): void {
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
 
 function fileNameOf(res: Response, fallback: string): string {
   const header = res.headers.get("content-disposition") ?? "";
@@ -116,8 +145,10 @@ function fileNameOf(res: Response, fallback: string): string {
 }
 
 /**
- * Télécharge `url` (mêmes cookies) : `fetch`, `Blob`, lien temporaire. Le nom
- * est celui du `Content-Disposition`, à défaut `fallbackName`.
+ * Télécharge la réponse d'une requête `fetch` (export : POST avec un corps),
+ * via un `Blob` et un lien temporaire. Le nom est celui du
+ * `Content-Disposition`, à défaut `fallbackName`. Les GET passent par
+ * {@link navigateDownload}.
  */
 export async function downloadFile(
   url: string,
@@ -188,15 +219,14 @@ export const backupsApi = {
         `${B}/projects/${enc(projectId)}/points/${enc(pointId)}/restore`,
       ),
     download: (projectId: string, pointId: string) =>
-      downloadFile(
+      navigateDownload(
         `${B}/projects/${enc(projectId)}/points/${enc(pointId)}/download`,
-        `${pointId}.arkyo`,
       ),
     remove: (projectId: string, pointId: string) =>
       api.delete<void>(
         `${B}/projects/${enc(projectId)}/points/${enc(pointId)}`,
       ),
-    settings: () => api.get<ProjectSettings>(`${B}/settings/projects`),
+    settings: () => api.get<ProjectSettingsState>(`${B}/settings/projects`),
     saveSettings: (s: ProjectSettings) =>
       api.put<ProjectSettings>(`${B}/settings/projects`, s),
   },
@@ -206,12 +236,14 @@ export const backupsApi = {
     list: () => api.get<SiteList>(`${B}/site`),
     create: () => api.post<SiteBackup>(`${B}/site`),
     download: (name: string) =>
-      downloadFile(`${B}/site/${enc(name)}/download`, name),
+      navigateDownload(`${B}/site/${enc(name)}/download`),
     remove: (name: string) => api.delete<void>(`${B}/site/${enc(name)}`),
     saveSettings: (s: SiteSettings) =>
       api.put<SiteSettings>(`${B}/settings/site`, s),
     /** Corps brut = l'archive ; le serveur redémarre ensuite. */
     restore: (file: Blob) =>
       api.post<SiteRestoreResult>(`${B}/site/restore`, file),
+    /** Annule une restauration en attente du prochain démarrage. */
+    cancelPending: () => api.delete<void>(`${B}/site/pending`),
   },
 };
