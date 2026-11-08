@@ -3,6 +3,7 @@
 mod admin;
 mod audit_read;
 mod auth;
+mod backups;
 mod catalogue;
 pub mod client_id;
 mod espace;
@@ -229,6 +230,13 @@ pub fn router(state: AppState) -> Router {
             post(system::update_upload).layer(DefaultBodyLimit::max(system::MAX_UPLOAD)),
         )
         .route("/system/update/rollback", post(system::update_rollback))
+        .route("/system/transfer/export", post(backups::export))
+        .route("/system/transfer/objects", get(backups::objects))
+        .route(
+            "/system/transfer/inspect",
+            post(backups::inspect).layer(DefaultBodyLimit::max(backups::MAX_INSPECT)),
+        )
+        .route("/system/transfer/import", post(backups::import))
         .merge(parametres::router())
         .merge(admin::router())
         .merge(catalogue::router())

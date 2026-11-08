@@ -11,6 +11,9 @@ use serde_json::Value;
 
 pub mod archive;
 pub mod graph;
+pub mod import;
+pub mod points;
+mod remap;
 pub mod rows;
 
 pub use graph::{classification, collect, owned_tables_in_insert_order, Class};

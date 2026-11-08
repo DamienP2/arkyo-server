@@ -54,6 +54,13 @@ pub async fn begin_immediate(
     pool.begin_with("BEGIN IMMEDIATE").await
 }
 
+/// Starts a read transaction (`BEGIN DEFERRED`): one consistent snapshot
+/// for a read made of many queries, such as the collection of an export.
+/// Never write through it (writes go through [`begin_immediate`]).
+pub async fn begin_read(pool: &SqlitePool) -> Result<Transaction<'static, Sqlite>, sqlx::Error> {
+    pool.begin_with("BEGIN DEFERRED").await
+}
+
 /// The base and its WAL companions.
 pub const DB_FILES: [&str; 3] = ["arkyo.db", "arkyo.db-wal", "arkyo.db-shm"];
 

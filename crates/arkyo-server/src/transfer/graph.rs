@@ -138,7 +138,7 @@ const REFERENTIALS: &[&str] = &[
 ];
 
 /// Tables of a project keyed by `projectId`.
-const PROJECT_TABLES: &[&str] = &[
+pub(crate) const PROJECT_TABLES: &[&str] = &[
     "TechnicalSheet",
     "ProjectDocument",
     "Task",
@@ -156,7 +156,7 @@ const PROJECT_TABLES: &[&str] = &[
 ];
 
 /// Tables of a container keyed by `rackId`.
-const RACK_TABLES: &[&str] = &[
+pub(crate) const RACK_TABLES: &[&str] = &[
     "RackInventoryItem",
     "RackSlot",
     "RackZone",
