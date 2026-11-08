@@ -1089,6 +1089,189 @@ async fn catalogue_unique_clash_uses_the_local_row() {
     );
 }
 
+#[tokio::test]
+async fn replace_nulls_a_reference_into_the_kept_rack() {
+    let t = setup().await;
+    let p1 = cid("p1");
+    let u = t.owner.id.clone();
+    for sql in [
+        r#"INSERT INTO "RigConfig" ("id","name","isTemplate","createdById","createdAt","updatedAt") VALUES ('<rgt>','Modèle',1,'<u>',?,?)"#,
+        r#"INSERT INTO "RigRack" ("id","rigConfigId","rackId","position") VALUES ('<rr9>','<rgt>','<ra>',0)"#,
+    ] {
+        exec(&t.e.pool, sql, &u).await;
+    }
+    let file = export(&t, &[(RootKind::Project, &p1)], "p.arkyo").await;
+    // The slot `pc1` starts from is removed from the shared rack (its
+    // children and `pc1` go with it, by cascade).
+    exec(
+        &t.e.pool,
+        r#"DELETE FROM "RackSlot" WHERE "id" = '<sa1>'"#,
+        &u,
+    )
+    .await;
+
+    let rep = run(&t, &file, modes(&[(&p1, Mode::Replace)]))
+        .await
+        .unwrap();
+    let from: (Option<String>, String) = sqlx::query_as(
+        r#"SELECT "fromSlotId", "fromRackId" FROM "ProjectConnection" WHERE "id" = ?"#,
+    )
+    .bind(cid("pc1"))
+    .fetch_one(&t.e.pool)
+    .await
+    .unwrap();
+    assert_eq!(from, (None, cid("ra")));
+    assert!(
+        rep.warnings.iter().any(|w| w
+            == "1 référence(s) de « ProjectConnection » visaient un élément qui n'existe pas ici : vidées."),
+        "{:?}",
+        rep.warnings
+    );
+    // The kept rack did not get its slot back.
+    assert_eq!(
+        count(
+            &t.e.pool,
+            &format!(
+                r#"SELECT COUNT(*) FROM "RackSlot" WHERE "id" = '{}'"#,
+                cid("sa1")
+            )
+        )
+        .await,
+        0
+    );
+}
+
+#[tokio::test]
+async fn rows_whose_required_parent_is_gone_are_skipped() {
+    let t = setup().await;
+    let p1 = cid("p1");
+    exec(
+        &t.e.pool,
+        r#"INSERT INTO "RackSlotPanelRow" ("id","slotId","rowIndex","synopticX","synopticY","createdAt","updatedAt") VALUES ('<pr1>','<sa2>',0,0,0,?,?)"#,
+        &t.owner.id,
+    )
+    .await;
+    let file = export(&t, &[(RootKind::Project, &p1)], "p.arkyo").await;
+    let edited = t.file("edited.arkyo");
+    // The file lost the row of rack `ra` (NOT NULL parent of its slots,
+    // of `rr1`, `pc1`, `ly1`); the panel row hangs on a skipped slot.
+    let ra = cid("ra");
+    edit_archive(&file, &edited, &t.file("uploads"), |b| {
+        rows_mut(b, "Rack").retain(|r| r["id"] != json!(ra));
+    });
+    delete_project(&t, &p1).await;
+
+    let rep = run(&t, &edited, modes(&[])).await.unwrap();
+    for (table, n) in [
+        ("RackSlot", 3),
+        ("RackSlotPanelRow", 1),
+        ("RigRack", 1),
+        ("RackInventoryItem", 2),
+        ("RackConnection", 1),
+        ("ProjectConnection", 1),
+        ("ProjectSynopticLayout", 1),
+    ] {
+        let w = format!(
+            "{n} ligne(s) de « {table} » ont été ignorées : elles visaient un élément qui n'existe plus."
+        );
+        assert!(rep.warnings.contains(&w), "{w} / {:?}", rep.warnings);
+        assert!(
+            !rep.warnings
+                .iter()
+                .any(|x| x.contains(&format!("de « {table} » existaient"))),
+            "{table} / {:?}",
+            rep.warnings
+        );
+        assert_eq!(rep.roots[0].inserted.get(table), None, "{table}");
+    }
+    assert_eq!(
+        count(&t.e.pool, r#"SELECT COUNT(*) FROM "Project""#).await,
+        1
+    );
+    assert_eq!(
+        count(&t.e.pool, r#"SELECT COUNT(*) FROM "RackSlotPanelRow""#).await,
+        0
+    );
+    assert_eq!(rep.roots[0].inserted.get("Location"), Some(&1));
+}
+
+#[tokio::test]
+async fn type_clash_on_an_expression_index_is_not_added() {
+    let t = setup().await;
+    let p1 = cid("p1");
+    let u = t.owner.id.clone();
+    exec(
+        &t.e.pool,
+        r#"INSERT INTO "TenantType" ("id","name","createdAt","updatedAt") VALUES ('<tt1>','Type test',?,?)"#,
+        &u,
+    )
+    .await;
+    let file = export(&t, &[(RootKind::Project, &p1)], "p.arkyo").await;
+    // Here, the same (name, no parent) under another id: the unique key is
+    // an expression (`COALESCE("parentId", '')`), no local row is found.
+    exec(
+        &t.e.pool,
+        r#"DELETE FROM "TenantType" WHERE "id" = '<tt1>'"#,
+        &u,
+    )
+    .await;
+    exec(
+        &t.e.pool,
+        r#"INSERT INTO "TenantType" ("id","name","createdAt","updatedAt") VALUES ('<ttx>','Type test',?,?)"#,
+        &u,
+    )
+    .await;
+    let rep = run(&t, &file, modes(&[(&p1, Mode::Copy)])).await.unwrap();
+    assert!(
+        rep.warnings.iter().any(|w| {
+            w
+            == "« Type test » (TenantType) existe déjà ici sous un autre identifiant : non ajouté."
+        }),
+        "{:?}",
+        rep.warnings
+    );
+    assert_eq!(
+        count(
+            &t.e.pool,
+            r#"SELECT COUNT(*) FROM "TenantType" WHERE "name" = 'Type test'"#
+        )
+        .await,
+        1
+    );
+    assert_eq!(rep.catalogue_added.get("TenantType"), None);
+}
+
+/// A row whose required (NOT NULL) parent is missing is skipped and its id
+/// leaves the planned set, so its own dependants are skipped in turn: this
+/// holds only if every required parent table is written before its
+/// children (catalogue and panels in classification order, then the owned
+/// tables), and no required reference points at its own table.
+#[tokio::test]
+async fn required_parents_come_first_in_insert_order() {
+    use arkyo_server::transfer::{classification, owned_tables_in_insert_order, Class};
+    let e = env().await;
+    let mut order: Vec<&str> = classification()
+        .iter()
+        .filter(|(_, c)| matches!(c, Class::Catalogue | Class::Dependency))
+        .map(|(t, _)| *t)
+        .collect();
+    order.extend(owned_tables_in_insert_order());
+    let pos = |t: &str| order.iter().position(|x| *x == t);
+    for (i, table) in order.iter().enumerate() {
+        let fks: Vec<(String, String)> = sqlx::query_as(&format!(
+            r#"SELECT f."from", f."table" FROM pragma_foreign_key_list('{table}') f
+               JOIN pragma_table_info('{table}') c ON c."name" = f."from" WHERE c."notnull" = 1"#
+        ))
+        .fetch_all(&e.pool)
+        .await
+        .unwrap();
+        for (col, parent) in fks {
+            let p = pos(&parent).unwrap_or_else(|| panic!("{table}.{col} → {parent} hors import"));
+            assert!(p < i, "{table}.{col} → {parent} écrit après");
+        }
+    }
+}
+
 /// Raw request with a body (and a session cookie).
 async fn raw(
     app: &axum::Router,

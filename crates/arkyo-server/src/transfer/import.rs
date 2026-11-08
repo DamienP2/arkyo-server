@@ -219,6 +219,10 @@ struct Ctx<'a> {
     /// File id → id here of a catalogue row already here under another id
     /// (same unique key): references to it are rewritten.
     alias: HashMap<String, String>,
+    /// Rows skipped (a required reference to a missing row), by table.
+    skipped: BTreeMap<String, usize>,
+    /// References set to NULL (to a missing row), by table.
+    nulled: BTreeMap<String, usize>,
     warned: HashSet<String>,
     warnings: Vec<String>,
 }
@@ -339,6 +343,18 @@ enum Write {
     IfMissing,
 }
 
+/// What became of a row.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum Outcome {
+    Written,
+    /// Already here (an insertion never overwrites), or a catalogue row
+    /// here under another id.
+    Kept,
+    /// A required (NOT NULL) reference points at a row neither written by
+    /// this import nor here.
+    Skipped,
+}
+
 /// The cable id a rack takes: its own when no other rack has it, else the
 /// first free one, preferably one no rack of the file wants (`None` if none
 /// is free).
@@ -373,7 +389,7 @@ async fn write_row(
     table: &str,
     mut row: Row,
     how: Write,
-) -> Result<bool, TransferError> {
+) -> Result<Outcome, TransferError> {
     if !ctx.alias.is_empty() {
         remap_row(&mut row, &ctx.alias);
     }
@@ -393,7 +409,7 @@ async fn write_row(
                     .fetch_one(&mut *conn)
                     .await?;
             if n > 0 {
-                return Ok(false);
+                return Ok(Outcome::Kept);
             }
         }
     }
@@ -409,15 +425,29 @@ async fn write_row(
             row.insert((*c).to_string(), Value::String(ctx.importer.to_string()));
         }
     }
-    // A reference to a row neither in the file nor here → NULL.
+    // A reference to a row neither written by this import nor here: NULL,
+    // or the row is skipped when the reference is required (its id leaves
+    // `planned`, so its own dependants follow: a required parent always
+    // comes earlier in the insert order, `owned_tables_in_insert_order`
+    // and the catalogue's classification order).
+    let mut nulled = 0;
     for fk in &ts.fks {
         let Some(Value::String(v)) = row.get(&fk.from) else {
             continue;
         };
         let v = v.clone();
-        let nullable = ts.col(&fk.from).is_some_and(|c| !c.notnull);
-        if nullable && !ctx.parent_present(conn, &fk.table, &fk.to, &v).await? {
+        if ctx.parent_present(conn, &fk.table, &fk.to, &v).await? {
+            continue;
+        }
+        if ts.col(&fk.from).is_some_and(|c| !c.notnull) {
             row.insert(fk.from.clone(), Value::Null);
+            nulled += 1;
+        } else {
+            if let (Some(id), Some(planned)) = (&id, ctx.planned.get_mut(table)) {
+                planned.remove(id);
+            }
+            *ctx.skipped.entry(table.to_string()).or_default() += 1;
+            return Ok(Outcome::Skipped);
         }
     }
     if table == "Rack" {
@@ -489,6 +519,9 @@ async fn write_row(
         q = bind_value(q, &row[*c]);
     }
     let done = q.execute(&mut *conn).await?.rows_affected() > 0;
+    if done && nulled > 0 {
+        *ctx.nulled.entry(table.to_string()).or_default() += nulled;
+    }
     if !done && how == Write::IfMissing {
         // Its id is missing here: another unique key clashed.
         let name = text(&row, "name")
@@ -513,7 +546,11 @@ async fn write_row(
             }
         }
     }
-    Ok(done)
+    Ok(if done {
+        Outcome::Written
+    } else {
+        Outcome::Kept
+    })
 }
 
 /// The id of the row here that has one of the unique keys of `row`.
@@ -531,12 +568,21 @@ async fn same_unique_key(
         if unique == 0 || origin == "pk" {
             continue;
         }
-        let cols: Vec<String> =
+        let cols: Vec<Option<String>> =
             sqlx::query_scalar(r#"SELECT "name" FROM pragma_index_info(?) ORDER BY "seqno""#)
                 .bind(&index)
                 .fetch_all(&mut *conn)
                 .await?;
-        // NULLs never clash; an expression index has unnamed columns.
+        // An expression index (`TenantType`: `COALESCE("parentId", '')`)
+        // has unnamed columns: not searched.
+        let Some(cols) = cols
+            .into_iter()
+            .map(|c| c.filter(|c| !c.is_empty()))
+            .collect::<Option<Vec<String>>>()
+        else {
+            continue;
+        };
+        // NULLs never clash.
         let values: Option<Vec<&Value>> = cols
             .iter()
             .map(|c| row.get(c).filter(|v| !v.is_null()))
@@ -676,6 +722,8 @@ pub async fn import(
         present: HashMap::new(),
         cable_ids: HashSet::new(),
         alias: HashMap::new(),
+        skipped: BTreeMap::new(),
+        nulled: BTreeMap::new(),
         warned: HashSet::new(),
         warnings: Vec::new(),
     };
@@ -698,28 +746,6 @@ pub async fn import(
                 (0..rows.len())
                     .filter(|i| !in_roots.contains(&(*table, *i)))
                     .map(|i| (*table, i)),
-            );
-        }
-    }
-
-    // The ids this import writes, for the references it keeps.
-    for (t, i) in &deps {
-        if let Some(id) = text(&bundle.tables[*t][*i], "id") {
-            ctx.planned
-                .entry(t.to_string())
-                .or_default()
-                .insert(id.to_string());
-        }
-    }
-    for plan in &plans {
-        for (t, ids) in part_ids(&bundle, &plan.part) {
-            let set = ctx.planned.entry(t).or_default();
-            set.extend(ids.iter().map(|id| plan.final_id(id)));
-        }
-        if let (Some(idx), Some(rows)) = (plan.part.get("Rack"), bundle.tables.get("Rack")) {
-            ctx.cable_ids.extend(
-                idx.iter()
-                    .filter_map(|i| rows[*i].get("cableId").and_then(Value::as_i64)),
             );
         }
     }
@@ -747,13 +773,44 @@ pub async fn import(
         skipped.push(skip);
     }
 
+    // The ids this import writes, for the references it keeps (not the
+    // rows of a kept rack: a reference to one gone here is NULL, or its
+    // row skipped).
+    for (t, i) in &deps {
+        if let Some(id) = text(&bundle.tables[*t][*i], "id") {
+            ctx.planned
+                .entry(t.to_string())
+                .or_default()
+                .insert(id.to_string());
+        }
+    }
+    for (plan, skip) in plans.iter().zip(&skipped) {
+        for (t, idx) in &plan.part {
+            let rows = &bundle.tables[t];
+            let set = ctx.planned.entry(t.clone()).or_default();
+            set.extend(
+                idx.iter()
+                    .filter(|i| !skip.contains(&(t.clone(), **i)))
+                    .filter_map(|i| text(&rows[*i], "id"))
+                    .map(|id| plan.final_id(id)),
+            );
+        }
+        if let (Some(idx), Some(rows)) = (plan.part.get("Rack"), bundle.tables.get("Rack")) {
+            ctx.cable_ids.extend(
+                idx.iter()
+                    .filter_map(|i| rows[*i].get("cableId").and_then(Value::as_i64)),
+            );
+        }
+    }
+
     let mut report = Report::default();
     for (table, i) in deps {
         let Some(ts) = schemas.get(table) else {
             continue;
         };
         let row = bundle.tables[table][i].clone();
-        if write_row(&mut tx, &mut ctx, ts, table, row, Write::IfMissing).await? {
+        if write_row(&mut tx, &mut ctx, ts, table, row, Write::IfMissing).await? == Outcome::Written
+        {
             *report.catalogue_added.entry(table.to_string()).or_default() += 1;
         }
     }
@@ -781,10 +838,10 @@ pub async fn import(
                         row.insert("name".into(), Value::String(plan.final_name()));
                     }
                 }
-                if write_row(&mut tx, &mut ctx, ts, table, row, how).await? {
-                    *inserted.entry(table.to_string()).or_default() += 1;
-                } else {
-                    *kept.entry(table.to_string()).or_default() += 1;
+                match write_row(&mut tx, &mut ctx, ts, table, row, how).await? {
+                    Outcome::Written => *inserted.entry(table.to_string()).or_default() += 1,
+                    Outcome::Kept => *kept.entry(table.to_string()).or_default() += 1,
+                    Outcome::Skipped => {}
                 }
             }
         }
@@ -813,6 +870,16 @@ pub async fn import(
     for (table, n) in kept {
         ctx.warn(format!(
             "{n} ligne(s) de « {table} » existaient déjà ici et ont été gardées telles quelles."
+        ));
+    }
+    for (table, n) in std::mem::take(&mut ctx.skipped) {
+        ctx.warn(format!(
+            "{n} ligne(s) de « {table} » ont été ignorées : elles visaient un élément qui n'existe plus."
+        ));
+    }
+    for (table, n) in std::mem::take(&mut ctx.nulled) {
+        ctx.warn(format!(
+            "{n} référence(s) de « {table} » visaient un élément qui n'existe pas ici : vidées."
         ));
     }
     report.warnings = std::mem::take(&mut ctx.warnings);
