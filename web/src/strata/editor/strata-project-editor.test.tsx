@@ -1,8 +1,9 @@
 /**
- * Éditeur projet en interface Strata, lot 3 (spec §6.2) : inspecteur avec la
- * face de l'équipement sélectionné, dock bas (Contrôles, Câbles, Bilan),
- * lentille Connectique, état d'enregistrement dans la topbar. En Classique,
- * rien de tout cela (tests existants de l'onglet Rack inchangés).
+ * Éditeur projet en interface Strata v2 (spec v2 §4.1) : topbar projet v2
+ * (Concevoir · Gérer, menu Vues, ⌘K, état d'enregistrement), coquille
+ * « Concevoir » (canevas plein) pour chaque onglet, bascule Classique ↔
+ * Strata en direct sans remonter le canevas. En Classique, rien ne change
+ * (tests existants de l'éditeur inchangés).
  */
 
 import { forwardRef, useImperativeHandle } from "react";
@@ -139,7 +140,7 @@ function api(iface: UiInterface, racks: unknown[] = RACKABLE, extra: Api = {}): 
   };
 }
 
-const dock = (name: string) => document.querySelector(`[data-dock="${name}"]`) as HTMLElement | null;
+const zone = (name: string) => document.querySelector(`[data-zone="${name}"]`) as HTMLElement | null;
 const here = (router: { state: { location: { pathname: string; search: string } } }) =>
   router.state.location.pathname + router.state.location.search;
 
@@ -157,95 +158,165 @@ async function rackEmptyState(iface: UiInterface, url = "/project/p1?tab=rack"):
   return title.parentElement!.outerHTML;
 }
 
-describe("onglet Rack en Strata", () => {
-  test("projet sans contenant rackable → EmptyState identique, dock vide", async () => {
+const shell = () => document.querySelector("[data-strata-canvas-shell]") as HTMLElement | null;
+const topbar = () => zone("topbar")!;
+const spaceNav = () => within(topbar()).getByRole("navigation", { name: "Espace du projet" });
+
+/** Ouvre un menu Radix (le déclencheur s'ouvre au clavier dans happy-dom). */
+async function openMenu(name: string): Promise<HTMLElement> {
+  fireEvent.keyDown(within(topbar()).getByRole("button", { name }), { key: "Enter" });
+  return screen.findByRole("menu");
+}
+
+describe("topbar projet v2", () => {
+  test("lockup, projet, statut, Concevoir · Gérer, Vues, ⌘K, Fermer ; canevas plein", async () => {
+    renderApp("/project/p1?tab=rack", api("strata"));
+    const canvas = await screen.findByTestId("rack-canvas", {}, FIRST_LOAD);
+    const bar = topbar();
+    expect(within(bar).getByRole("banner")).toBeInTheDocument();
+    expect(within(bar).getByLabelText("Strata Arkyo")).toBeInTheDocument();
+    expect(within(bar).getByText("Finale Coupe de France")).toBeInTheDocument();
+    expect(within(bar).getByRole("button", { name: "Statut : En préparation — modifier" })).toBeInTheDocument();
+    expect(within(spaceNav()).getAllByRole("link").map((l) => l.textContent)).toEqual(["Concevoir", "Gérer"]);
+    expect(within(spaceNav()).getByRole("link", { name: "Concevoir" })).toHaveAttribute("aria-current", "page");
+    expect(within(bar).getByRole("button", { name: "Vues" })).toBeInTheDocument();
+    expect(within(bar).getByRole("button", { name: "Rechercher ou agir (⌘K)" })).toBeInTheDocument();
+    expect(within(bar).getByRole("button", { name: "Fermer l'édition" })).toBeInTheDocument();
+    // Plus d'onglets Conception · Inventaire · Livraison ni de pill d'arkyo.
+    expect(screen.queryByRole("navigation", { name: "Onglets du projet" })).toBeNull();
+    // Coquille « Concevoir » : canevas plein, outils flottants, tiroir fermé.
+    expect(shell()).not.toBeNull();
+    expect(zone("canvas")!.contains(canvas)).toBe(true);
+    expect(within(zone("tools")!).getByRole("toolbar", { name: "Outils" })).toBeInTheDocument();
+    expect(zone("drawer")).not.toBeVisible();
+    expect(document.querySelector("[data-dock]")).toBeNull();
+  });
+
+  test("Gérer → ?space=gerer (espace à venir), Concevoir y revient", async () => {
+    const { router } = renderApp("/project/p1?tab=rack", api("strata"));
+    await screen.findByTestId("rack-canvas", {}, FIRST_LOAD);
+    expect(within(spaceNav()).getByRole("link", { name: "Gérer" })).toHaveAttribute("href", "?tab=rack&space=gerer");
+    fireEvent.click(within(spaceNav()).getByRole("link", { name: "Gérer" }));
+    await waitFor(() => expect(here(router)).toBe("/project/p1?tab=rack&space=gerer"));
+    expect(await screen.findByText("Gérer arrive")).toBeInTheDocument();
+    expect(within(spaceNav()).getByRole("link", { name: "Gérer" })).toHaveAttribute("aria-current", "page");
+    expect(zone("canvas")).toBeNull();
+
+    fireEvent.click(within(spaceNav()).getByRole("link", { name: "Concevoir" }));
+    await waitFor(() => expect(here(router)).toBe("/project/p1?tab=rack"));
+    expect(zone("canvas")!.contains(screen.getByTestId("rack-canvas"))).toBe(true);
+  });
+
+  test("Vues : chaque onglet d'arkyo reste atteignable, et y mène dans Concevoir", async () => {
+    const { router } = renderApp("/project/p1?tab=rack&space=gerer", api("strata"));
+    await screen.findByText("Gérer arrive", {}, FIRST_LOAD);
+    let menu = await openMenu("Vues");
+    const items = within(menu).getAllByRole("menuitem").map((i) => i.textContent);
+    expect(items).toEqual([
+      "Synoptique",
+      "Rack",
+      "Schémas",
+      "Plan",
+      "Vidéo",
+      "Audio",
+      "Plan de feu",
+      "Adressage DMX",
+      "Inventaire",
+      "Map",
+      "Adressage IP",
+      "Adressage 2110",
+      "Configuration",
+      "Préparation",
+      "Recette",
+      "Caractéristiques du projet",
+      "Exporter un dossier",
+    ]);
+    expect(within(menu).getByRole("menuitem", { name: "Rack" })).toHaveAttribute("aria-current", "page");
+
+    fireEvent.click(within(menu).getByRole("menuitem", { name: "Recette" }));
+    await waitFor(() => expect(here(router)).toBe("/project/p1?tab=recette"));
+    expect(window.localStorage.getItem("project-editor-tab")).toBe('"recette"');
+    expect(within(spaceNav()).getByRole("link", { name: "Concevoir" })).toHaveAttribute("aria-current", "page");
+
+    // Sous-onglets de Lumière (même stockage que la pill d'arkyo).
+    menu = await openMenu("Vues");
+    fireEvent.click(within(menu).getByRole("menuitem", { name: "Adressage DMX" }));
+    await waitFor(() => expect(here(router)).toBe("/project/p1?tab=lumiere"));
+    expect(window.localStorage.getItem("project-lumiere-subtab")).toBe('"dmx"');
+    menu = await openMenu("Vues");
+    expect(within(menu).getByRole("menuitem", { name: "Adressage DMX" })).toHaveAttribute("aria-current", "page");
+    expect(within(menu).getByRole("menuitem", { name: "Plan de feu" })).not.toHaveAttribute("aria-current");
+    fireEvent.keyDown(menu, { key: "Escape" });
+  });
+
+  test("Vues › Caractéristiques et Exporter un dossier : dialogues existants", async () => {
+    renderApp("/project/p1?tab=rack", api("strata"));
+    await screen.findByTestId("rack-canvas", {}, FIRST_LOAD);
+    fireEvent.click(within(await openMenu("Vues")).getByRole("menuitem", { name: "Caractéristiques du projet" }));
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText("Modifier « Finale Coupe de France »")).toBeInTheDocument();
+    fireEvent.keyDown(dialog, { key: "Escape" });
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    fireEvent.click(within(await openMenu("Vues")).getByRole("menuitem", { name: "Exporter un dossier" }));
+    // Le dossier d'arkyo (`DossierWizard`), en bouchon jusqu'à la phase 6.
+    expect(within(await screen.findByRole("dialog")).getByText("Bientôt disponible")).toBeInTheDocument();
+  });
+
+  test("⌘K : la palette est montée dans l'éditeur plein écran", async () => {
+    renderApp("/project/p1?tab=rack", api("strata"));
+    await screen.findByTestId("rack-canvas", {}, FIRST_LOAD);
+    fireEvent.click(within(topbar()).getByRole("button", { name: "Rechercher ou agir (⌘K)" }));
+    expect(await screen.findByRole("dialog", { name: "Palette de commandes" })).toBeInTheDocument();
+  });
+
+  test("Fermer l'édition revient aux projets", async () => {
+    const { router } = renderApp("/project/p1?tab=rack", api("strata"));
+    await screen.findByTestId("rack-canvas", {}, FIRST_LOAD);
+    fireEvent.click(within(topbar()).getByRole("button", { name: "Fermer l'édition" }));
+    await waitFor(() => expect(router.state.location.pathname).toBe("/projects"));
+  });
+
+  test("en Strata, l'état d'enregistrement est dans la topbar", async () => {
+    renderApp("/project/p1?tab=rack", api("strata"));
+    await screen.findByTestId("rack-canvas", {}, FIRST_LOAD);
+    const bar = topbar();
+    const trigger = within(bar).getByRole("button", { name: "Statut : En préparation — modifier" });
+    fireEvent.keyDown(trigger, { key: "Enter" });
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Prêt" }));
+    const saved = await within(bar).findByText("Enregistré");
+    expect(saved.closest("[data-strata-save]")).not.toBeNull();
+  });
+});
+
+describe("onglets dans la coquille Concevoir", () => {
+  test("projet sans contenant rackable → EmptyState identique, sans tiroir", async () => {
     const classique = await rackEmptyState("classique");
     resetApp();
     const strata = await rackEmptyState("strata");
     expect(strata).toBe(classique);
     expect(screen.getByRole("button", { name: "Aller à l'Inventaire" })).toBeInTheDocument();
-    expect(dock("bottom")).toBeNull();
-    expect(dock("right")).toBeNull();
+    expect(zone("drawer")).toBeNull();
   });
 
-  test("sans contenant rackable, lentille Connectique ouverte : même EmptyState, pas de dock bas", async () => {
-    const classique = await rackEmptyState("classique", "/project/p1?tab=rack&lens=connectique");
-    resetApp();
-    const strata = await rackEmptyState("strata", "/project/p1?tab=rack&lens=connectique");
-    expect(strata).toBe(classique);
-    expect(screen.getByRole("button", { name: "Aller à l'Inventaire" })).toBeInTheDocument();
-    expect(within(screen.getByRole("navigation", { name: "Lentilles" })).getByRole("link", { name: "Connectique" })).toHaveAttribute(
-      "aria-current",
-      "page",
-    );
-    expect(dock("bottom")).toBeNull();
-    expect(screen.queryByRole("list", { name: "Caisse" })).toBeNull();
+  test("Inventaire : page, outils en bande, panneau latéral en colonne", async () => {
+    renderApp("/project/p1?tab=inventaire", api("strata"));
+    const side = await screen.findByRole("complementary", { name: "Panneau latéral" }, FIRST_LOAD);
+    expect(await within(side).findByRole("heading", { name: "Équipements" }, FIRST_LOAD)).toBeInTheDocument();
+    const tools = zone("tools")!;
+    expect(tools.className).not.toMatch(/\babsolute\b/);
+    expect(within(tools).getByRole("toolbar", { name: "Outils" })).toBeInTheDocument();
+    // Le panneau droit existant (fiche, export) est dans le tiroir, fermé.
+    expect(zone("drawer")).not.toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Ouvrir l'inspecteur" }));
+    expect(zone("drawer")).toBeVisible();
   });
 
-  test("dock bas : un clic sur un contrôle sélectionne l'équipement, dont l'inspecteur montre la face", async () => {
-    renderApp("/project/p1?tab=rack", api("strata"));
+  test("en Classique : aucune coquille ni topbar Strata", async () => {
+    renderApp("/project/p1?tab=rack", api("classique"));
     await screen.findByTestId("rack-canvas", {}, FIRST_LOAD);
-    const bottom = await waitFor(() => dock("bottom")!);
-    const controls = await within(bottom).findByRole("tab", { name: "Contrôles 2 erreurs, 2 avertissements" });
-    expect(controls).toHaveAttribute("aria-selected", "true");
-    // Rien de sélectionné : pas de face dans l'inspecteur.
-    expect(within(dock("right")!).queryByRole("region", { name: "Équipement sélectionné" })).toBeNull();
-
-    fireEvent.click(within(bottom).getByRole("button", { name: /CAM 1 - Caméra X.*connecté 2 fois/ }));
-    const right = dock("right")!;
-    const card = await within(right).findByRole("region", { name: "Équipement sélectionné" });
-    expect(within(card).getByRole("img", { name: "Face arrière Caméra X" })).toBeInTheDocument();
-    expect(within(card).getByText("2 / 3 ports reliés")).toBeInTheDocument();
-    // Le panneau existant reste dessous.
-    expect(right.querySelector("aside")).not.toBeNull();
-  });
-
-  test("lentille Connectique : ?lens=connectique sur l'onglet rack, canevas remplacé, retour au Rack", async () => {
-    const { router } = renderApp("/project/p1?tab=rack", api("strata"));
-    await screen.findByTestId("rack-canvas", {}, FIRST_LOAD);
-    const lenses = screen.getByRole("navigation", { name: "Lentilles" });
-    expect(within(lenses).getByRole("link", { name: "Connectique" })).toHaveAttribute(
-      "href",
-      "?tab=rack&lens=connectique",
-    );
-    fireEvent.click(within(lenses).getByRole("link", { name: "Connectique" }));
-    await waitFor(() => expect(here(router)).toBe("/project/p1?tab=rack&lens=connectique"));
-    expect(within(lenses).getByRole("link", { name: "Connectique" })).toHaveAttribute("aria-current", "page");
-    expect(within(lenses).getByRole("link", { name: "Rack" })).not.toHaveAttribute("aria-current");
-
-    const list = await screen.findByRole("list", { name: "Baie 1" });
-    expect(Array.from(list.children).map((li) => li.querySelector("strong")?.textContent)).toEqual([
-      "ALIM",
-      "MON 1",
-      "CAM 1",
-    ]);
-    expect(screen.queryByTestId("rack-canvas")).toBeNull();
-    // Le dock bas reste là.
-    expect(within(dock("bottom")!).getByRole("tab", { name: /Contrôles/ })).toBeInTheDocument();
-
-    // Une ligne sélectionne l'équipement (inspecteur).
-    fireEvent.click(within(list.children[1] as HTMLElement).getByText("MON 1"));
-    expect(
-      await within(dock("right")!).findByRole("img", { name: "Face arrière Moniteur 17" }),
-    ).toBeInTheDocument();
-
-    // Rack quitte la lentille.
-    fireEvent.click(within(lenses).getByRole("link", { name: "Rack" }));
-    await waitFor(() => expect(here(router)).toBe("/project/p1?tab=rack"));
-    expect(await screen.findByTestId("rack-canvas")).toBeInTheDocument();
-    // Une autre lentille aussi.
-    fireEvent.click(within(lenses).getByRole("link", { name: "Connectique" }));
-    await waitFor(() => expect(here(router)).toBe("/project/p1?tab=rack&lens=connectique"));
-    fireEvent.click(within(screen.getByRole("navigation", { name: "Lentilles" })).getByRole("link", { name: "Schémas" }));
-    await waitFor(() => expect(here(router)).toBe("/project/p1?tab=schema"));
-  });
-
-  test("en Classique : ni dock bas, ni face dans l'inspecteur, ni lentille", async () => {
-    renderApp("/project/p1?tab=rack&lens=connectique", api("classique"));
-    await screen.findByTestId("rack-canvas", {}, FIRST_LOAD);
-    expect(document.querySelector("[data-strata-editor]")).toBeNull();
-    expect(screen.queryByRole("tab", { name: /Contrôles/ })).toBeNull();
-    expect(screen.queryByRole("list", { name: "Baie 1" })).toBeNull();
+    expect(shell()).toBeNull();
+    expect(screen.queryByRole("navigation", { name: "Espace du projet" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Vues" })).toBeNull();
   });
 });
 
@@ -279,65 +350,68 @@ async function openLocation(iface: UiInterface, url = "/project/p1?tab=rack") {
 }
 
 describe("flux temps réel en portée lieu (HTTP/1.1 : 6 connexions par origine)", () => {
-  const RACK_STREAMS = ["/api/racks/r1/events", "/api/racks/r2/events", "/api/racks/r3/events"];
-
   test("vue Rack : les flux des canevas et le flux applicatif seulement, comme en Classique", async () => {
     await openLocation("classique");
     await waitFor(() => expect(screen.getAllByTestId("rack-canvas")).toHaveLength(3), FIRST_LOAD);
-    await waitFor(() => expect(streams()).toEqual(["/api/events", ...RACK_STREAMS]));
+    await waitFor(() =>
+      expect(streams()).toEqual(["/api/events", "/api/racks/r1/events", "/api/racks/r2/events", "/api/racks/r3/events"]),
+    );
     const classique = streams();
     resetApp();
 
     await openLocation("strata");
     await waitFor(() => expect(screen.getAllByTestId("rack-canvas")).toHaveLength(3), FIRST_LOAD);
-    // Le dock bas est là, avec les câbles de la Baie 1…
-    const bottom = await waitFor(() => dock("bottom")!);
-    expect(await within(bottom).findByRole("tab", { name: "Câbles 3" })).toBeInTheDocument();
-    // …sans aucun flux de plus.
     expect(streams()).toEqual(classique);
   });
-
-  test("vue Connectique : le flux applicatif seul, et il tient les câbles à jour", async () => {
-    const { fetchSpy } = await openLocation("strata", "/project/p1?tab=rack&lens=connectique");
-    await screen.findByRole("list", { name: "Baie 1" }, FIRST_LOAD);
-    expect(screen.queryByTestId("rack-canvas")).toBeNull();
-    await waitFor(() => expect(streams()).toEqual(["/api/events"]));
-
-    const reads = () =>
-      fetchSpy.mock.calls.filter(([input]) => String(input).split("?")[0] === "/api/racks/r2/connections").length;
-    const before = reads();
-    emitAppEvent({ type: "update", entity: "rackConnection", action: "created", id: "r2", rackId: "r2" });
-    await waitFor(() => expect(reads()).toBe(before + 1));
-    expect(streams()).toEqual(["/api/events"]);
-  });
 });
 
-describe("inspecteur de l'Inventaire en Strata", () => {
-  test("la face de l'élément sélectionné s'affiche au-dessus du panneau existant", async () => {
-    renderApp("/project/p1?tab=inventaire", api("strata"));
-    await waitFor(() => expect(document.querySelector('[data-rack-id="r1"]')).not.toBeNull(), FIRST_LOAD);
-    const row = (
-      await within(document.querySelector('[data-rack-id="r1"]') as HTMLElement).findByText("Caméra X")
-    ).closest(".group\\/row") as HTMLElement;
-    fireEvent.click(row);
-    const right = dock("right")!;
-    const card = await within(right).findByRole("region", { name: "Équipement sélectionné" });
-    expect(within(card).getByRole("img", { name: "Face arrière Caméra X" })).toBeInTheDocument();
-    // Placée en U1–U2 de la Baie 1, avec ses câbles.
-    expect(within(card).getByText("U1–U2 · 2 U · avant")).toBeInTheDocument();
-    expect(within(card).getByText("2 / 3 ports reliés")).toBeInTheDocument();
-  });
-});
+// ── Bascule Classique ↔ Strata en direct (Review Focus 1) ───────────────────
 
-describe("état d'enregistrement", () => {
-  test("en Strata, l'état d'enregistrement est dans la topbar", async () => {
-    renderApp("/project/p1?tab=rack", api("strata"));
-    await screen.findByTestId("rack-canvas", {}, FIRST_LOAD);
-    const bar = dock("topbar")!;
-    const trigger = within(bar).getByRole("button", { name: "Statut : En préparation — modifier" });
-    fireEvent.keyDown(trigger, { key: "Enter" });
-    fireEvent.click(await screen.findByRole("menuitem", { name: "Prêt" }));
-    const saved = await within(bar).findByText("Enregistré");
-    expect(saved.closest("[data-strata-save]")).not.toBeNull();
+/** Vue Générale minimale du synoptique (synoptic_general.rs) : un contenant sans port. */
+const GENERAL = {
+  locations: [],
+  racks: [{ id: "r9", name: "Flight 1", rackType: "FLIGHT_CASE_CLASSIC", totalU: 6, canvasX: 40, canvasY: 40, externalConnectors: [] }],
+  connections: [],
+  bundles: [],
+  connectorTypes: [],
+  signals: [],
+  signalCategories: [],
+  appConfig: {},
+  project: { id: "p1", name: "Finale Coupe de France" },
+  stats: { rackCount: 1, totalWeightKg: 0, totalPowerW: 0 },
+};
+
+describe("bascule d'interface en direct", () => {
+  test("synoptique : ni le canevas ni ses données ne sont relus, seule la coquille change", async () => {
+    let iface: UiInterface = "classique";
+    window.localStorage.setItem("project-p1-synoptique-rack", "__general__");
+    const { fetchSpy } = renderApp(
+      "/project/p1?tab=synoptique",
+      api("classique", [rack("r9", "Flight 1", { rackType: "FLIGHT_CASE_CLASSIC", totalU: 6, locationId: null })], {
+        "GET /api/site": () => ({ body: { name: "Régie A", logoUrl: null, interface: iface } }),
+        "GET /api/tenant/catalogue/adapters": { body: { arkyo: [], personal: [] } },
+        "GET /api/tenant/projects/p1/synoptic/general": { body: GENERAL },
+      }),
+    );
+    const block = await screen.findByText("Flight 1", { selector: "[data-slot-id] *" }, FIRST_LOAD);
+    const general = () =>
+      fetchSpy.mock.calls.filter(([input]) => String(input).split("?")[0] === "/api/tenant/projects/p1/synoptic/general").length;
+    expect(general()).toBe(1);
+    expect(shell()).toBeNull();
+
+    // Classique → Strata : coquille « Concevoir », même canevas.
+    iface = "strata";
+    emitAppEvent({ entity: "config", action: "updated", id: "1" });
+    await waitFor(() => expect(shell()).not.toBeNull());
+    expect(block.isConnected).toBe(true);
+    expect(zone("canvas")!.contains(block)).toBe(true);
+    expect(within(topbar()).getByRole("navigation", { name: "Espace du projet" })).toBeInTheDocument();
+
+    // Strata → Classique : idem.
+    iface = "classique";
+    emitAppEvent({ entity: "config", action: "updated", id: "2" });
+    await waitFor(() => expect(shell()).toBeNull());
+    expect(block.isConnected).toBe(true);
+    expect(general()).toBe(1);
   });
 });

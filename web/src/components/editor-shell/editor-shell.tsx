@@ -9,7 +9,7 @@ import {
   SHELL_SLIDEOVER_W,
 } from "@/components/synoptique/lib/constants";
 import { useInterface } from "@/strata/interface-context"; // arkyo-server: interface Strata
-import { StrataEditorShell } from "@/strata/shell/strata-editor-shell"; // arkyo-server: interface Strata
+import { StrataCanvasShell, useCanvasStage } from "@/strata/shell/canvas-shell"; // arkyo-server: interface Strata
 
 export interface EditorShellSlots {
   globalTopbar: ReactNode;
@@ -25,18 +25,20 @@ export interface EditorShellSlots {
    * standard de l'app (`--topbar-height`).
    */
   globalTopbarHeight?: number;
-  // arkyo-server: interface Strata — onglets du dock gauche et dock bas, ignorés en Classique.
-  strata?: { leftDockTabs?: { id: string; label: string; node: ReactNode }[]; bottomDock?: ReactNode };
+  // arkyo-server: interface Strata — contenu au-dessus du tiroir et disposition (canevas ou page), ignorés en Classique.
+  strata?: { drawerTop?: ReactNode; mode?: "canvas" | "page" };
 }
 
 export function EditorShell(slots: EditorShellSlots) {
   const rightW = useWorkspace((s) => s.rightPanelWidth);
   const slideOver = useWorkspace((s) => s.slideOver);
   const topbarH = slots.globalTopbarHeight ?? SHELL_TOPBAR_GLOBAL_H;
-  // arkyo-server: interface Strata — disposition en docks, mêmes slots.
+  // arkyo-server: interface Strata — disposition canevas plein, mêmes slots ; le canevas est rendu une seule fois
+  // (portail dans un hôte stable, voir `useCanvasStage`) : une bascule Classique ↔ Strata ne le remonte pas.
   const ui = useInterface();
-  if (ui === "strata") return <StrataEditorShell {...slots} />;
-  return (
+  const stage = useCanvasStage(slots, ui);
+  if (ui === "strata") return stage.wrap(<StrataCanvasShell {...slots} />);
+  return stage.wrap( // arkyo-server: interface Strata
     <div
       className="bg-background text-foreground fixed right-0 bottom-0 left-0 z-50 flex flex-col overflow-hidden"
       style={{ top: "calc(var(--dev-banner-height) + var(--impersonation-banner-height, 0px))" }}
@@ -52,7 +54,7 @@ export function EditorShell(slots: EditorShellSlots) {
           {slots.contextualTopbar}
         </div>
       )}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden" ref={stage.classicRow /* arkyo-server: interface Strata */}>
         {slots.leftToolbar && (
           <div
             style={{ width: SHELL_LEFT_TOOLBAR_W }}
@@ -69,7 +71,8 @@ export function EditorShell(slots: EditorShellSlots) {
             {slots.leftSidePanel}
           </div>
         )}
-        <div className="relative flex-1 overflow-hidden">{slots.canvas}</div>
+        {/* arkyo-server: interface Strata — l'hôte du canevas (`useCanvasStage`) prend ici la place de
+            <div className="relative flex-1 overflow-hidden">{slots.canvas}</div>, même classe, même rang. */}
         {slots.rightPanel && (
           <div style={{ width: rightW }} className="border-border bg-background flex-none border-l">
             {slots.rightPanel}

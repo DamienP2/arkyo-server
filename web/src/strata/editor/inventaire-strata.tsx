@@ -1,10 +1,11 @@
 "use client";
 
 /**
- * Onglet Inventaire de l'éditeur projet en interface Strata (spec §6.2,
- * lot 3) : face de l'élément d'inventaire sélectionné (`selectedItem` de
- * l'`InventaireScope`) en tête de l'inspecteur, au-dessus du panneau
- * existant. Branché par `withStrataInventaireFace` dans `getEditorSlots`.
+ * Onglet Inventaire de l'éditeur projet en interface Strata : face de
+ * l'élément d'inventaire sélectionné (`selectedItem` de l'`InventaireScope`),
+ * `InventaireFaceCard`. `withStrataInventaireFace` (branché dans
+ * `getEditorSlots`) est, depuis la tâche 3 de Strata v2, une enveloppe
+ * neutre : la carte rejoindra le tiroir ou Gérer › Matériel (tâches 4 et 5).
  *
  * L'équipement, ses ports reliés et sa position viennent du `canvas-data` et
  * des câbles de son contenant (le slot qui porte l'élément, par
@@ -18,11 +19,10 @@ import type { Slot } from "@/components/synoptique/lib/types";
 import { flattenSlots } from "../bottom/rack-model";
 import { useRacksLive } from "../bottom/use-rack-live";
 import { EquipmentFaceCard } from "../inspector/equipment-face-card";
-import { StrataInspector } from "./rack-strata";
 
 const NONE: string[] = [];
 
-function InventaireFaceCard() {
+export function InventaireFaceCard() {
   const scope = useInventaireScopeOptional();
   const sel = scope?.selectedItem ?? null;
   const rack = sel ? scope?.racks.find((r) => r.id === sel.rackId) : undefined;
@@ -49,7 +49,7 @@ function InventaireFaceCard() {
   );
 }
 
-/** Panneau droit de l'Inventaire, avec la face de l'élément sélectionné (Strata). */
+/** Enveloppe neutre (tâche 3) : le panneau droit de l'Inventaire, inchangé. */
 export function withStrataInventaireFace(panel: ReactNode): ReactNode {
-  return <StrataInspector top={<InventaireFaceCard />}>{panel}</StrataInspector>;
+  return panel;
 }

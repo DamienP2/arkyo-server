@@ -1,15 +1,15 @@
 "use client";
 
 /**
- * État d'enregistrement de l'éditeur projet dans la topbar Strata (spec §6.2,
- * maquette : « Enregistré » à droite de la topbar).
+ * État d'enregistrement de l'éditeur projet dans la topbar Strata (spec v2
+ * §4.1 : « état d'enregistrement » de la topbar projet).
  *
  * `getEditorSlots` (project-editor.tsx) enveloppe sa topbar globale dans
- * `withStrataSaveStatus` ; `StrataProjectTopbar` lit l'état par
+ * `withStrataSaveStatus` ; `ProjectTopbarV2` lit l'état par
  * `useStrataSaveStatus` et, pendant un état visible (pas `idle`), pose le
  * repère `data-strata-save`, qui masque le badge de la barre contextuelle
- * (`StrataEditorShell`). En Classique, le
- * contexte n'est lu par personne : le badge reste dans la barre contextuelle.
+ * (`StrataCanvasShell`). En Classique, le contexte n'est lu par personne : le
+ * badge reste dans la barre contextuelle.
  */
 
 import { createContext, useContext, type ReactNode } from "react";

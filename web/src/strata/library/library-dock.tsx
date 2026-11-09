@@ -16,13 +16,12 @@
  *   réel (`useRackSync`). Un équipement trop profond est signalé comme sur le
  *   canvas (`depthWarning`), sans bloquer.
  *
- * Branché par `withLibraryDock` dans `getEditorSlots` (project-editor.tsx),
- * comme onglet du dock gauche de `StrataEditorShell` ; ignoré en Classique.
+ * Strata v2 : la tâche 4 la place dans le tiroir du mode Racks (le dock
+ * gauche de la v1, `withLibraryDock`, est retiré).
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useDndMonitor, type DragEndEvent } from "@dnd-kit/core";
-import type { EditorShellSlots } from "@/components/editor-shell/editor-shell";
 import type { Equipment, Slot, ViewId, WidthFraction } from "@/components/synoptique/lib/types";
 import type {
   LocationCanvasData,
@@ -403,23 +402,5 @@ export function libraryDockProps(src: LibraryDockSource): {
         ]
       : [],
     view: src.visibleViews.has("FRONT") ? "FRONT" : ([...src.visibleViews][0] ?? "FRONT"),
-  };
-}
-
-/**
- * Ajoute aux slots de l'onglet Rack les onglets du dock gauche Strata :
- * « Outils » (le panneau latéral existant) et « Bibliothèque ». Sans effet en
- * Classique : `EditorShell` ignore le champ `strata`.
- */
-export function withLibraryDock(slots: EditorShellSlots, src: LibraryDockSource): EditorShellSlots {
-  return {
-    ...slots,
-    strata: {
-      ...slots.strata,
-      leftDockTabs: [
-        { id: "outils", label: "Outils", node: slots.leftSidePanel },
-        { id: "bibliotheque", label: "Bibliothèque", node: <LibraryDock {...libraryDockProps(src)} /> },
-      ],
-    },
   };
 }

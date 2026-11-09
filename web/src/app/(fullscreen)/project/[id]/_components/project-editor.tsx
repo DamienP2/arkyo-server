@@ -1275,13 +1275,14 @@ function getEditorSlots(args: {
           onRequestCatalog={() => setActiveTool("equipment")}
         />
       ),
-      rightPanel: withStrataInventaireFace(( // arkyo-server: interface Strata — face de l'élément sélectionné au-dessus du panneau (Strata seulement).
+      rightPanel: withStrataInventaireFace(( // arkyo-server: interface Strata — enveloppe neutre (Strata v2, tâche 3), sans effet en Classique.
         <InventaireRightPanel
           fiche={project.fiche}
           status={status}
           onStatusChange={onStatusChange}
         />
       )), // arkyo-server: interface Strata
+      strata: { mode: "page" }, // arkyo-server: interface Strata — page défilante : outils en bande, rien sur le contenu (ignoré en Classique).
     };
   }
 
@@ -1378,7 +1379,7 @@ function getEditorSlots(args: {
         }
       />
     );
-    // arkyo-server: interface Strata — dock gauche « Outils » / « Bibliothèque », face dans l'inspecteur, dock bas, lentille Connectique (sans effet en Classique).
+    // arkyo-server: interface Strata — enveloppe neutre (Strata v2, tâche 3 ; la tâche 4 y branche le tiroir), sans effet en Classique.
     return withStrataRack({
       globalTopbar,
       contextualTopbar: rackContextualTopbar,
@@ -1575,6 +1576,7 @@ function getEditorSlots(args: {
     contextualTopbar: resolvedContextualTopbar,
     canvas,
     rightPanel: resolvedRightPanel,
+    strata: { mode: "page" }, // arkyo-server: interface Strata — Préparation, Réseau, Recette : pages (ignoré en Classique).
   };
 }
 
