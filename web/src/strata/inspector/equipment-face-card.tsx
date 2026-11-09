@@ -18,10 +18,9 @@ import { useMemo, useState, type ReactNode } from "react";
 import type { RackCanvasData } from "@/app/(fullscreen)/project/[id]/rack/rack-tab-client";
 import type { Equipment, Slot } from "@/components/synoptique/lib/types";
 import { cn } from "@/lib/utils";
-import { drawingConnectorTypes, drawingSignals, fmtNumber, totalPorts } from "../catalogue-model";
+import { drawingConnectorTypes, drawingSignals, fmtNumber, fullestFace, totalPorts } from "../catalogue-model";
 import { DIRECTION_LABEL, EquipmentFace, genderLetter } from "../drawings/equipment-face";
 import { entryLabel, portCount, type FaceSide } from "../drawings/face-layout";
-import { cardFace } from "../pages/strata-catalogue-grid";
 import {
   cableAt,
   cableLabel,
@@ -133,7 +132,7 @@ function FaceCardBody({
   const typeName = useMemo(() => new Map(connectorTypes.map((t) => [t.id, t.name])), [connectorTypes]);
   const colorOf = useMemo(() => new Map(canvasData.signals.map((s) => [s.name, s.color])), [canvasData.signals]);
 
-  const [face, setFace] = useState<FaceSide>(() => cardFace(connectors));
+  const [face, setFace] = useState<FaceSide>(() => fullestFace(connectors));
   const [selectedPort, setSelectedPort] = useState<string | null>(null);
   const [hoverEntry, setHoverEntry] = useState<number | null>(null);
 

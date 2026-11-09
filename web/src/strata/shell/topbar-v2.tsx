@@ -5,9 +5,9 @@
  *   - lockup Strata Arkyo (vers la page Projets), puis nom du site ;
  *   - onglets `Projets` · `Catalogue` · `Administration ▾`, filtrés par les
  *     permissions du rail Classique (`nav-model.ts`) ;
- *   - navigation de section du Catalogue (`Catalogue` · `Modèles`, puis
- *     `Contenants` · `Panels` · `Dossiers` sur les modèles) : il n'y a plus de
- *     barre latérale ;
+ *   - sur les pages des modèles, leur navigation (`Contenants` · `Panels` ·
+ *     `Dossiers`) : il n'y a plus de barre latérale, et ces pages n'ont pas
+ *     d'onglets ; le catalogue a les siens (`Équipements` · … · `Modèles`) ;
  *   - onglets de la page (`useTopbarTabs`), comme la topbar Classique ;
  *   - à droite : emplacement ⌘K, présence, notifications, langue, thème,
  *     badge de rôle et profil (menus de la topbar Classique, réutilisés tels
@@ -161,8 +161,13 @@ function SubNav({ label, links }: { label: string; links: { href: string; label:
 
 const Divider = () => <div aria-hidden className="h-4 w-px shrink-0 bg-[var(--border)]" />;
 
-/** Navigation de section du Catalogue : `Catalogue` · `Modèles`, puis les modèles. */
-function CatalogueNav({
+/**
+ * Navigation des modèles (`Contenants` · `Panels` · `Dossiers`), sur leurs
+ * pages seulement (`/templates`, `/racks`, `/rigs`, `/panels`) : ces pages
+ * d'arkyo n'ont pas d'onglets à elles. Sur `/admin/catalogue`, les onglets de
+ * la page (dont « Modèles ») suffisent : pas de navigation en plus.
+ */
+function ModelesNav({
   section,
   canSee,
   pathname,
@@ -173,33 +178,16 @@ function CatalogueNav({
   pathname: string;
   tabParam: string | null;
 }) {
-  const visible = section.items.filter(canSee);
-  const fiches = visible.filter((i) => !i.group);
-  const modeles = visible.filter((i) => i.group === MODELES);
+  const modeles = section.items.filter((i) => i.group === MODELES && canSee(i));
   const onModeles = modeles.some((i) => isItemActive(i, pathname, tabParam)) || pathname === "/templates";
-
-  const parts = [
-    ...fiches.map((i) => ({ href: i.href, label: i.label, current: isItemActive(i, pathname, tabParam) })),
-    ...(modeles.length > 0 ? [{ href: modeles[0].href, label: MODELES, current: onModeles }] : []),
-  ];
-
+  if (!onModeles || modeles.length === 0) return null;
   return (
     <>
-      {parts.length > 1 && (
-        <>
-          <Divider />
-          <SubNav label={section.label} links={parts} />
-        </>
-      )}
-      {onModeles && modeles.length > 0 && (
-        <>
-          <Divider />
-          <SubNav
-            label={MODELES}
-            links={modeles.map((i) => ({ href: i.href, label: i.label, current: isItemActive(i, pathname, tabParam) }))}
-          />
-        </>
-      )}
+      <Divider />
+      <SubNav
+        label={MODELES}
+        links={modeles.map((i) => ({ href: i.href, label: i.label, current: isItemActive(i, pathname, tabParam) }))}
+      />
     </>
   );
 }
@@ -279,7 +267,7 @@ export function TopbarV2() {
       </nav>
 
       {current === "catalogue" && (
-        <CatalogueNav section={catalogue} canSee={canSee} pathname={pathname} tabParam={tabParam} />
+        <ModelesNav section={catalogue} canSee={canSee} pathname={pathname} tabParam={tabParam} />
       )}
 
       {/* Onglets de la page : même slot que la topbar Classique, monté côté

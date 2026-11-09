@@ -90,8 +90,6 @@ import {
 import { useCatalogueSync } from "./use-catalogue-sync";
 // arkyo-server: useProposalSync retiré (propositions à Arkyo).
 import { LoadingState } from "@/components/ui/loading-state";
-import { useInterface } from "@/strata/interface-context"; // arkyo-server: interface Strata
-import { StrataAdaptersGrid } from "@/strata/pages/strata-adapters-grid"; // arkyo-server: interface Strata
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -185,7 +183,6 @@ function loadInitialFilters(): PersistedFilters {
 
 export function AdaptersListPanel() {
   const router = useRouter();
-  const isStrata = useInterface() === "strata"; // arkyo-server: interface Strata
   const confirm = useConfirm();
   const toast = useToast();
   // arkyo-server: `canAccess` (plan) retiré.
@@ -947,13 +944,6 @@ export function AdaptersListPanel() {
               defaultSort={{ key: "name", dir: "asc" }}
               onBulkDelete={handleBulkDelete}
               onVisibleOrderChange={setOrderedSelectableIds}
-            />
-          ) : isStrata ? (
-            // arkyo-server: interface Strata (grille dessinée, même liste filtrée)
-            <StrataAdaptersGrid
-              items={filtered}
-              hrefOf={(it) => `/admin/catalogue/adapters/${it.id}`}
-              renderActions={renderItemActions}
             />
           ) : (
             <div className="space-y-7">

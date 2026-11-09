@@ -87,8 +87,6 @@ import {
 import { useCatalogueSync } from "./use-catalogue-sync";
 // arkyo-server: useProposalSync retiré (propositions à Arkyo).
 import { LoadingState } from "@/components/ui/loading-state";
-import { useInterface } from "@/strata/interface-context"; // arkyo-server: interface Strata
-import { StrataCablesGrid } from "@/strata/pages/strata-cables-grid"; // arkyo-server: interface Strata
 
 // ── Constants & helpers ───────────────────────────────────────────────────────
 
@@ -220,7 +218,6 @@ function toCableCardItem(it: TenantCableItem): CableCardItem {
 
 export function CablesListPanel() {
   const router = useRouter();
-  const isStrata = useInterface() === "strata"; // arkyo-server: interface Strata
   const confirm = useConfirm();
   const toast = useToast();
   // arkyo-server: `canAccess` (plan) retiré.
@@ -1063,13 +1060,6 @@ export function CablesListPanel() {
               defaultSort={{ key: "name", dir: "asc" }}
               onBulkDelete={handleBulkDelete}
               onVisibleOrderChange={setOrderedSelectableIds}
-            />
-          ) : isStrata ? (
-            // arkyo-server: interface Strata (grille dessinée, même liste filtrée)
-            <StrataCablesGrid
-              items={filtered}
-              hrefOf={(it) => `/admin/catalogue/cables/${it.id}`}
-              renderActions={renderItemActions}
             />
           ) : (
             <div className="space-y-7">

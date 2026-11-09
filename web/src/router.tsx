@@ -39,6 +39,8 @@ import { InterfaceSwitch } from "@/strata/interface-switch";
 // Pages du catalogue (phase 2) : chargées à la demande, hors du bundle principal.
 const ParametresPage = lazy(() => import("@/app/(app)/admin/parametres/page"));
 const CataloguePage = lazy(() => import("@/app/(app)/admin/catalogue/page"));
+// Interface Strata : catalogue liste + détail à la place des panneaux d'arkyo.
+const StrataCataloguePage = lazy(() => import("@/strata/pages/catalogue-page"));
 const NewEquipmentPage = lazy(() => import("@/app/(app)/admin/catalogue/equipment/new/page"));
 const EquipmentPage = lazy(() => import("@/app/(app)/admin/catalogue/equipment/[id]/page"));
 const NewCablePage = lazy(() => import("@/app/(app)/admin/catalogue/cables/new/page"));
@@ -75,6 +77,11 @@ function DashboardRoute() {
 /** `/projects` : liste des projets d'arkyo en Classique, page Projets en Strata. */
 function ProjectsRoute() {
   return <InterfaceSwitch classique={<ProjectsPage />} strata={<StrataProjectsPage />} />;
+}
+
+/** `/admin/catalogue` : catalogue d'arkyo en Classique, catalogue liste + détail en Strata. */
+function CatalogueRoute() {
+  return <InterfaceSwitch classique={<CataloguePage />} strata={<StrataCataloguePage />} />;
 }
 
 /** Page chargée à la demande (`lazy()`), avec `<LoadingState>` en attendant.
@@ -123,7 +130,7 @@ export const routes: RouteObject[] = [
           soon("rigs/:id/rack/:rackId"),
           { path: "admin/systeme", element: <SystemePage />, errorElement },
           lazyPage("admin/parametres", ParametresPage),
-          lazyPage("admin/catalogue", CataloguePage),
+          lazyPage("admin/catalogue", CatalogueRoute),
           lazyPage("admin/catalogue/equipment/new", NewEquipmentPage),
           lazyPage("admin/catalogue/equipment/:id", EquipmentPage),
           lazyPage("admin/catalogue/cables/new", NewCablePage),

@@ -45,7 +45,8 @@ beforeAll(async () => {
   await Promise.all([
     import("@/strata/pages/projects-page"),
     import("@/app/(app)/templates/page"),
-    import("@/app/(app)/admin/catalogue/page"),
+    import("@/strata/pages/catalogue-page"),
+    import("@/app/(app)/admin/espace/page"),
   ]);
 }, 60000);
 
@@ -219,16 +220,12 @@ describe("topbar v2", () => {
     expect(within(menu).getAllByRole("menuitem").map((a) => a.textContent)).toEqual(["Utilisateurs"]);
   });
 
-  test("Catalogue : navigation de section Catalogue · Modèles, puis Contenants · Panels · Dossiers", async () => {
+  test("Modèles : navigation Contenants · Panels · Dossiers sur leurs pages", async () => {
     renderApp("/templates?tab=panels", strataApi());
     const header = await strataHeader();
     expect(within(mainNav(header)).getByRole("link", { name: "Catalogue" })).toHaveAttribute("aria-current", "page");
-    const section = within(header).getByRole("navigation", { name: "Catalogue" });
-    expect(within(section).getAllByRole("link").map((a) => [a.textContent, a.getAttribute("href")])).toEqual([
-      ["Catalogue", "/admin/catalogue"],
-      ["Modèles", "/templates?tab=racks"],
-    ]);
-    expect(within(section).getByRole("link", { name: "Modèles" })).toHaveAttribute("aria-current", "page");
+    // Plus de navigation `Catalogue` · `Modèles` : les onglets de la page Catalogue la remplacent.
+    expect(within(header).queryByRole("navigation", { name: "Catalogue" })).toBeNull();
     const modeles = within(header).getByRole("navigation", { name: "Modèles" });
     expect(within(modeles).getAllByRole("link").map((a) => [a.textContent, a.getAttribute("href")])).toEqual([
       ["Contenants", "/templates?tab=racks"],
@@ -238,17 +235,30 @@ describe("topbar v2", () => {
     expect(within(modeles).getByRole("link", { name: "Panels" })).toHaveAttribute("aria-current", "page");
   });
 
-  test("onglets de page rendus dans la topbar", async () => {
+  test("/admin/catalogue : onglets de la page, sans navigation de section", async () => {
     renderApp("/admin/catalogue", strataApi());
     const header = await strataHeader();
-    for (const label of ["Équipements", "Cordons", "Adaptateurs"]) {
-      expect(await within(header).findByRole("button", { name: label }, { timeout: 15000 })).toBeInTheDocument();
-    }
+    const tabs = await screen.findByRole("tablist", { name: "Catalogue" }, { timeout: 15000 });
+    expect(within(tabs).getAllByRole("tab").map((t) => t.textContent?.replace(/\d+$/, ""))).toEqual([
+      "Équipements",
+      "Câbles",
+      "Adaptateurs",
+      "Modèles",
+    ]);
     expect(within(mainNav(header)).getByRole("link", { name: "Catalogue" })).toHaveAttribute("aria-current", "page");
-    const section = within(header).getByRole("navigation", { name: "Catalogue" });
-    expect(within(section).getByRole("link", { name: "Catalogue" })).toHaveAttribute("aria-current", "page");
-    // Les sous-entrées des modèles ne s'affichent que sur les modèles.
+    expect(within(header).queryByRole("navigation", { name: "Catalogue" })).toBeNull();
     expect(within(header).queryByRole("navigation", { name: "Modèles" })).toBeNull();
+  });
+
+  test("onglets de page rendus dans la topbar", async () => {
+    renderApp(
+      "/admin/espace",
+      strataApi(OWNER_PERMS, {
+        "GET /api/tenant/espace/informations": { body: { id: "site", name: "Régie A", logoUrl: null } },
+      }),
+    );
+    const header = await strataHeader();
+    expect(await within(header).findByRole("button", { name: "Informations" }, { timeout: 15000 })).toBeInTheDocument();
   });
 
   test("/admin/systeme s'affiche dans la coquille Strata, Administration actif", async () => {

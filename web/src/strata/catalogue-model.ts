@@ -23,7 +23,10 @@ export const POWER_FUNCTION_KEY = "ENERGIE";
 export type LookupConnectorType = { id: string; name: string; iconId?: string | null };
 export type LookupSignal = { name: string; color: string; functionId?: string | null };
 export type LookupFunction = { id: string; label: string; color: string | null; key?: string | null };
-export type LookupBrand = { id: string; name: string };
+export type LookupBrand = { id: string; name: string; logoUrl?: string | null };
+/** Type d'équipement (`CatalogType`) : racine (`parentId` nul) ou sous-type. */
+export type LookupType = { id: string; name: string; functionId: string; parentId: string | null; source?: "ARKYO" | "PERSONAL" };
+export type LookupPhase = { id: string; label: string; key?: string | null; color?: string | null };
 export type LookupCableModel = {
   id: string;
   name: string;
@@ -45,6 +48,8 @@ export type CatalogueLookup = {
   signals?: readonly LookupSignal[];
   functions?: readonly LookupFunction[];
   cableModels?: readonly LookupCableModel[];
+  types?: readonly LookupType[];
+  phases?: readonly LookupPhase[];
 };
 
 /** Référentiels du catalogue, chargés une fois (`null` pendant le chargement ou en cas d'échec). */
@@ -135,6 +140,12 @@ export function portFamilies(
       },
     ];
   });
+}
+
+/** Face à dessiner d'abord : la plus garnie (avant à égalité). */
+export function fullestFace(connectors: readonly ConnectorEntry[]): "FRONT" | "REAR" {
+  const ports = (face: ConnectorEntry["face"]) => totalPorts(connectors.filter((c) => c.face === face));
+  return ports("REAR") > ports("FRONT") ? "REAR" : "FRONT";
 }
 
 /** Nombre total de ports d'une connectique. */

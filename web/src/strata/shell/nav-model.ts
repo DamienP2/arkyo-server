@@ -8,7 +8,8 @@
  *   - Projets : l'onglet mène à `/dashboard` (page Projets) ; Prestation et
  *     Intégration sont les filtres de cette page (`filter`) ;
  *   - Catalogue : le catalogue et les modèles (spec v2 §7, « Catalogue ›
- *     Modèles »), dans la navigation de section de la topbar ;
+ *     Modèles ») : onglets de la page Catalogue, et navigation des modèles
+ *     dans la topbar sur leurs pages (qui n'ont pas d'onglets) ;
  *   - Administration : le menu de l'onglet.
  */
 
@@ -45,7 +46,7 @@ export type StrataNavItem = {
   altPrefixes?: string[];
   /** Filtre de la page Projets (bouton de la page, pas lien de la topbar). */
   filter?: "prestation" | "integration";
-  /** Sous-groupe de la navigation de section (« Modèles »). */
+  /** Sous-groupe « Modèles » (onglet de la page Catalogue, navigation des modèles). */
   group?: string;
 };
 
