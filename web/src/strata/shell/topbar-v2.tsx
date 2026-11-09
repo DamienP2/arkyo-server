@@ -37,6 +37,7 @@ import {
   type StrataNavItem,
   type StrataSection,
 } from "./nav-model";
+import { CommandPalette } from "@/strata/palette/command-palette";
 import { TOPBAR_ICON_BTN, TOPBAR_TAB, TOPBAR_TAB_OFF, TOPBAR_TAB_ON } from "./seg-tabs";
 
 /** Évènement `window` qui ouvre la palette ⌘K (écouté par la palette). */
@@ -326,6 +327,7 @@ export function TopbarV2() {
           onLogout={() => void signOut({ callbackUrl: "/auth" })}
         />
       </div>
+      <CommandPalette />
     </header>
   );
 }
