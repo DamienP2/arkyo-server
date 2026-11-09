@@ -71,6 +71,9 @@ pub const NEWER: &str = "Cette sauvegarde vient d'une version plus récente de S
 const IN_PROGRESS: &str = "restore-in-progress.json";
 /// Outcome of the last restore applied at startup.
 const STATUS: &str = "restore-status.json";
+/// Marker of a failed restore whose original data is not all back: every
+/// start refuses until the admin removes it.
+pub const STRANDED: &str = "restore-stranded.json";
 /// Age past which a temporary file left by a crash is removed.
 const STALE: Duration = Duration::from_secs(3600);
 
@@ -1030,6 +1033,8 @@ const INTERRUPTED: &str =
 /// lets the next start put the original data back after a crash in
 /// between. The outcome goes to `restore-status.json`.
 pub fn apply_pending_restore(data_dir: &Path) -> Result<bool, TransferError> {
+    // An earlier restore left the data partly aside: touch nothing.
+    check_not_stranded(data_dir)?;
     let owner = Owner::of(data_dir);
     let stamp = local_stamp();
     let pending = data_dir.join(PENDING);
@@ -1116,12 +1121,14 @@ fn leftover_order(name: &str, prefix: &str, suffix: &str) -> (String, u32) {
 }
 
 /// After a restore committed (never after a failure: the data aside may be
-/// the only good copy), keeps the 2 latest `before-restore-*` folders, the
+/// the only good copy; never the folder named by [`STRANDED`]), keeps the 2 latest `before-restore-*` folders, the
 /// latest `restore-applied-*.zip` and the latest `restore-failed-*.zip`.
 fn purge_leftovers(data_dir: &Path) {
     let Ok(entries) = std::fs::read_dir(data_dir) else {
         return;
     };
+    // The folder of a stranded restore may hold the only copy of the data.
+    let stranded = read_stranded(data_dir).map(|m| m.before_restore);
     let entries: Vec<(String, bool)> = entries
         .flatten()
         .filter_map(|e| {
@@ -1133,6 +1140,7 @@ fn purge_leftovers(data_dir: &Path) {
         let mut names: Vec<&String> = entries
             .iter()
             .filter(|(n, d)| *d == folder && n.starts_with(prefix) && n.ends_with(suffix))
+            .filter(|(n, _)| stranded.as_deref() != Some(n.as_str()))
             .map(|(n, _)| n)
             .collect();
         names.sort_by_key(|n| leftover_order(n, prefix, suffix));
@@ -1241,6 +1249,7 @@ fn recover(
             &data_dir.join(&progress.aside),
             progress.phase,
             TransferError::Invalid(INTERRUPTED.into()),
+            owner,
         )
     } else {
         tracing::error!("{IN_PROGRESS}: invalid folder {}", progress.aside);
@@ -1316,20 +1325,64 @@ fn put_back(data_dir: &Path, aside: &Path, phase: Phase) -> bool {
     complete
 }
 
+/// `<data>/restore-stranded.json`.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct StrandedMarker {
+    at: String,
+    /// The `before-restore-…` folder holding the original data.
+    before_restore: String,
+    /// Why the restore failed.
+    error: String,
+}
+
+fn read_stranded(data_dir: &Path) -> Option<StrandedMarker> {
+    serde_json::from_slice(&std::fs::read(data_dir.join(STRANDED)).ok()?).ok()
+}
+
+/// Refuses while `<data>/restore-stranded.json` exists: a restore failed and
+/// the original data is not all back, so opening the base would create an
+/// empty one over it. Checked by every start and every CLI command that
+/// opens the base; the admin removes the marker once the data is back.
+pub fn check_not_stranded(data_dir: &Path) -> Result<(), TransferError> {
+    let path = data_dir.join(STRANDED);
+    if std::fs::symlink_metadata(&path).is_err() {
+        return Ok(());
+    }
+    // An unreadable marker still refuses; it then names the data folder.
+    let folder = read_stranded(data_dir)
+        .map(|m| m.before_restore)
+        .filter(|f| f.starts_with("before-restore-") && !f.contains(['/', '\\']))
+        .map_or_else(|| data_dir.to_path_buf(), |f| data_dir.join(f));
+    Err(TransferError::Stranded(folder))
+}
+
 /// [`put_back`], or [`TransferError::Stranded`] when the original data is
-/// not all back in place (`failure` is only logged then).
+/// not all back in place: the marker [`STRANDED`] is then written
+/// (`failure` is kept in it).
 fn undo_restore(
     data_dir: &Path,
     aside: &Path,
     phase: Phase,
     failure: TransferError,
+    owner: Owner,
 ) -> TransferError {
     if put_back(data_dir, aside, phase) {
-        failure
-    } else {
-        tracing::error!("site restore failed ({failure}); the original data is not all back");
-        TransferError::Stranded(aside.to_path_buf())
+        return failure;
     }
+    tracing::error!("site restore failed ({failure}); the original data is not all back");
+    let marker = StrandedMarker {
+        at: crate::ids::now_iso(),
+        before_restore: aside
+            .file_name()
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_default(),
+        error: failure.to_string(),
+    };
+    if let Err(e) = write_json(&data_dir.join(STRANDED), &marker, owner) {
+        tracing::error!("cannot write {STRANDED}: {e}");
+    }
+    TransferError::Stranded(aside.to_path_buf())
 }
 
 fn apply(
@@ -1353,7 +1406,7 @@ fn apply(
     };
     let marker = data_dir.join(IN_PROGRESS);
     let undo = |phase: Phase, e: TransferError| {
-        let e = undo_restore(data_dir, &aside, phase, e);
+        let e = undo_restore(data_dir, &aside, phase, e, owner);
         let _ = std::fs::remove_file(&marker);
         e
     };
@@ -1559,6 +1612,34 @@ mod tests {
         // Only Windows waits for a held file.
         let held = io::Error::from(io::ErrorKind::PermissionDenied);
         assert_eq!(held_by_another_process(&held), cfg!(windows));
+    }
+
+    #[test]
+    fn purge_keeps_the_folder_of_a_stranded_restore() {
+        let d = tempfile::tempdir().unwrap();
+        for n in ["20200101-000000", "20200102-000000", "20200103-000000"] {
+            std::fs::create_dir(d.path().join(format!("before-restore-{n}"))).unwrap();
+        }
+        std::fs::write(
+            d.path().join(STRANDED),
+            r#"{"at":"2026-11-08T03:00:00.000Z","beforeRestore":"before-restore-20200101-000000","error":"x"}"#,
+        )
+        .unwrap();
+        purge_leftovers(d.path());
+        let mut left: Vec<String> = std::fs::read_dir(d.path())
+            .unwrap()
+            .map(|e| e.unwrap().file_name().into_string().unwrap())
+            .filter(|n| n.starts_with("before-restore-"))
+            .collect();
+        left.sort();
+        assert_eq!(
+            left,
+            [
+                "before-restore-20200101-000000",
+                "before-restore-20200102-000000",
+                "before-restore-20200103-000000",
+            ]
+        );
     }
 
     #[test]

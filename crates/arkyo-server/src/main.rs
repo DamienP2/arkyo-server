@@ -158,6 +158,7 @@ enum UserCmd {
 
 async fn backup_command(out: Option<PathBuf>, data_dir: Option<PathBuf>) -> anyhow::Result<()> {
     let dir = paths::cli_data_dir(data_dir)?;
+    site::check_not_stranded(&dir)?;
     if !dir.join("arkyo.db").is_file() {
         anyhow::bail!("aucune base dans {}", dir.display());
     }
@@ -198,6 +199,7 @@ async fn backup_command(out: Option<PathBuf>, data_dir: Option<PathBuf>) -> anyh
 
 fn restore_command(file: PathBuf, data_dir: Option<PathBuf>) -> anyhow::Result<()> {
     let dir = paths::cli_data_dir(data_dir)?;
+    site::check_not_stranded(&dir)?;
     let m = site::stage_restore(&dir, &file)?;
     if m.migration > db::latest_migration() {
         eprintln!(
@@ -243,6 +245,8 @@ impl UserCmd {
 
 async fn user_command(cmd: UserCmd) -> anyhow::Result<()> {
     let dir = paths::cli_data_dir(cmd.data_dir())?;
+    // A stranded restore: opening the base would create an empty one.
+    site::check_not_stranded(&dir)?;
     // `sudo` in the service account's directory: refuse planted symlinks or
     // hard links before SQLite (running as root) opens them.
     #[cfg(unix)]
@@ -437,10 +441,7 @@ fn apply_staged_restore(dir: &std::path::Path) -> anyhow::Result<()> {
         Ok(false) => {}
         Err(e @ arkyo_server::transfer::TransferError::Stranded(_)) => {
             tracing::error!("{e}");
-            anyhow::bail!(
-                "{e} Le serveur ne démarre pas : remettez ces données dans {} puis relancez-le.",
-                dir.display()
-            );
+            anyhow::bail!("{e} Le serveur ne démarre pas (the server does not start).");
         }
         Err(e) => tracing::error!("site restore not applied: {e}"),
     }
@@ -585,6 +586,18 @@ mod tests {
         assert!(err.contains("before-restore-20261108-030000"), "{err}");
         assert!(err.contains("ne démarre pas"), "{err}");
         assert!(!d.path().join("arkyo.db").exists());
+        assert!(d.path().join("restore-stranded.json").is_file());
+
+        // The supervisor starts it again: still refused, no base created.
+        let err = apply_staged_restore(d.path()).unwrap_err().to_string();
+        assert!(err.contains("before-restore-20261108-030000"), "{err}");
+        assert!(err.contains("restore-stranded.json"), "{err}");
+        assert!(!d.path().join("arkyo.db").exists());
+
+        // Put back by hand, marker removed: the start goes on.
+        std::fs::rename(aside.join("arkyo.db"), d.path().join("arkyo.db")).unwrap();
+        std::fs::remove_file(d.path().join("restore-stranded.json")).unwrap();
+        apply_staged_restore(d.path()).unwrap();
     }
 
     #[test]

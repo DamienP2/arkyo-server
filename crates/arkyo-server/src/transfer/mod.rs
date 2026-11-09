@@ -166,9 +166,13 @@ impl fmt::Display for TransferError {
             TransferError::Storage(_) => f.write_str(STORAGE),
             TransferError::Stranded(dir) => write!(
                 f,
-                "La restauration a échoué et les données d'origine n'ont pas pu être toutes \
-                 remises en place : elles sont dans « {} ».",
-                dir.display()
+                "La restauration du site a échoué et les données d'origine n'ont pas pu être \
+                 toutes remises en place : elles sont dans « {dir} ». Remettez-les en place à \
+                 la main, puis supprimez « restore-stranded.json » du dossier de données. \
+                 (The site restore failed and the original data could not all be put back: \
+                 it is in « {dir} ». Put it back by hand, then delete restore-stranded.json \
+                 from the data folder.)",
+                dir = dir.display()
             ),
         }
     }

@@ -1735,3 +1735,27 @@ async fn replace_of_a_panel_keeps_a_safety_copy() {
     }
     assert_eq!(arkyo_files(&dir).len(), 10);
 }
+
+#[tokio::test]
+async fn a_refused_import_takes_no_point_nor_safety_copy() {
+    let t = setup().await;
+    let (p1, pn1) = (cid("p1"), cid("pn1"));
+    let file = export(
+        &t,
+        &[(RootKind::Project, &p1), (RootKind::Panel, &pn1)],
+        "both.arkyo",
+    )
+    .await;
+    // Replace chosen for one root, no mode for the other (present here).
+    for opts in [
+        modes(&[(&p1, Mode::Replace)]),
+        modes(&[(&pn1, Mode::Replace)]),
+    ] {
+        match run(&t, &file, opts).await {
+            Err(TransferError::Invalid(m)) => assert!(m.starts_with("Choisissez"), "{m}"),
+            other => panic!("{other:?}"),
+        }
+    }
+    assert!(!t.file("backups/projects").exists());
+    assert!(!t.file("backups/objects").exists());
+}

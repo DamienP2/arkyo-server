@@ -644,6 +644,13 @@ impl RootPlan<'_> {
     }
 }
 
+fn missing_mode(root: &Root) -> TransferError {
+    TransferError::Invalid(format!(
+        "Choisissez Remplacer ou Copie pour « {} ».",
+        root.name
+    ))
+}
+
 /// A root id that is safe as a file name (`<data>/backups/projects/<id>`).
 fn plain_id(id: &str) -> bool {
     !id.is_empty()
@@ -669,6 +676,8 @@ pub async fn import(
     // about to be replaced, a safety copy of each other root. Existence is
     // checked on a plain connection; a root created or deleted in between
     // is handled by the transaction below.
+    // Every root is checked (id, mode chosen when present here) before any
+    // point or copy is written: a refused import leaves nothing.
     let mut safety_copies = Vec::new();
     {
         let mut conn = st.pool.acquire().await?;
@@ -677,10 +686,13 @@ pub async fn import(
             if !plain_id(&root.id) {
                 return Err(TransferError::Invalid("Archive invalide.".into()));
             }
-            if opts.modes.get(&root.id) == Some(&Mode::Replace)
-                && root_exists(&mut conn, root.kind, &root.id).await?
-            {
-                replaced.push((root.kind, root.id.clone()));
+            if !root_exists(&mut conn, root.kind, &root.id).await? {
+                continue;
+            }
+            match opts.modes.get(&root.id) {
+                Some(Mode::Replace) => replaced.push((root.kind, root.id.clone())),
+                Some(Mode::Copy) => {}
+                _ => return Err(missing_mode(root)),
             }
         }
         drop(conn);
@@ -712,12 +724,7 @@ pub async fn import(
             (false, _) => Mode::Insert,
             (true, Some(Mode::Replace)) => Mode::Replace,
             (true, Some(Mode::Copy)) => Mode::Copy,
-            (true, _) => {
-                return Err(TransferError::Invalid(format!(
-                    "Choisissez Remplacer ou Copie pour « {} ».",
-                    root.name
-                )))
-            }
+            (true, _) => return Err(missing_mode(root)),
         };
         let part = partition(&bundle, root.kind, &root.id);
         let mut map = HashMap::new();

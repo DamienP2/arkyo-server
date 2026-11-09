@@ -1360,3 +1360,55 @@ async fn a_failed_restore_purges_nothing() {
     assert_eq!(aside(&d, "restore-applied-").len(), 2);
     assert_eq!(aside(&d, "restore-failed-").len(), 3);
 }
+
+/// The marker a restore leaves when the original data could not all be
+/// put back.
+fn strand(d: &Path, folder: &str) {
+    std::fs::create_dir_all(d.join(folder)).unwrap();
+    std::fs::write(
+        d.join("restore-stranded.json"),
+        json!({"at": NOW, "beforeRestore": folder, "error": "disque plein"}).to_string(),
+    )
+    .unwrap();
+}
+
+#[tokio::test]
+async fn a_stranded_marker_stops_every_restore_and_the_cli() {
+    let (e, _) = populated().await;
+    let d = e._dir.path().to_path_buf();
+    let out = tempfile::tempdir().unwrap();
+    let b = create_site_backup(&e.pool, &d, out.path()).await.unwrap();
+    stage_restore(&d, &out.path().join(&b.name)).unwrap();
+    e.pool.close().await;
+    strand(&d, "before-restore-20261108-030000");
+
+    // Refused each time, nothing touched (the archive stays pending).
+    for _ in 0..2 {
+        match apply_pending_restore(&d) {
+            Err(TransferError::Stranded(dir)) => {
+                assert!(dir.ends_with("before-restore-20261108-030000"), "{dir:?}")
+            }
+            other => panic!("{other:?}"),
+        }
+        assert!(d.join(PENDING).is_file());
+        assert!(d.join("restore-stranded.json").is_file());
+    }
+
+    // The CLI does not open the base either.
+    let exe = env!("CARGO_BIN_EXE_arkyo-server");
+    let o = std::process::Command::new(exe)
+        .args(["backup", "--out"])
+        .arg(out.path())
+        .arg("--data-dir")
+        .arg(&d)
+        .output()
+        .unwrap();
+    assert!(!o.status.success());
+    let err = String::from_utf8_lossy(&o.stderr);
+    assert!(err.contains("before-restore-20261108-030000"), "{err}");
+    assert!(err.contains("restore-stranded.json"), "{err}");
+
+    // The admin put the data back and removed the marker: it goes on.
+    std::fs::remove_file(d.join("restore-stranded.json")).unwrap();
+    assert!(apply_pending_restore(&d).unwrap());
+}
