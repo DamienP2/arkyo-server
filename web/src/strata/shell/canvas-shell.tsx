@@ -44,6 +44,7 @@ import {
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
+import { UNSAFE_LocationContext } from "react-router";
 import type { EditorShellSlots } from "@/components/editor-shell/editor-shell";
 import { useWorkspace } from "@/components/editor-shell/hooks/use-workspace";
 import { SHELL_LEFT_SIDE_PANEL_W, SHELL_SLIDEOVER_W, SHELL_TOPBAR_CTX_H } from "@/components/synoptique/lib/constants";
@@ -51,7 +52,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { ChevronDown, LayoutList, PanelLeft, SlidersHorizontal, X } from "@/components/ui/icons";
 import { cn } from "@/lib/utils";
 import type { UiInterface } from "../interface-context";
-import { useProjectSpace } from "./space-switch";
+import { spaceOf, useProjectSpace } from "./space-switch";
 import { ValidationBanner } from "./validation-banner";
 
 /** Hauteur de la topbar Strata (`--topbar-height` de `[data-interface="strata"]`). */
@@ -68,17 +69,23 @@ const SHELL_TOP = "calc(var(--dev-banner-height) + var(--impersonation-banner-he
 
 /**
  * Barres d'outils verticales d'arkyo (`LeftToolbar`, `InventaireLeftToolbar`,
- * `RackTabLeftToolbar` : colonne `flex-col`, groupes `flex-col`, filets
- * `h-px`, titres de groupe en 7 px) mises à plat dans la barre flottante. Et,
- * quand la topbar affiche l'état d'enregistrement, le badge de la barre
- * contextuelle (dernier `span` à pictogramme de sa racine) est masqué.
+ * `RackTabLeftToolbar`) mises à plat dans la barre flottante, par leur seule
+ * structure (aucune classe d'arkyo) : la racine et ses groupes passent en
+ * ligne ; les filets (`div` vides `aria-hidden`) deviennent verticaux ; les
+ * titres de groupe (« Vues », « Zoom » : `div` de texte seul, sans `title`,
+ * contrairement au pourcentage de zoom) sont masqués.
+ *
+ * Quand la topbar affiche l'état d'enregistrement, le badge de
+ * `ProjectContextualTopbar` est masqué : seule cette barre a pour racine un
+ * `div` qui commence par son liseré (`span` `aria-hidden`) et finit par le
+ * badge (`span` à pictogramme).
  */
 const SHELL_CSS = `
 [data-strata-tools] > div { flex-direction: row; align-items: center; height: auto; padding: 0; gap: 2px; }
 [data-strata-tools] > div > div { flex-direction: row; align-items: center; margin-top: 0; gap: 2px; }
-[data-strata-tools] [aria-hidden].h-px { width: 1px; height: 22px; margin: 0 5px; }
-[data-strata-tools] .tracking-widest { display: none; }
-[data-strata-canvas-shell]:has([data-strata-save]) [data-zone="contextual"] > div > span:last-child:has(> svg) { display: none; }
+[data-strata-tools] > div > div > div[aria-hidden]:empty { width: 1px; height: 22px; margin: 0 5px; }
+[data-strata-tools] > div > div > div:not([aria-hidden]):not([title]):not(:has(*)) { display: none; }
+[data-strata-canvas-shell]:has([data-strata-save]) [data-zone="contextual"] div:has(> span[aria-hidden]:first-child) > span:last-child:not([aria-hidden]):has(> svg) { display: none; }
 `;
 
 // ── Tiroir ──────────────────────────────────────────────────────────────────
@@ -184,8 +191,14 @@ export function useCanvasStage(slots: EditorShellSlots, ui: UiInterface): Canvas
     if (ui === "classique" && row.current) placeClassic(row.current, host, leftCount);
   });
 
+  // Espace Gérer (Strata, `?space=gerer`) : le canevas n'est pas monté (ni ses
+  // raccourcis clavier ni ses mesures) ; il l'est de nouveau au retour dans
+  // Concevoir. Contexte de l'URL lu sans exiger de routeur (EditorShell seul).
+  const location = useContext(UNSAFE_LocationContext)?.location;
+  const gerer = ui === "strata" && spaceOf(new URLSearchParams(location?.search ?? "")) === "gerer";
+
   const stage = useMemo<Stage>(() => ({ drawer, attach }), [drawer, attach]);
-  const portal = createPortal(slots.canvas, host);
+  const portal = gerer ? null : createPortal(slots.canvas, host);
   const wrap = (layout: ReactNode) => (
     <StageContext.Provider value={stage}>
       {layout}
@@ -221,14 +234,18 @@ function ViewOptions({ children }: { children: ReactNode }) {
       if (ref.current?.contains(t) || t?.closest?.("[data-radix-popper-content-wrapper]")) return;
       setOpen(false);
     };
+    // Échap ferme le menu, et lui seul (le tiroir reste ouvert) : écouté avant
+    // le tiroir (capture), il consomme la touche.
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && !e.defaultPrevented && !inLayer(e.target)) setOpen(false);
+      if (e.key !== "Escape" || e.defaultPrevented || inLayer(e.target)) return;
+      e.preventDefault();
+      setOpen(false);
     };
     document.addEventListener("pointerdown", onDown);
-    document.addEventListener("keydown", onKey);
+    document.addEventListener("keydown", onKey, true);
     return () => {
       document.removeEventListener("pointerdown", onDown);
-      document.removeEventListener("keydown", onKey);
+      document.removeEventListener("keydown", onKey, true);
     };
   }, [open]);
 

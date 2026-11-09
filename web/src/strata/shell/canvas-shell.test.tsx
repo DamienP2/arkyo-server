@@ -7,11 +7,12 @@
  */
 
 import { useEffect, useState, type ReactNode } from "react";
-import { MemoryRouter } from "react-router";
+import { MemoryRouter, useNavigate } from "react-router";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { EditorShell, type EditorShellSlots } from "@/components/editor-shell/editor-shell";
 import { WorkspaceProvider } from "@/components/editor-shell/workspace-context";
+import { useWorkspaceActions } from "@/components/editor-shell/hooks/use-workspace";
 import { useTopbarActions } from "@/components/editor-shell/topbar-actions-context";
 import type { WorkspaceId } from "@/components/editor-shell/tool-registry";
 import type { ValidationReport } from "@/lib/services/rack-validation";
@@ -83,6 +84,31 @@ describe("EditorShell en Classique", () => {
     rerender(<Shell iface="classique" {...SLOTS} leftToolbar={null} leftSidePanel={null} />);
     rerender(<Shell iface="classique" {...SLOTS} />);
     expect(container.innerHTML).toBe(classicDom());
+  });
+});
+
+describe("EditorShell en Classique (suite)", () => {
+  test("classique : un panneau droit puis un volet qui apparaissent gardent l'ordre exact", () => {
+    function OpenSlideOver() {
+      const { openSlideOver } = useWorkspaceActions();
+      return (
+        <button type="button" onClick={() => openSlideOver("export")}>
+          ouvrir
+        </button>
+      );
+    }
+    const canvas = <OpenSlideOver />;
+    const html = '<button type="button">ouvrir</button>';
+    const { container, rerender } = render(<Shell iface="classique" {...SLOTS} canvas={canvas} rightPanel={null} />);
+    rerender(<Shell iface="classique" {...SLOTS} canvas={canvas} />);
+    expect(container.innerHTML).toBe(classicDom(html));
+    fireEvent.click(screen.getByRole("button", { name: "ouvrir" }));
+    // Le volet s'ajoute en fin de rangée, après le panneau droit.
+    expect(container.innerHTML).toBe(
+      classicDom(html).slice(0, -"</div></div>".length) +
+        '<div style="width: 480px;" class="border-border bg-card flex-none border-l shadow-xl"><div>volet</div></div>' +
+        "</div></div>",
+    );
   });
 });
 
@@ -189,20 +215,66 @@ describe("StrataCanvasShell", () => {
     expect(strip.compareDocumentPosition(zone("canvas")!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
-  test("?space=gerer : le projet affiche l'espace Gérer (à venir)", () => {
+  test("?space=gerer : le canevas n'est pas monté (ni ses raccourcis), il l'est au retour dans Concevoir", () => {
+    const shortcut = vi.fn();
+    let mounts = 0;
+    function Synoptic() {
+      useEffect(() => {
+        mounts += 1;
+        // Comme `SynopticView` : ⌘Z, ⌘X… écoutés sur `window`.
+        const onKey = (e: KeyboardEvent) => {
+          if (e.metaKey) shortcut(e.key);
+        };
+        window.addEventListener("keydown", onKey);
+        return () => window.removeEventListener("keydown", onKey);
+      }, []);
+      return <div>synoptique</div>;
+    }
+    function Back() {
+      const navigate = useNavigate();
+      return (
+        <button type="button" onClick={() => navigate("/project/p1?tab=synoptique")}>
+          Concevoir
+        </button>
+      );
+    }
     render(
       <MemoryRouter initialEntries={["/project/p1?tab=synoptique&space=gerer"]}>
         <InterfaceProvider value="strata">
-          <WorkspaceProvider workspace="design">
-            <EditorShell {...SLOTS} />
+          <WorkspaceProvider workspace="synoptic">
+            <EditorShell {...SLOTS} globalTopbar={<Back />} canvas={<Synoptic />} />
           </WorkspaceProvider>
         </InterfaceProvider>
       </MemoryRouter>,
     );
-    expect(within(zone("topbar")!).getByText("topbar")).toBeInTheDocument();
     expect(screen.getByText("Gérer arrive")).toBeInTheDocument();
     expect(zone("canvas")).toBeNull();
-    expect(screen.queryByText("canevas")).toBeNull();
+    expect(zone("drawer")).toBeNull();
+    expect(zone("tools")).toBeNull();
+    expect(screen.queryByText("synoptique")).toBeNull();
+    expect(mounts).toBe(0);
+    fireEvent.keyDown(window, { key: "z", metaKey: true });
+    fireEvent.keyDown(window, { key: "x", metaKey: true });
+    expect(shortcut).not.toHaveBeenCalled();
+
+    // Retour dans Concevoir : le canevas est monté, ses raccourcis répondent.
+    fireEvent.click(screen.getByRole("button", { name: "Concevoir" }));
+    expect(within(zone("canvas")!).getByText("synoptique")).toBeInTheDocument();
+    expect(mounts).toBe(1);
+    fireEvent.keyDown(window, { key: "z", metaKey: true });
+    expect(shortcut).toHaveBeenCalledWith("z");
+  });
+
+  test("Échap ferme d'abord « Options de la vue », puis le tiroir", () => {
+    render(<Shell iface="strata" {...SLOTS} />);
+    fireEvent.click(screen.getByRole("button", { name: "Ouvrir l'inspecteur" }));
+    fireEvent.click(screen.getByRole("button", { name: "Options de la vue" }));
+    expect(screen.getByText("contextuelle")).toBeVisible();
+    fireEvent.keyDown(document.body, { key: "Escape" });
+    expect(screen.getByText("contextuelle")).not.toBeVisible();
+    expect(zone("drawer")).toBeVisible();
+    fireEvent.keyDown(document.body, { key: "Escape" });
+    expect(zone("drawer")).not.toBeVisible();
   });
 });
 

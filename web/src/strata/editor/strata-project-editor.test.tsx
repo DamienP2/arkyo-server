@@ -201,10 +201,12 @@ describe("topbar projet v2", () => {
     expect(await screen.findByText("Gérer arrive")).toBeInTheDocument();
     expect(within(spaceNav()).getByRole("link", { name: "Gérer" })).toHaveAttribute("aria-current", "page");
     expect(zone("canvas")).toBeNull();
+    // Le canevas de Concevoir n'est pas monté dans Gérer.
+    expect(screen.queryByTestId("rack-canvas")).toBeNull();
 
     fireEvent.click(within(spaceNav()).getByRole("link", { name: "Concevoir" }));
     await waitFor(() => expect(here(router)).toBe("/project/p1?tab=rack"));
-    expect(zone("canvas")!.contains(screen.getByTestId("rack-canvas"))).toBe(true);
+    expect(zone("canvas")!.contains(await screen.findByTestId("rack-canvas"))).toBe(true);
   });
 
   test("Vues : chaque onglet d'arkyo reste atteignable, et y mène dans Concevoir", async () => {
