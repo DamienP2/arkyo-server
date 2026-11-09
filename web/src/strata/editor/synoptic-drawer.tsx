@@ -42,7 +42,7 @@ export type SynopticSelection = {
   label: Identified;
   external: Identified;
   multiCable: readonly { id: string }[];
-  multiNode: { nodeCount: number };
+  multiNode: { nodeCount: number; rackCount: number };
   multiExternal: readonly { id: string }[];
   generalRack: Identified;
   generalConnection: Identified;
@@ -52,6 +52,11 @@ export type SynopticSelection = {
  * Identité de la sélection (`null` : rien de sélectionné). Ne dépend que des
  * identifiants : des détails republiés pour la même sélection (rechargement,
  * temps réel) donnent la même clé.
+ *
+ * Multi-sélection d'équipements : le synoptique n'en remonte que les
+ * compteurs (`onMultiNodeSelectionChange({ nodeCount, rackCount })`,
+ * synoptic-view.tsx, fichier hors liste fermée), pas les identifiants. La clé
+ * prend donc les deux compteurs, plus le dernier nœud cliqué (`node`).
  */
 export function selectionKey(s: SynopticSelection): string | null {
   const parts: string[] = [];
@@ -61,7 +66,7 @@ export function selectionKey(s: SynopticSelection): string | null {
   const many = (kind: string, list: readonly { id: string }[]) => {
     if (list.length > 1) parts.push(`${kind}:${list.map((x) => x.id).join(",")}`);
   };
-  if (s.multiNode.nodeCount > 1) parts.push(`nodes:${s.multiNode.nodeCount}`);
+  if (s.multiNode.nodeCount > 1) parts.push(`nodes:${s.multiNode.nodeCount}:${s.multiNode.rackCount}`);
   if (s.node) parts.push(`node:${s.node.slotId}`);
   one("cable", s.cable);
   one("adapter", s.adapter);
@@ -105,16 +110,29 @@ function NodeFaces({
   const goToTab = useGoToProjectTab();
   const live = useRacksLive(rackId ? [rackId] : NONE, projectId)[rackId];
   const canvas = live?.canvas ?? null;
-  if (!canvas) return <LoadingState className="py-8" />;
+  if (!canvas) {
+    // Lecture en échec : pas de carte (le panneau d'arkyo, dessous, reste complet).
+    if (live?.canvasError) {
+      return (
+        <p role="status" className="px-3.5 py-3 text-[12px] text-[var(--muted-foreground)]">
+          Faces indisponibles : le contenant n'a pas pu être lu.
+        </p>
+      );
+    }
+    return <LoadingState className="py-8" />;
+  }
   if (canvas.rack.id !== rackId) return null;
 
   const slots = canvas.rack.slots;
   const slot = flattenSlots(slots).find((s) => s.id === node.slotId) ?? null;
   if (!slot?.equipment) return null;
+  // Équipement posé sur une étagère (slot enfant) : sa hauteur est celle de
+  // l'étagère qui le porte, comme sur le canevas du rack.
+  const parent = slot.parentSlotId ? slots.find((s) => s.id === slot.parentSlotId) : undefined;
 
   const rack = racks.find((r) => r.id === rackId);
   const location = rack ? undefined : locations.find((l) => l.virtualRackId === rackId);
-  const reason = notInRack(rack, slot.startU ?? node.startU);
+  const reason = notInRack(rack, slot.startU ?? parent?.startU ?? null);
   const rackName = rack && !rack.isVirtual ? rack.name : `Pose libre${location ? ` · ${location.name}` : ""}`;
 
   return (
@@ -137,7 +155,7 @@ function NodeFaces({
         </button>
       </div>
       <EquipmentFaceCard
-        slot={slot}
+        slot={slot.startU == null && parent ? { ...slot, startU: parent.startU, heightU: parent.heightU } : slot}
         canvasData={canvas}
         connections={live?.connections ?? null}
         slots={slots}

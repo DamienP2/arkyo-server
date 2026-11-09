@@ -35,9 +35,17 @@ afterEach(() => {
   delete document.documentElement.dataset.interface;
 });
 
+/**
+ * Sous la charge de la suite complète, le premier rendu de l'application et
+ * l'ouverture de la palette peuvent dépasser les délais par défaut (1 s pour
+ * `findBy*`, 5 s par test) : délais explicites, plus larges.
+ */
+const SLOW = { timeout: 5000 };
+const SLOW_TEST = 20000;
+
 async function mount(extra: Api = {}) {
   renderApp("/dashboard", api(extra));
-  await screen.findByRole("button", { name: /Rechercher ou agir/ });
+  await screen.findByRole("button", { name: /Rechercher ou agir/ }, SLOW);
 }
 
 const press = (init: KeyboardEventInit, target: EventTarget = document.body) =>
@@ -50,13 +58,13 @@ describe("palette ⌘K", () => {
     await mount();
     expect(screen.queryByRole("dialog", { name: "Palette de commandes" })).toBeNull();
     press({ key: "k", metaKey: true });
-    expect(await screen.findByRole("dialog", { name: "Palette de commandes" })).toBeTruthy();
+    expect(await screen.findByRole("dialog", { name: "Palette de commandes" }, SLOW)).toBeTruthy();
     press({ key: "Escape" });
-    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Palette de commandes" })).toBeNull());
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Palette de commandes" })).toBeNull(), SLOW);
     press({ key: "k", ctrlKey: true });
-    await screen.findByRole("dialog");
+    await screen.findByRole("dialog", {}, SLOW);
     press({ key: "Escape" });
-    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull(), SLOW);
     const input = document.createElement("input");
     document.body.appendChild(input);
     input.focus();
@@ -64,12 +72,12 @@ describe("palette ⌘K", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
     input.remove();
     press({ key: "/" });
-    await screen.findByRole("dialog");
+    await screen.findByRole("dialog", {}, SLOW);
     press({ key: "Escape" });
-    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull(), SLOW);
     act(() => openStrataPalette());
-    await screen.findByRole("dialog");
-  });
+    await screen.findByRole("dialog", {}, SLOW);
+  }, SLOW_TEST);
 
   test("n'appelle l'API qu'à l'ouverture, puis liste projets, fiches, utilisateurs, actions", async () => {
     await mount();

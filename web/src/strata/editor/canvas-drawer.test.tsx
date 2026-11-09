@@ -14,16 +14,19 @@
  */
 
 import { forwardRef, useImperativeHandle, type ReactNode } from "react";
-import { MemoryRouter } from "react-router";
+import { MemoryRouter, Route, Routes } from "react-router";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { OWNER_PERMS, emitAppEvent, renderApp, resetApp, signedInApi, type Api } from "@/tests/app-harness";
+import { OWNER_PERMS, emitAppEvent, mockApi, renderApp, resetApp, signedInApi, type Api } from "@/tests/app-harness";
 import { EditorShell, type EditorShellSlots } from "@/components/editor-shell/editor-shell";
 import { WorkspaceProvider } from "@/components/editor-shell/workspace-context";
 import type { Slot } from "@/components/synoptique/lib/types";
 import { usePendingExportStore } from "@/app/(fullscreen)/project/[id]/_components/pending-export-store";
 import { InterfaceProvider, type UiInterface } from "@/strata/interface-context";
+import type { NodeSelectionDetails } from "@/components/synoptique/synoptic-view";
+import type { InventaireRack } from "@/app/(fullscreen)/project/[id]/inventaire/inventaire-client";
 import { CAMERA, CONNECTIONS, RACK, SLOT, canvasData } from "../bottom/test-fixtures";
+import { StrataSynopticDrawerTop, type SynopticSelection } from "./synoptic-drawer";
 
 const FIRST_LOAD = { timeout: 15000 };
 
@@ -357,6 +360,134 @@ describe("synoptique : tiroir à la sélection", () => {
   });
 });
 
+describe("Voir dans le rack, portée par emplacement", () => {
+  test("Voir dans le rack : en portée lieu, le lieu du contenant est affiché", async () => {
+    // L'onglet Rack est en portée « par emplacement », sur un autre lieu (Plateau).
+    window.localStorage.setItem("rack-tab:display-scope", JSON.stringify("location"));
+    window.localStorage.setItem("rack-tab:location", JSON.stringify("l2"));
+    window.localStorage.setItem("project-p1-synoptique-rack", "loc:l1");
+    window.localStorage.setItem("synoptic-loc-decollision:l1", "1");
+    const { router } = renderApp(
+      "/project/p1?tab=synoptique",
+      api("strata", [...RACKS, rack("r5", "Baie plateau", { locationId: "l2" })], {
+        "GET /api/tenant/projects/p1/editor": {
+          body: {
+            ...editor([...RACKS, rack("r5", "Baie plateau", { locationId: "l2" })]),
+            inventaire: {
+              rigConfigId: "rc1",
+              racks: [...RACKS, rack("r5", "Baie plateau", { locationId: "l2" })],
+              locations: [
+                { id: "l1", name: "Régie", cableCode: "REG", sortOrder: 0, virtualRackId: "v1" },
+                { id: "l2", name: "Plateau", cableCode: "PLT", sortOrder: 1, virtualRackId: null },
+              ],
+            },
+          },
+        },
+        "GET /api/tenant/projects/p1/racks/r5/canvas-data": { body: canvasData("r5", "Baie plateau", []) },
+        "GET /api/racks/r5/connections": { body: [] },
+      }),
+    );
+    await screen.findByText("Mélangeur", { selector: "[data-slot-id] *" }, FIRST_LOAD);
+    fireEvent.click(node("Mélangeur"));
+    const faces = await within(drawer()).findByRole("region", { name: "Faces" });
+    await waitFor(() => expect(within(faces).getByRole("button", { name: "Voir dans le rack" })).toBeEnabled());
+    fireEvent.click(within(faces).getByRole("button", { name: "Voir dans le rack" }));
+    await waitFor(() => expect(here(router)).toBe("/project/p1?tab=rack"));
+    // Portée gardée, lieu du contenant (Régie) : ses deux baies, dont la Baie 2.
+    await waitFor(() => expect(window.localStorage.getItem("rack-tab:location")).toBe('"l1"'));
+    expect(window.localStorage.getItem("rack-tab:display-scope")).toBe('"location"');
+    await waitFor(
+      () => expect(screen.getAllByTestId("rack-canvas").map((c) => c.getAttribute("data-rack")).sort()).toEqual(["r1", "r2"]),
+      FIRST_LOAD,
+    );
+  });
+});
+
+// ── Carte Faces seule : raisons du bouton, étagère, lecture en échec ────────
+
+const PLAIN_SELECTION: Omit<SynopticSelection, "node" | "nodeRackId"> = {
+  cable: null,
+  adapter: null,
+  zone: null,
+  label: null,
+  external: null,
+  multiCable: [],
+  multiNode: { nodeCount: 0, rackCount: 0 },
+  multiExternal: [],
+  generalRack: null,
+  generalConnection: null,
+};
+
+/** Carte du tiroir pour le slot `slotId` du contenant `rackId` (lu par `canvas-data`). */
+function renderFaces(rackId: string, slotId: string, racks: unknown[], canvas: Api[string]) {
+  mockApi({
+    [`GET /api/tenant/projects/p1/racks/${rackId}/canvas-data`]: canvas,
+    [`GET /api/racks/${rackId}/connections`]: { body: [] },
+  });
+  const selection: SynopticSelection = {
+    ...PLAIN_SELECTION,
+    node: { slotId, equipmentName: "Caméra X", startU: null } as NodeSelectionDetails,
+    nodeRackId: rackId,
+  };
+  render(
+    <MemoryRouter initialEntries={["/project/p1?tab=synoptique"]}>
+      <Routes>
+        <Route
+          path="/project/:id"
+          element={
+            <StrataSynopticDrawerTop
+              projectId="p1"
+              racks={racks as InventaireRack[]}
+              locations={[]}
+              selection={selection}
+            />
+          }
+        />
+      </Routes>
+    </MemoryRouter>,
+  );
+}
+
+describe("carte Faces", () => {
+  test("Voir dans le rack : contenant non rackable", async () => {
+    renderFaces("rc", "s1", [rack("rc", "Caisse", { isRackable: false })], {
+      body: canvasData("rc", "Caisse", [{ ...SLOT, rackId: "rc" }]),
+    });
+    const go = await screen.findByRole("button", { name: "Voir dans le rack" });
+    expect(go).toBeDisabled();
+    expect(go).toHaveAttribute("title", "Contenant non rackable");
+  });
+
+  test("Voir dans le rack : équipement non placé en U", async () => {
+    renderFaces("ru", "s1", [rack("ru", "Baie U")], {
+      body: canvasData("ru", "Baie U", [{ ...SLOT, rackId: "ru", startU: null }]),
+    });
+    const go = await screen.findByRole("button", { name: "Voir dans le rack" });
+    expect(go).toBeDisabled();
+    expect(go).toHaveAttribute("title", "Équipement non placé en U");
+  });
+
+  test("Voir dans le rack : équipement sur une étagère (slot enfant), placé par son étagère", async () => {
+    const shelf = { ...SLOT, id: "sh1", rackId: "rs", equipment: null, startU: 20, heightU: 2, label: "ÉTAGÈRE" };
+    const child = { ...SLOT, id: "ch1", rackId: "rs", parentSlotId: "sh1", startU: null, heightU: null };
+    renderFaces("rs", "ch1", [rack("rs", "Baie S")], {
+      body: canvasData("rs", "Baie S", [{ ...shelf, children: [child] }]),
+    });
+    const go = await screen.findByRole("button", { name: "Voir dans le rack" });
+    expect(go).toBeEnabled();
+    expect(screen.getByRole("region", { name: "Équipement sélectionné" })).toHaveTextContent("U20–U21");
+  });
+
+  test("lecture du contenant en échec : plus d'attente, message court", async () => {
+    renderFaces("rx", "s1", [rack("rx", "Baie X")], () => {
+      throw new TypeError("Failed to fetch");
+    });
+    expect(await screen.findByText("Faces indisponibles : le contenant n'a pas pu être lu.")).toBeInTheDocument();
+    expect(screen.queryByText("Chargement…")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Voir dans le rack" })).toBeNull();
+  });
+});
+
 describe("mode Racks", () => {
   test("mode Racks : bibliothèque dans le tiroir, dépôt sur un U libre (charge utile v1 inchangée)", async () => {
     const { fetchSpy } = renderApp("/project/p1?tab=rack", api("strata"));
@@ -435,6 +566,7 @@ describe("mode Racks", () => {
     const dialog = await screen.findByRole("dialog", {}, FIRST_LOAD);
     expect(dialog).toBeVisible();
     expect(drawer().contains(dialog)).toBe(false);
+    expect(drawer()).not.toBeVisible();
   });
 
   test("projet sans contenant rackable : EmptyState identique", async () => {

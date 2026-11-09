@@ -29,6 +29,8 @@ export type RackLive = {
   /** `null` pendant la première lecture. */
   connections: RackConnectionRow[] | null;
   canvas: RackCanvasData | null;
+  /** La dernière lecture du `canvas-data` a échoué (`canvas` reste la dernière valeur connue). */
+  canvasError?: boolean;
 };
 
 const useRackLiveStore = create<{ byRack: Record<string, RackLive> }>(() => ({ byRack: {} }));
@@ -79,10 +81,9 @@ function loadConnections(rackId: string) {
 function loadCanvas(rackId: string, projectId: string) {
   api
     .get<RackCanvasData>(`/api/tenant/projects/${projectId}/racks/${rackId}/canvas-data`)
-    .then((data) => patch(rackId, { canvas: data }))
-    .catch(() => {
-      /* le canevas garde sa dernière valeur */
-    });
+    .then((data) => patch(rackId, { canvas: data, canvasError: false }))
+    // Le canevas garde sa dernière valeur ; l'échec est signalé aux abonnés.
+    .catch(() => patch(rackId, { canvasError: true }));
 }
 
 function reload(rackId: string) {
@@ -120,7 +121,7 @@ function acquire(rackId: string, projectId: string | null, wantCanvas: boolean):
       else {
         owned.canvasRefs.delete(canvasKey);
         // Plus personne ne le suit : il serait périmé à la prochaine lecture.
-        if (owned.canvasRefs.size === 0) patch(rackId, { canvas: null });
+        if (owned.canvasRefs.size === 0) patch(rackId, { canvas: null, canvasError: false });
       }
     }
     owned.refs -= 1;
