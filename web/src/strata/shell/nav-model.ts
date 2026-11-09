@@ -1,11 +1,15 @@
 /**
- * Navigation de l'interface Strata : onglets de la topbar (une section par
- * onglet) et entrées de la barre latérale de bibliothèque.
+ * Navigation de l'interface Strata v2 (spec v2 §4.3) : trois onglets dans la
+ * topbar, `Projets` · `Catalogue` · `Administration ▾`, sans barre latérale.
  *
- * Les routes et les permissions sont exactement celles du rail Classique
- * (`components/layout/sidebar.tsx`) : `strata-app-shell.test.tsx` le vérifie.
- * Aucune route n'est retirée ; s'y ajoute le renvoi « Référentiels » vers
- * Paramètres dans l'onglet Catalogue.
+ * Chaque entrée du rail Classique (`components/layout/sidebar.tsx`) a ici sa
+ * place, avec la même route et la même permission (`topbar-v2.test.tsx` le
+ * vérifie) :
+ *   - Projets : l'onglet mène à `/dashboard` (page Projets) ; Prestation et
+ *     Intégration sont les filtres de cette page (`filter`) ;
+ *   - Catalogue : le catalogue et les modèles (spec v2 §7, « Catalogue ›
+ *     Modèles »), dans la navigation de section de la topbar ;
+ *   - Administration : le menu de l'onglet.
  */
 
 import type { ComponentType, CSSProperties } from "react";
@@ -21,7 +25,6 @@ import {
   Lockers,
   Package,
   Settings,
-  SlidersHorizontal,
   Users,
   Wrench,
 } from "@/components/ui/icons";
@@ -40,14 +43,14 @@ export type StrataNavItem = {
   defaultTab?: boolean;
   /** Autres chemins (pages filles) qui rendent l'entrée active. */
   altPrefixes?: string[];
-  /** Listée dans le menu Administration seulement : sa page vit dans un autre onglet. */
-  menuOnly?: boolean;
-  /** Renvoi vers la page d'un autre onglet, affiché après les entrées de la section. */
-  renvoi?: boolean;
+  /** Filtre de la page Projets (bouton de la page, pas lien de la topbar). */
+  filter?: "prestation" | "integration";
+  /** Sous-groupe de la navigation de section (« Modèles »). */
+  group?: string;
 };
 
 export type StrataSection = {
-  id: "projets" | "modeles" | "catalogue" | "administration";
+  id: "projets" | "catalogue" | "administration";
   label: string;
   icon: StrataIcon;
   items: StrataNavItem[];
@@ -59,19 +62,22 @@ const CATALOG_ADMIN = { domain: "catalog", level: "admin" } as const;
 const SETTINGS_ADMIN = { domain: "settings", level: "admin" } as const;
 const MEMBERS_ADMIN = { domain: "members", level: "admin" } as const;
 
+/** Sous-groupe « Modèles » de l'onglet Catalogue. */
+export const MODELES = "Modèles";
+
 export const STRATA_NAV: StrataSection[] = [
   {
     id: "projets",
     label: "Projets",
     icon: Folder,
     items: [
-      { href: "/dashboard", label: "Tableau de bord", icon: Gauge },
+      { href: "/dashboard", label: "Projets", icon: Gauge },
       {
         href: "/projects?tab=prestation",
         label: "Prestation",
         icon: Antenna,
         tabs: ["prestation"],
-        defaultTab: true,
+        filter: "prestation",
         perm: PROJECTS_READ,
       },
       {
@@ -79,15 +85,17 @@ export const STRATA_NAV: StrataSection[] = [
         label: "Intégration",
         icon: Wrench,
         tabs: ["integration"],
+        filter: "integration",
         perm: PROJECTS_READ,
       },
     ],
   },
   {
-    id: "modeles",
-    label: "Modèles",
-    icon: Lockers,
+    id: "catalogue",
+    label: "Catalogue",
+    icon: Package,
     items: [
+      { href: "/admin/catalogue", label: "Catalogue", icon: Package, perm: CATALOG_ADMIN },
       {
         href: "/templates?tab=racks",
         label: "Contenants",
@@ -96,6 +104,7 @@ export const STRATA_NAV: StrataSection[] = [
         defaultTab: true,
         altPrefixes: ["/racks", "/rigs"],
         perm: DESIGN_READ,
+        group: MODELES,
       },
       {
         href: "/templates?tab=panels",
@@ -104,6 +113,7 @@ export const STRATA_NAV: StrataSection[] = [
         tabs: ["panels"],
         altPrefixes: ["/panels"],
         perm: DESIGN_READ,
+        group: MODELES,
       },
       {
         href: "/templates?tab=dossiers",
@@ -111,23 +121,7 @@ export const STRATA_NAV: StrataSection[] = [
         icon: FileStack,
         tabs: ["dossiers"],
         perm: DESIGN_READ,
-      },
-    ],
-  },
-  {
-    id: "catalogue",
-    label: "Catalogue",
-    icon: Package,
-    // Une seule entrée : Équipements, Cordons et Adaptateurs sont les onglets
-    // de la page, rendus dans la topbar Strata (`useTopbarTabs`).
-    items: [
-      { href: "/admin/catalogue", label: "Catalogue", icon: Package, perm: CATALOG_ADMIN },
-      {
-        href: "/admin/parametres",
-        label: "Référentiels",
-        icon: SlidersHorizontal,
-        perm: SETTINGS_ADMIN,
-        renvoi: true,
+        group: MODELES,
       },
     ],
   },
@@ -138,7 +132,7 @@ export const STRATA_NAV: StrataSection[] = [
     items: [
       { href: "/admin/espace", label: "Espace", icon: Building2, perm: SETTINGS_ADMIN },
       { href: "/admin/users", label: "Utilisateurs", icon: Users, perm: MEMBERS_ADMIN },
-      { href: "/admin/catalogue", label: "Catalogue", icon: Package, perm: CATALOG_ADMIN, menuOnly: true },
+      { href: "/admin/catalogue", label: "Catalogue", icon: Package, perm: CATALOG_ADMIN },
       { href: "/admin/parametres", label: "Paramètres", icon: Settings, perm: SETTINGS_ADMIN },
       { href: "/admin/systeme", label: "Système", icon: Cpu, perm: SETTINGS_ADMIN },
     ],
@@ -148,12 +142,13 @@ export const STRATA_NAV: StrataSection[] = [
 const startsWithPath = (pathname: string, base: string) =>
   pathname === base || pathname.startsWith(`${base}/`);
 
-/** Onglet de la topbar auquel appartient une page. */
-export function sectionOf(pathname: string): StrataSection["id"] {
+/** Onglet de la topbar auquel appartient une page (`null` : aucun, ex. le profil). */
+export function sectionOf(pathname: string): StrataSection["id"] | null {
   if (startsWithPath(pathname, "/admin/catalogue")) return "catalogue";
   if (startsWithPath(pathname, "/admin")) return "administration";
-  if (["/templates", "/racks", "/rigs", "/panels"].some((p) => startsWithPath(pathname, p))) return "modeles";
-  return "projets";
+  if (["/templates", "/racks", "/rigs", "/panels"].some((p) => startsWithPath(pathname, p))) return "catalogue";
+  if (startsWithPath(pathname, "/dashboard") || startsWithPath(pathname, "/projects")) return "projets";
+  return null;
 }
 
 /** Entrée active pour la page `pathname` (et son `?tab=`). */
@@ -167,12 +162,12 @@ export function isItemActive(item: StrataNavItem, pathname: string, tabParam: st
   return tabParam ? item.tabs.includes(tabParam) : !!item.defaultTab;
 }
 
-/** Entrées propres à la section (ni menu seul, ni renvoi) : elles portent l'onglet. */
-export function primaryItems(section: StrataSection, canSee: (item: StrataNavItem) => boolean): StrataNavItem[] {
-  return section.items.filter((i) => !i.menuOnly && !i.renvoi && canSee(i));
-}
-
 /** Filtre de permission de la navigation, comme le rail Classique (hors provider : tout est visible). */
 export function navFilter(has: ((domain: TenantDomain, level: TenantLevel) => boolean) | undefined) {
   return (item: StrataNavItem) => !item.perm || !has || has(item.perm.domain, item.perm.level);
+}
+
+/** Lien de l'onglet d'une section : sa première entrée visible (hors filtres de page). */
+export function sectionHref(section: StrataSection, canSee: (item: StrataNavItem) => boolean): string | null {
+  return section.items.find((i) => !i.filter && canSee(i))?.href ?? null;
 }

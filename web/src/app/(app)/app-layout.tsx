@@ -33,8 +33,7 @@ import { TenantPermissionsProvider } from "@/components/tenant-permissions-conte
 import type { TenantPermissions } from "@/lib/tenant-permissions";
 import type { MemberRole } from "@/lib/prisma/main-client";
 import { InterfaceProvider, type UiInterface } from "@/strata/interface-context"; // arkyo-server: interface Strata
-import { StrataTopbar } from "@/strata/shell/strata-topbar"; // arkyo-server: interface Strata
-import { StrataSideNav } from "@/strata/shell/strata-side-nav"; // arkyo-server: interface Strata
+import { TopbarV2 } from "@/strata/shell/topbar-v2"; // arkyo-server: interface Strata
 
 const MEMBER_ROLES: readonly MemberRole[] = ["OWNER", "CHEF_PROJET", "TECHNICIEN", "CONSULTATION"];
 
@@ -135,12 +134,12 @@ export default function AppLayout() {
         <div className="flex h-screen bg-[var(--background)]">
           {/* Topbar pleine largeur (z-40) */}
           <Suspense>
-            {gate.interface === "strata" ? <StrataTopbar /> : <Topbar />}{/* arkyo-server: interface Strata (seules topbar et navigation changent : une bascule ne remonte pas la page) */}
+            {gate.interface === "strata" ? <TopbarV2 /> : <Topbar />}{/* arkyo-server: interface Strata (seules topbar et navigation changent : une bascule ne remonte pas la page) */}
           </Suspense>
 
           {/* Rail gauche — sous la topbar */}
           <Suspense>
-            {gate.interface === "strata" ? <StrataSideNav /> : <Sidebar />}{/* arkyo-server: interface Strata */}
+            {gate.interface === "strata" ? null : <Sidebar />}{/* arkyo-server: interface Strata (pas de rail en Strata v2 ; l'emplacement reste pour que `main` ne bouge pas dans l'arbre) */}
           </Suspense>
 
           {/* Contenu principal */}

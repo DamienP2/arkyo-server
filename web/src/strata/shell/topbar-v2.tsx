@@ -1,21 +1,25 @@
 "use client";
 
 /**
- * Topbar de l'interface Strata (46 px), de gauche à droite :
- *   - lockup Strata Arkyo, puis nom du site ;
- *   - onglets segmentés Projets · Modèles · Catalogue · Administration ▾,
- *     filtrés par les permissions du rail Classique ;
- *   - onglets de la page (`useTopbarTabs`), second groupe segmenté ;
- *   - à droite : présence, thème, notifications, langue, badge de rôle, profil
- *     (menus de la topbar Classique, réutilisés tels quels).
+ * Topbar de l'interface Strata v2 (46 px, spec v2 §4.3), de gauche à droite :
+ *   - lockup Strata Arkyo (vers la page Projets), puis nom du site ;
+ *   - onglets `Projets` · `Catalogue` · `Administration ▾`, filtrés par les
+ *     permissions du rail Classique (`nav-model.ts`) ;
+ *   - navigation de section du Catalogue (`Catalogue` · `Modèles`, puis
+ *     `Contenants` · `Panels` · `Dossiers` sur les modèles) : il n'y a plus de
+ *     barre latérale ;
+ *   - onglets de la page (`useTopbarTabs`), comme la topbar Classique ;
+ *   - à droite : emplacement ⌘K, présence, notifications, langue, thème,
+ *     badge de rôle et profil (menus de la topbar Classique, réutilisés tels
+ *     quels).
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 import { useTheme } from "next-themes";
-import { ChevronDown, Moon, Sun } from "@/components/ui/icons";
+import { ChevronDown, Moon, Search, Sun } from "@/components/ui/icons";
 import { StrataBrand } from "@/components/brand/strata-brand";
 import { LanguageMenu, NotificationsMenu, ProfileMenu, ROLE_BADGE } from "@/components/layout/topbar";
 import { PresenceAvatars } from "@/components/presence/presence-avatars";
@@ -23,8 +27,24 @@ import { useTenantPermissionsOptional } from "@/components/tenant-permissions-co
 import { useTenantMembership } from "@/lib/tenant-membership-context";
 import { useTopbarTabs } from "@/lib/topbar-tabs-context";
 import { cn } from "@/lib/utils";
-import { navFilter, primaryItems, sectionOf, STRATA_NAV, type StrataNavItem, type StrataSection } from "./nav-model";
+import {
+  isItemActive,
+  MODELES,
+  navFilter,
+  sectionHref,
+  sectionOf,
+  STRATA_NAV,
+  type StrataNavItem,
+  type StrataSection,
+} from "./nav-model";
 import { TOPBAR_ICON_BTN, TOPBAR_TAB, TOPBAR_TAB_OFF, TOPBAR_TAB_ON } from "./seg-tabs";
+
+/** Évènement `window` qui ouvre la palette ⌘K (écouté par la palette). */
+export const STRATA_PALETTE_EVENT = "strata:palette";
+
+export function openStrataPalette() {
+  window.dispatchEvent(new CustomEvent(STRATA_PALETTE_EVENT));
+}
 
 /** "demo studio" → "Demo Studio", comme le nom du site de la topbar Classique. */
 function toTitleCase(input: string): string {
@@ -38,8 +58,21 @@ function toTitleCase(input: string): string {
     .join("");
 }
 
+const SUB_TAB =
+  "inline-flex items-center rounded-[6px] px-2.5 py-1 text-[12.5px] font-medium whitespace-nowrap transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]";
+
 /** Onglet « Administration ▾ » : menu des pages d'administration visibles. */
-function AdminMenu({ section, items, active }: { section: StrataSection; items: StrataNavItem[]; active: boolean }) {
+function AdminMenu({
+  section,
+  items,
+  active,
+  isCurrent,
+}: {
+  section: StrataSection;
+  items: StrataNavItem[];
+  active: boolean;
+  isCurrent: (item: StrataNavItem) => boolean;
+}) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const close = useCallback(() => setOpen(false), []);
@@ -83,15 +116,20 @@ function AdminMenu({ section, items, active }: { section: StrataSection; items: 
         >
           {items.map((item) => {
             const ItemIcon = item.icon;
+            const current = isCurrent(item);
             return (
               <Link
                 key={item.href}
                 href={item.href}
                 role="menuitem"
+                aria-current={current ? "page" : undefined}
                 onClick={close}
-                className="flex w-full items-center gap-[9px] rounded-[6px] px-2.5 py-[7px] text-[13px] text-[var(--muted-foreground)] transition-colors hover:bg-[var(--muted)] hover:text-[var(--foreground)]"
+                className={cn(
+                  "flex w-full items-center gap-[9px] rounded-[6px] px-2.5 py-[7px] text-[13px] transition-colors hover:bg-[var(--muted)] hover:text-[var(--foreground)]",
+                  current ? "bg-[var(--accent-soft)] text-[var(--foreground)]" : "text-[var(--muted-foreground)]",
+                )}
               >
-                <ItemIcon className="h-3.5 w-3.5 shrink-0" />
+                <ItemIcon className={cn("h-3.5 w-3.5 shrink-0", current && "text-[var(--accent-strong)]")} />
                 {item.label}
               </Link>
             );
@@ -102,8 +140,72 @@ function AdminMenu({ section, items, active }: { section: StrataSection; items: 
   );
 }
 
-export function StrataTopbar() {
+/** Groupe de liens de section (navigation propre à l'onglet actif). */
+function SubNav({ label, links }: { label: string; links: { href: string; label: string; current: boolean }[] }) {
+  return (
+    <nav aria-label={label} className="flex shrink-0 items-center gap-0.5">
+      {links.map((l) => (
+        <Link
+          key={l.href}
+          href={l.href}
+          aria-current={l.current ? "page" : undefined}
+          className={cn(SUB_TAB, l.current ? TOPBAR_TAB_ON : TOPBAR_TAB_OFF)}
+        >
+          {l.label}
+        </Link>
+      ))}
+    </nav>
+  );
+}
+
+const Divider = () => <div aria-hidden className="h-4 w-px shrink-0 bg-[var(--border)]" />;
+
+/** Navigation de section du Catalogue : `Catalogue` · `Modèles`, puis les modèles. */
+function CatalogueNav({
+  section,
+  canSee,
+  pathname,
+  tabParam,
+}: {
+  section: StrataSection;
+  canSee: (item: StrataNavItem) => boolean;
+  pathname: string;
+  tabParam: string | null;
+}) {
+  const visible = section.items.filter(canSee);
+  const fiches = visible.filter((i) => !i.group);
+  const modeles = visible.filter((i) => i.group === MODELES);
+  const onModeles = modeles.some((i) => isItemActive(i, pathname, tabParam)) || pathname === "/templates";
+
+  const parts = [
+    ...fiches.map((i) => ({ href: i.href, label: i.label, current: isItemActive(i, pathname, tabParam) })),
+    ...(modeles.length > 0 ? [{ href: modeles[0].href, label: MODELES, current: onModeles }] : []),
+  ];
+
+  return (
+    <>
+      {parts.length > 1 && (
+        <>
+          <Divider />
+          <SubNav label={section.label} links={parts} />
+        </>
+      )}
+      {onModeles && modeles.length > 0 && (
+        <>
+          <Divider />
+          <SubNav
+            label={MODELES}
+            links={modeles.map((i) => ({ href: i.href, label: i.label, current: isItemActive(i, pathname, tabParam) }))}
+          />
+        </>
+      )}
+    </>
+  );
+}
+
+export function TopbarV2() {
   const pathname = usePathname();
+  const tabParam = useSearchParams().get("tab");
   const perms = useTenantPermissionsOptional();
   const { tabs: pageTabs } = useTopbarTabs();
   const { tenantName, role } = useTenantMembership();
@@ -120,17 +222,18 @@ export function StrataTopbar() {
   const isDark = resolvedTheme === "dark";
   const badge = role ? ROLE_BADGE[role] : ROLE_BADGE.CONSULTATION;
   const displayName = tenantName ? toTitleCase(tenantName) : "";
+  const catalogue = STRATA_NAV.find((s) => s.id === "catalogue")!;
 
   return (
     <header
-      className="fixed right-0 left-0 z-40 flex items-center gap-[18px] border-b border-[var(--border)] bg-[var(--surface)] px-3.5"
+      className="fixed right-0 left-0 z-40 flex items-center gap-3.5 border-b border-[var(--border)] bg-[var(--surface)] px-3.5"
       style={{
         top: "calc(var(--dev-banner-height) + var(--impersonation-banner-height, 0px))",
         height: "var(--topbar-height)",
       }}
     >
       <div className="flex shrink-0 items-center gap-3">
-        <Link href="/dashboard" className="flex items-center" title="Accueil">
+        <Link href="/dashboard" className="flex items-center" title="Projets">
           <StrataBrand />
         </Link>
         {displayName && (
@@ -147,15 +250,23 @@ export function StrataTopbar() {
           if (section.id === "administration") {
             const items = section.items.filter(canSee);
             if (items.length === 0) return null;
-            return <AdminMenu key={section.id} section={section} items={items} active={active} />;
+            return (
+              <AdminMenu
+                key={section.id}
+                section={section}
+                items={items}
+                active={active}
+                isCurrent={(item) => isItemActive(item, pathname, tabParam)}
+              />
+            );
           }
-          const first = primaryItems(section, canSee)[0];
-          if (!first) return null;
+          const href = sectionHref(section, canSee);
+          if (!href) return null;
           const Icon = section.icon;
           return (
             <Link
               key={section.id}
-              href={first.href}
+              href={href}
               aria-current={active ? "page" : undefined}
               className={cn(TOPBAR_TAB, active ? TOPBAR_TAB_ON : TOPBAR_TAB_OFF)}
             >
@@ -166,23 +277,39 @@ export function StrataTopbar() {
         })}
       </nav>
 
+      {current === "catalogue" && (
+        <CatalogueNav section={catalogue} canSee={canSee} pathname={pathname} tabParam={tabParam} />
+      )}
+
       {/* Onglets de la page : même slot que la topbar Classique, monté côté
           client seulement (voir `Topbar`). */}
       {mounted && pageTabs && (
         <div className="flex min-w-0 items-center overflow-x-auto [scrollbar-width:none]">{pageTabs}</div>
       )}
 
-      <div className="flex-1" />
+      <div className="min-w-0 flex-1" />
 
       <div className="flex shrink-0 items-center gap-1.5">
+        <button
+          type="button"
+          onClick={openStrataPalette}
+          aria-label="Rechercher ou agir (⌘K)"
+          className="mr-1 inline-flex h-[30px] items-center gap-2 rounded-[7px] border border-[var(--border)] bg-[var(--muted)] px-2 text-[12.5px] text-[var(--text-tertiary)] transition-colors hover:border-[var(--border-strong)] hover:text-[var(--muted-foreground)] 2xl:w-[230px]"
+        >
+          <Search className="h-3.5 w-3.5 shrink-0" />
+          <span className="hidden flex-1 text-left 2xl:inline">Rechercher, agir…</span>
+          <kbd className="rounded border border-[var(--border)] bg-[var(--surface)] px-1 font-sans text-[10.5px] text-[var(--muted-foreground)]">
+            ⌘K
+          </kbd>
+        </button>
         <PresenceAvatars className="mr-1" />
+        <NotificationsMenu />
+        <LanguageMenu />
         {mounted && (
           <button onClick={() => setTheme(isDark ? "light" : "dark")} className={TOPBAR_ICON_BTN} aria-label="Thème">
             {isDark ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
           </button>
         )}
-        <NotificationsMenu />
-        <LanguageMenu />
         <div className="mx-1 h-4 w-px bg-[var(--border)]" />
         {role && (
           <span

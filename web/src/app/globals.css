@@ -257,11 +257,12 @@ body {
   --premium: #fbbf24; /* amber-400 */
 }
 
-/* arkyo-server: interface Strata — coquille Strata : barre latérale de 240 px
-   et topbar de 46 px. Les en-têtes fixes (AdminTabLayout) suivent ces
-   variables, et `--topbar-bottom` (calculé sur :root) avec elles. */
+/* arkyo-server: interface Strata — coquille Strata v2 : pas de rail (la
+   navigation est dans la topbar et dans les pages), topbar de 46 px. Les
+   en-têtes fixes (AdminTabLayout) suivent ces variables, et `--topbar-bottom`
+   (calculé sur :root) avec elles. */
 [data-interface="strata"] {
-  --rail-width: 240px;
+  --rail-width: 0px;
   --topbar-height: 46px;
 }
 

@@ -51,8 +51,8 @@ const ProfilePage = lazy(() => import("@/app/(app)/profile/page"));
 // Phase 3 : tableau de bord, liste des projets, modèles (`/templates`) et
 // détail de régie.
 const DashboardPage = lazy(() => import("@/app/(app)/dashboard/page"));
-// Interface Strata : accueil à la place du tableau de bord (`/dashboard`).
-const StrataHome = lazy(() => import("@/strata/pages/strata-home"));
+// Interface Strata : page Projets à la place du tableau de bord et de la liste.
+const StrataProjectsPage = lazy(() => import("@/strata/pages/projects-page"));
 const ProjectsPage = lazy(() => import("@/app/(app)/projects/page"));
 const TemplatesPage = lazy(() => import("@/app/(app)/templates/page"));
 const RigDetailPage = lazy(() => import("@/app/(app)/rigs/[id]/page"));
@@ -67,9 +67,14 @@ const SettingsRedirect = SettingsPage as unknown as React.ComponentType;
 
 const errorElement = <NavigationErrorElement />;
 
-/** `/dashboard` : tableau de bord d'arkyo en Classique, accueil en Strata. */
+/** `/dashboard` : tableau de bord d'arkyo en Classique, page Projets en Strata. */
 function DashboardRoute() {
-  return <InterfaceSwitch classique={<DashboardPage />} strata={<StrataHome />} />;
+  return <InterfaceSwitch classique={<DashboardPage />} strata={<StrataProjectsPage />} />;
+}
+
+/** `/projects` : liste des projets d'arkyo en Classique, page Projets en Strata. */
+function ProjectsRoute() {
+  return <InterfaceSwitch classique={<ProjectsPage />} strata={<StrataProjectsPage />} />;
 }
 
 /** Page chargée à la demande (`lazy()`), avec `<LoadingState>` en attendant.
@@ -104,7 +109,7 @@ export const routes: RouteObject[] = [
         errorElement,
         children: [
           lazyPage("dashboard", DashboardRoute),
-          lazyPage("projects", ProjectsPage),
+          lazyPage("projects", ProjectsRoute),
           // Les redirections d'arkyo (garde, puis `redirect()`) sont chargées
           // d'emblée, comme `/settings`.
           { path: "projects/:id", element: <LegacyProjectRedirect />, errorElement },
