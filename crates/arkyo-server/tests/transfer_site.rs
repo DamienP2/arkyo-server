@@ -844,7 +844,19 @@ async fn a_write_failure_is_not_an_invalid_archive() {
 fn move_aside(d: &Path, aside: &Path, item: &str) {
     let dest = aside.join(item);
     std::fs::create_dir_all(dest.parent().unwrap()).unwrap();
-    std::fs::rename(d.join(item), dest).unwrap();
+    // Windows may hold the base a moment after `pool.close()` (error 32,
+    // sharing violation): retry for a few seconds, as the restore does.
+    let mut tries = 0;
+    loop {
+        match std::fs::rename(d.join(item), &dest) {
+            Ok(()) => return,
+            Err(e) if tries < 50 && e.kind() != std::io::ErrorKind::NotFound => {
+                tries += 1;
+                std::thread::sleep(std::time::Duration::from_millis(100));
+            }
+            Err(e) => panic!("move_aside {item}: {e}"),
+        }
+    }
 }
 
 fn marker(d: &Path, aside: &str, phase: &str) {
