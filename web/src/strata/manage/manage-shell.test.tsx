@@ -78,7 +78,7 @@ describe("Gérer › navigation", () => {
     expect(screen.getByRole("switch", { name: "Toujours afficher les sections avancées" })).toBeInTheDocument();
   });
 
-  test("Réseau, Livraison, Dossier : « Bientôt disponible » comme en Classique ; Câbles : bouchon", async () => {
+  test("Réseau, Livraison, Dossier : « Bientôt disponible » comme en Classique ; Câbles : lien vers le synoptique", async () => {
     const { router } = renderApp(
       "/project/p1?space=gerer&page=reseau",
       manageApi("strata", undefined, {
@@ -97,7 +97,8 @@ describe("Gérer › navigation", () => {
     expect(screen.getByText("Bientôt disponible")).toBeInTheDocument();
     fireEvent.click(within(nav()).getByRole("link", { name: /Câbles/ }));
     expect(await screen.findByRole("heading", { name: "Câbles" })).toBeInTheDocument();
-    // Les câbles restent éditables dans le synoptique.
+    // Liste illisible (vue Générale en erreur) : le synoptique reste accessible.
+    expect(await screen.findByRole("alert")).toHaveTextContent("Réessayer");
     fireEvent.click(screen.getByRole("button", { name: "Ouvrir le synoptique" }));
     // Le dernier écran de Gérer reste dans l'URL (retour par le sélecteur d'espace).
     await waitFor(() => expect(here(router)).toBe(normUrl("/project/p1?page=cables&tab=synoptique")));

@@ -5,7 +5,7 @@
 
 import { OWNER_PERMS, signedInApi, type Api } from "@/tests/app-harness";
 import type { UiInterface } from "@/strata/interface-context";
-import { CONNECTIONS, MONITOR_SLOT, SLOT, canvasData } from "../bottom/test-fixtures";
+import { CONNECTIONS, MONITOR_SLOT, PANEL_SLOT, SLOT, canvasData } from "../bottom/test-fixtures";
 
 export const HEADER = {
   id: "p1",
@@ -159,4 +159,49 @@ export function normUrl(url: string): string {
   const q = [...u.searchParams.entries()].filter(([k, v]) => !(k === "tab" && v === "inventaire"));
   q.sort(([a], [b]) => a.localeCompare(b));
   return u.pathname + (q.length ? `?${new URLSearchParams(q).toString()}` : "");
+}
+
+/** Réponse de `GET …/synoptic/location/l1` (Régie : Baie 1 et pose libre) avec ces câbles. */
+export function locationPayload(connections: unknown[] = CONNECTIONS) {
+  return {
+    location: { id: "l1", name: "Régie", cableCode: "REG", virtualRackId: "v1" },
+    racks: [
+      { id: "r1", name: "Baie 1", isVirtual: false },
+      { id: "r2", name: "Caisse", isVirtual: false },
+      { id: "v1", name: "", isVirtual: true },
+    ],
+    slots: [SLOT, PANEL_SLOT, MONITOR_SLOT].map((s) => ({ ...s, rackId: "r1" })),
+    connections,
+    projectConnections: [],
+    adapters: [],
+    connectorTypes: [
+      { id: "ct-bnc", name: "BNC", iconId: "bnc", color: "#64748b", category: "Vidéo" },
+      { id: "ct-xlr", name: "XLR3", iconId: "xlr3", color: "#64748b", category: "Audio" },
+    ],
+    signals: [
+      { name: "12G-SDI", color: "#3654ff" },
+      { name: "AES3", color: "#f59e0b" },
+    ],
+  };
+}
+
+/** Vue Générale sans câble entre lieux. */
+export const GENERAL_EMPTY = {
+  locations: [{ id: "l1", name: "Régie" }],
+  racks: [],
+  connections: [],
+  bundles: [],
+  connectorTypes: [],
+  signals: [],
+  signalCategories: [],
+  appConfig: {},
+};
+
+/** Gérer › Câbles : l'API de `manageApi` et les lectures de la liste des câbles. */
+export function cablesApi(iface: UiInterface, connections: unknown[] = CONNECTIONS, extra: Api = {}): Api {
+  return manageApi(iface, undefined, {
+    "GET /api/tenant/projects/p1/synoptic/general": { body: GENERAL_EMPTY },
+    "GET /api/tenant/projects/p1/synoptic/location/l1": { body: locationPayload(connections) },
+    ...extra,
+  });
 }

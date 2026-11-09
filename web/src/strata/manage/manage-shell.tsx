@@ -32,11 +32,12 @@ import { AdvancedAlwaysToggle } from "../advanced/advanced-section";
 import { SHELL_TOP, STRATA_TOPBAR_H } from "../shell/canvas-shell";
 import { useInterface } from "../interface-context";
 import { spaceOf } from "../shell/space-switch";
+import { CablesPage } from "./cables-page";
 import { FichePage } from "./fiche-page";
 import { SECTION_LABEL } from "./manage-ui";
 import { MaterielPage } from "./materiel-page";
 import { OverviewPage } from "./overview";
-import { CablesStubPage, ComingSoonPage } from "./stub-page";
+import { ComingSoonPage } from "./stub-page";
 import { allCables, computeTodo, unplacedItems, type ManagePage } from "./todo-model";
 import { useManageData, useManageNav, type ManageNav, type ManageState } from "./use-manage";
 
@@ -176,7 +177,7 @@ export function ManageShell({
       page = <MaterielPage data={data} nav={nav} onOpenCatalogue={onOpenCatalogue} />;
       break;
     case "cables":
-      page = <CablesStubPage nav={nav} />;
+      page = <CablesPage data={data} nav={nav} />;
       break;
     case "reseau":
       page = <ComingSoonPage title="Réseau" />;
