@@ -85,10 +85,11 @@ const TENANT_PROJECTS = PROJECTS.map((p) => ({
   rigConfigsCount: p.id === "pA" ? 2 : 0,
 }));
 
-/** `GET /api/tenant/members` (forme réduite). */
+/** `GET /api/tenant/members?inactive=1` (forme réduite) : u2 est désactivée,
+ *  absente de la liste des seuls membres actifs. */
 const MEMBERS = [
-  { id: "u1", userId: "u1", name: "Damien Perpignan", email: "damien@example.com" },
-  { id: "u2", userId: "u2", name: null, email: "lea@example.com" },
+  { id: "u1", userId: "u1", name: "Damien Perpignan", email: "damien@example.com", isActive: true },
+  { id: "u2", userId: "u2", name: null, email: "lea@example.com", isActive: false },
 ];
 
 function projectsApi(iface: "classique" | "strata", extra: Api = {}, perms?: unknown): Api {
@@ -97,7 +98,8 @@ function projectsApi(iface: "classique" | "strata", extra: Api = {}, perms?: unk
     "GET /api/projects": { body: PROJECTS },
     "GET /api/projects?stats=tasks": { body: TASK_STATS },
     "GET /api/tenant/projects": { body: { projects: TENANT_PROJECTS } },
-    "GET /api/tenant/members": { body: MEMBERS },
+    "GET /api/tenant/members?inactive=1": { body: MEMBERS },
+    "GET /api/tenant/members": { body: MEMBERS.filter((m) => m.isActive) },
     "GET /api/notifications?limit=15": { body: { items: [], count: 0, total: 0, page: 1, pages: 1 } },
     ...extra,
   };
@@ -175,10 +177,11 @@ describe("page Projets (Strata v2)", () => {
     expect(within(alpha).getByRole("meter", { name: "Avancement" })).toHaveAttribute("aria-valuenow", "43");
     expect(within(alpha).getByText("En préparation")).toBeInTheDocument();
     // Équipe : le créateur du projet (membres de l'espace).
-    expect(within(alpha).getByTitle("Créé par Damien Perpignan")).toHaveTextContent("DP");
+    expect(within(alpha).getByRole("img", { name: "Créé par Damien Perpignan" })).toHaveTextContent("DP");
     const charlie = within(list).getByRole("row", { name: /Gala Charlie/ });
     expect(within(charlie).getByText("Terminé")).toBeInTheDocument();
-    expect(within(charlie).getByTitle("Créé par lea@example.com")).toHaveTextContent("L");
+    // Créatrice désactivée : toujours nommée (`?inactive=1`).
+    expect(within(charlie).getByRole("img", { name: "Créé par lea@example.com" })).toHaveTextContent("L");
     const bravo = within(list).getByRole("row", { name: /Concert Bravo/ });
     expect(within(bravo).getByText("Projet interne · Intégration")).toBeInTheDocument();
   });
@@ -220,7 +223,8 @@ describe("page Projets (Strata v2)", () => {
     expect(within(detail).getByRole("group", { name: "Fiche technique" })).toHaveTextContent("43 %");
     // Alertes connues : fiche incomplète.
     expect(within(detail).getByText("Fiche technique à 43 %")).toBeInTheDocument();
-    expect(within(list).getByRole("row", { name: /Festival Alpha/ })).toHaveAttribute("aria-selected", "true");
+    expect(within(list).getByRole("button", { name: "Festival Alpha" })).toHaveAttribute("aria-current", "true");
+    expect(within(list).getByRole("button", { name: "Gala Charlie" })).not.toHaveAttribute("aria-current");
 
     // Fermer le détail.
     fireEvent.click(within(detail).getByRole("button", { name: "Fermer le détail" }));
@@ -299,7 +303,7 @@ describe("page Projets (Strata v2)", () => {
       "/dashboard",
       projectsApi("strata", {
         "GET /api/tenant/projects": { status: 500, body: { error: "Erreur serveur" } },
-        "GET /api/tenant/members": { status: 500, body: { error: "Erreur serveur" } },
+        "GET /api/tenant/members?inactive=1": { status: 500, body: { error: "Erreur serveur" } },
       }),
     );
     const list = await projectList();
@@ -309,23 +313,37 @@ describe("page Projets (Strata v2)", () => {
     expect(within(detail).getByRole("group", { name: "Tâches" })).toHaveTextContent("3");
   });
 
-  test("suppression (projects:admin) : confirmation puis DELETE", async () => {
+  test("suppression (projects:admin) : confirmation puis DELETE, compteurs à jour", async () => {
     const { fetchSpy } = renderApp(
       "/dashboard",
-      projectsApi("strata", { "DELETE /api/tenant/projects/pC": { body: { ok: true } } }),
+      projectsApi("strata", { "DELETE /api/tenant/projects/pB": { body: { ok: true } } }),
     );
     const list = await projectList();
-    fireEvent.click(within(list).getByRole("button", { name: "Gala Charlie" }));
+    const counters = screen.getByRole("region", { name: "Compteurs" });
+    const counter = (label: string) => within(counters).getByRole("group", { name: label });
+    expect(counter("Projets actifs")).toHaveTextContent("2Projets actifssur 3 au total");
+    expect(counter("Prochaine captation")).toHaveTextContent("Concert Bravo");
+
+    fireEvent.click(within(list).getByRole("button", { name: "Concert Bravo" }));
     const detail = await screen.findByRole("region", { name: "Détail du projet" });
     fireEvent.click(within(detail).getByRole("button", { name: "Supprimer le projet" }));
     const dialog = await screen.findByRole("dialog");
-    expect(within(dialog).getByText("Supprimer « Gala Charlie » ?")).toBeInTheDocument();
+    expect(within(dialog).getByText("Supprimer « Concert Bravo » ?")).toBeInTheDocument();
     fireEvent.click(within(dialog).getByRole("button", { name: "Supprimer" }));
-    await waitFor(() => expect(rowNames(list)).toEqual(["Concert Bravo", "Festival Alpha"]));
+    await waitFor(() => expect(rowNames(list)).toEqual(["Festival Alpha", "Gala Charlie"]));
     expect(
-      fetchSpy.mock.calls.some(([u, init]) => String(u) === "/api/tenant/projects/pC" && init?.method === "DELETE"),
+      fetchSpy.mock.calls.some(([u, init]) => String(u) === "/api/tenant/projects/pB" && init?.method === "DELETE"),
     ).toBe(true);
     expect(screen.queryByRole("region", { name: "Détail du projet" })).toBeNull();
+
+    // Le projet supprimé ne compte plus : (42,5 + 100) / 2 = 71 %, prochaine
+    // captation Festival Alpha, plus de Concert Bravo dans les captations à venir.
+    expect(counter("Projets actifs")).toHaveTextContent("1Projets actifssur 2 au total");
+    expect(counter("Complétion moyenne")).toHaveTextContent("71%");
+    expect(counter("Prochaine captation")).toHaveTextContent("Festival Alpha");
+    const upcoming = screen.getByRole("region", { name: "Captations à venir" });
+    expect(within(upcoming).queryByText("Concert Bravo")).toBeNull();
+    expect(within(upcoming).getByText("Festival Alpha")).toBeInTheDocument();
   });
 
   test("sans projects:admin, pas de suppression", async () => {

@@ -18,7 +18,7 @@
  *
  * Données : `GET /api/projects` et `?stats=tasks` (celles du tableau de bord
  * Classique, obligatoires), `GET /api/tenant/projects` (compteurs de la liste
- * Classique) et `GET /api/tenant/members` (créateur du projet). Ces deux
+ * Classique) et `GET /api/tenant/members?inactive=1` (créateur du projet). Ces deux
  * dernières sont des compléments : si l'une échoue, la page s'affiche et la
  * donnée manquante vaut « — », jamais 0.
  *
@@ -109,7 +109,8 @@ async function loadProjects(): Promise<PageData> {
         ),
       () => null,
     ),
-    api.get<Member[]>("/api/tenant/members").then(
+    // `?inactive=1` : un créateur désactivé reste nommé.
+    api.get<Member[]>("/api/tenant/members?inactive=1").then(
       (r) => new Map(r.map((m) => [m.id, m])),
       () => null,
     ),
@@ -290,7 +291,6 @@ export default function ProjectsPage() {
 
 function ProjectsContent({ data }: { data: PageData }) {
   const now = new Date();
-  const f = dashboardFigures(data.projects, data.taskStats, now);
   const { tenantName } = useTenantMembership();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -317,6 +317,8 @@ function ProjectsContent({ data }: { data: PageData }) {
   const [newOpen, setNewOpen] = useState(false);
 
   const projects = useMemo(() => data.projects.filter((p) => !removed.has(p.id)), [data.projects, removed]);
+  // Compteurs sur la liste à jour : un projet supprimé n'y compte plus.
+  const f = dashboardFigures(projects, data.taskStats, now);
 
   const shown = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -359,6 +361,8 @@ function ProjectsContent({ data }: { data: PageData }) {
       await api.delete(`/api/tenant/projects/${p.id}`);
       setRemoved((prev) => new Set(prev).add(p.id));
       setSelectedId(null);
+      // Relecture silencieuse (`ClientPage`) : les statistiques de tâches suivent.
+      router.refresh();
     } catch (e) {
       toast.error(getApiErrorMessage(e, "Échec de la suppression."));
     }
@@ -501,7 +505,7 @@ function ProjectsContent({ data }: { data: PageData }) {
                 <CalendarDays className="h-3.5 w-3.5" />
                 <h3 className="flex-1 text-[13px] font-bold text-[var(--foreground)]">Captations à venir</h3>
               </header>
-              {f.upcomingProjects.filter((p) => !removed.has(p.id)).length === 0 ? (
+              {f.upcomingProjects.length === 0 ? (
                 <EmptyState
                   icon={<CalendarDays strokeWidth={1.5} />}
                   title="Aucune captation planifiée"
@@ -511,7 +515,6 @@ function ProjectsContent({ data }: { data: PageData }) {
               ) : (
                 <div className="flex flex-col py-1">
                   {f.upcomingProjects
-                    .filter((p) => !removed.has(p.id))
                     .slice(0, 5)
                     .map((p) => (
                       <button
@@ -644,6 +647,8 @@ function ProgressBar({ value, label }: { value: number; label: string }) {
 function Avatar({ member }: { member: Member }) {
   return (
     <span
+      role="img"
+      aria-label={`Créé par ${memberLabel(member)}`}
       title={`Créé par ${memberLabel(member)}`}
       className="inline-grid h-6 w-6 place-items-center rounded-full border border-[var(--border)] bg-[var(--muted)] text-[10px] font-bold text-[var(--muted-foreground)]"
     >
@@ -667,7 +672,6 @@ function ProjectRow({
   const cell = "border-b border-[var(--border)] px-2.5 py-[7px] align-middle";
   return (
     <tr
-      aria-selected={selected}
       onClick={onSelect}
       className={cn(
         "cursor-pointer transition-colors",
@@ -677,6 +681,7 @@ function ProjectRow({
       <td className={cn(cell, "pl-3.5")}>
         <button
           type="button"
+          aria-current={selected ? "true" : undefined}
           className="block max-w-[320px] truncate text-left font-semibold text-[var(--foreground)] outline-none focus-visible:underline"
         >
           {p.name}

@@ -104,7 +104,7 @@ function AdminMenu({
         aria-current={active ? "page" : undefined}
         className={cn(TOPBAR_TAB, active ? TOPBAR_TAB_ON : TOPBAR_TAB_OFF)}
       >
-        <Icon className="h-4 w-4" />
+        <Icon className="hidden h-4 w-4 2xl:block" />
         {section.label}
         <ChevronDown className="h-3.5 w-3.5" />
       </button>
@@ -226,7 +226,7 @@ export function TopbarV2() {
 
   return (
     <header
-      className="fixed right-0 left-0 z-40 flex items-center gap-3.5 border-b border-[var(--border)] bg-[var(--surface)] px-3.5"
+      className="fixed right-0 left-0 z-40 flex items-center gap-2.5 border-b border-[var(--border)] bg-[var(--surface)] px-3.5 2xl:gap-3.5"
       style={{
         top: "calc(var(--dev-banner-height) + var(--impersonation-banner-height, 0px))",
         height: "var(--topbar-height)",
@@ -270,7 +270,7 @@ export function TopbarV2() {
               aria-current={active ? "page" : undefined}
               className={cn(TOPBAR_TAB, active ? TOPBAR_TAB_ON : TOPBAR_TAB_OFF)}
             >
-              <Icon className="h-4 w-4" />
+              <Icon className="hidden h-4 w-4 2xl:block" />
               {section.label}
             </Link>
           );
@@ -294,11 +294,11 @@ export function TopbarV2() {
           type="button"
           onClick={openStrataPalette}
           aria-label="Rechercher ou agir (⌘K)"
-          className="mr-1 inline-flex h-[30px] items-center gap-2 rounded-[7px] border border-[var(--border)] bg-[var(--muted)] px-2 text-[12.5px] text-[var(--text-tertiary)] transition-colors hover:border-[var(--border-strong)] hover:text-[var(--muted-foreground)] 2xl:w-[230px]"
+          className="inline-flex h-[30px] items-center gap-2 rounded-[7px] border border-[var(--border)] bg-[var(--muted)] px-2 text-[12.5px] text-[var(--text-tertiary)] transition-colors hover:border-[var(--border-strong)] hover:text-[var(--muted-foreground)] 2xl:mr-1 2xl:w-[230px]"
         >
           <Search className="h-3.5 w-3.5 shrink-0" />
           <span className="hidden flex-1 text-left 2xl:inline">Rechercher, agir…</span>
-          <kbd className="rounded border border-[var(--border)] bg-[var(--surface)] px-1 font-sans text-[10.5px] text-[var(--muted-foreground)]">
+          <kbd className="hidden rounded border border-[var(--border)] bg-[var(--surface)] px-1 font-sans text-[10.5px] text-[var(--muted-foreground)] 2xl:inline">
             ⌘K
           </kbd>
         </button>
