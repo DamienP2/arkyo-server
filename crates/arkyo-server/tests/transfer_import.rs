@@ -1703,7 +1703,12 @@ async fn replace_of_a_panel_keeps_a_safety_copy() {
     let report = run(&t, &file, modes(&[(&pn1, Mode::Replace)]))
         .await
         .unwrap();
-    let dir = t.dir().join("backups/objects").join(format!("panel-{pn1}"));
+    // Joined part by part: the report's path uses the platform separator.
+    let dir = t
+        .dir()
+        .join("backups")
+        .join("objects")
+        .join(format!("panel-{pn1}"));
     let files = arkyo_files(&dir);
     assert_eq!(files.len(), 1, "{files:?}");
     assert!(files[0].ends_with("-avant-import.arkyo"), "{files:?}");
