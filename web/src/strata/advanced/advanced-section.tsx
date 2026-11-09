@@ -103,11 +103,10 @@ export function AdvancedSection({
           </span>
         )}
       </button>
-      {open && (
-        <div id={id} className="flex flex-col gap-3 border-t border-[var(--border)] px-3 pt-2.5 pb-3">
-          {children}
-        </div>
-      )}
+      {/* Région toujours présente (cible de `aria-controls`), vide et masquée section repliée. */}
+      <div id={id} hidden={!open} className="flex flex-col gap-3 border-t border-[var(--border)] px-3 pt-2.5 pb-3">
+        {open && children}
+      </div>
     </div>
   );
 }

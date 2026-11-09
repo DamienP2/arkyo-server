@@ -9,6 +9,8 @@
  *     (`onNodeDetailsChange`, `onCableDetailsChange`…) : une sélection
  *     nouvelle l'ouvre ; après une fermeture manuelle, la même sélection ne
  *     le rouvre pas ;
+ *   - note le rapport de validation publié pour ce projet
+ *     (`ValidationRecorder`, lu par Gérer) ;
  *   - pour un équipement, la carte « Faces » (`EquipmentFaceCard` : faces
  *     avant / arrière, ports reliés, position) et « Voir dans le rack », qui
  *     passe en mode Racks sur le contenant de l'équipement.
@@ -28,6 +30,7 @@ import { EquipmentFaceCard } from "../inspector/equipment-face-card";
 import { useStrataDrawer } from "../shell/canvas-shell";
 import { useGoToProjectTab } from "../shell/tab-nav";
 import { useRackFocusStore } from "./rack-focus";
+import { ValidationRecorder } from "../manage/validation-record";
 
 type Identified = { id: string } | null;
 
@@ -185,6 +188,15 @@ export function StrataSynopticDrawerTop({
 
   const { node, nodeRackId } = selection;
   // Un équipement seul (pas un panel, pas une multi-sélection).
-  if (!node || !nodeRackId || !node.equipmentName || selection.multiNode.nodeCount > 1) return null;
-  return <NodeFaces key={node.slotId} projectId={projectId} node={node} rackId={nodeRackId} racks={racks} locations={locations} />;
+  const faces =
+    !node || !nodeRackId || !node.equipmentName || selection.multiNode.nodeCount > 1 ? null : (
+      <NodeFaces key={node.slotId} projectId={projectId} node={node} rackId={nodeRackId} racks={racks} locations={locations} />
+    );
+  return (
+    <>
+      {/* Rapport de validation de ce projet, pour Gérer (le store du shell est global). */}
+      <ValidationRecorder projectId={projectId} />
+      {faces}
+    </>
+  );
 }

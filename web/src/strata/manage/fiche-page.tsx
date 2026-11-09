@@ -16,35 +16,24 @@
  */
 
 import { useEffect, useState } from "react";
-import { format } from "date-fns";
-import { fr } from "date-fns/locale";
 import { ClipboardList, FileText, MessageSquare, Settings2, Users } from "@/components/ui/icons";
 import { AuditPanelContent } from "@/components/synoptique/components/audit-panel";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingState } from "@/components/ui/loading-state";
 import { api } from "@/lib/api-client";
+import { INTERVENTION_LABEL, RIG_LABEL, fmtDay, plural } from "./format";
 import { Box, Kv, PageHead, Pill, SMALL_BTN, TabPanel, Tabs, useTabIds } from "./manage-ui";
 import { missingFicheFields } from "./todo-model";
 import type { ManageState } from "./use-manage";
 
 type FicheTab = "infos" | "equipe" | "taches" | "messages" | "documents" | "journal";
 
-const INTERVENTION: Record<string, string> = { PRESTATION: "Prestation", INTEGRATION: "Intégration" };
-const RIG: Record<string, string> = {
-  FLIGHT_CASE: "Flight case",
-  CAR: "Car régie / véhicule mobile",
-  FIXED_INSTALL: "Installation fixe",
-  MIXED: "Mixte",
-};
-
-const day = (iso: string | null) => (iso ? format(new Date(iso), "d MMM yyyy", { locale: fr }) : null);
 const range = (a: string | null, b: string | null) => {
-  const from = day(a);
-  const to = day(b);
+  const from = fmtDay(a);
+  const to = fmtDay(b);
   if (from && to) return `du ${from} au ${to}`;
   return from ?? to ?? "—";
 };
-const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n > 1 ? many : one}`;
 
 function size(bytes: number | null): string | null {
   if (bytes == null) return null;
@@ -64,7 +53,7 @@ export function FichePage({ data, onEditCharacteristics }: { data: ManageState; 
     <div className="min-h-0 flex-1 overflow-auto">
       <PageHead
         title="Fiche"
-        subtitle={[fiche.clientName, INTERVENTION[fiche.interventionType]].filter(Boolean).join(" · ")}
+        subtitle={[fiche.clientName, INTERVENTION_LABEL[fiche.interventionType]].filter(Boolean).join(" · ")}
       >
         <Tabs
           label="Fiche du projet"
@@ -102,13 +91,13 @@ export function FichePage({ data, onEditCharacteristics }: { data: ManageState; 
                 ["Nom", fiche.name],
                 ["Client", fiche.clientName || "—"],
                 ["Lieu", fiche.location || "—"],
-                ["Intervention", INTERVENTION[fiche.interventionType] ?? fiche.interventionType],
-                ["Type de régie", fiche.rigType ? (RIG[fiche.rigType] ?? fiche.rigType) : "—"],
+                ["Intervention", INTERVENTION_LABEL[fiche.interventionType] ?? fiche.interventionType],
+                ["Type de régie", fiche.rigType ? (RIG_LABEL[fiche.rigType] ?? fiche.rigType) : "—"],
                 ...(prestation ? ([["Type de prestation", fiche.prestationType || "—"]] as [string, string][]) : []),
                 ["Planification", range(fiche.planningStart, fiche.planningEnd)],
                 prestation
                   ? ["Tournage", range(fiche.shootingDate, fiche.shootingEndDate)]
-                  : ["Mise en service", day(fiche.commissioningDate) ?? "—"],
+                  : ["Mise en service", fmtDay(fiche.commissioningDate) ?? "—"],
                 ["Description", fiche.description ? <span className="whitespace-pre-line">{fiche.description}</span> : "—"],
               ]}
             />
@@ -152,7 +141,7 @@ export function FichePage({ data, onEditCharacteristics }: { data: ManageState; 
                       {d.name}
                     </a>
                     <span className="shrink-0 text-[var(--muted-foreground)]">
-                      {[size(d.sizeBytes), day(d.uploadedAt)].filter(Boolean).join(" · ")}
+                      {[size(d.sizeBytes), fmtDay(d.uploadedAt)].filter(Boolean).join(" · ")}
                     </span>
                   </li>
                 ))}

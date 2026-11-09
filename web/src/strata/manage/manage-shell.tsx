@@ -154,12 +154,15 @@ export function ManageShell({
   project,
   topbar,
   onEditCharacteristics,
+  onOpenCatalogue,
 }: {
   project: ProjectEditorData;
   /** Topbar projet (v2 en Strata), avec l'état d'enregistrement. */
   topbar: ReactNode;
   /** Ouvre le dialogue des caractéristiques d'arkyo (monté par l'éditeur). */
   onEditCharacteristics: () => void;
+  /** Ouvre l'outil Équipements de l'Inventaire (état de l'éditeur). */
+  onOpenCatalogue: () => void;
 }) {
   const data = useManageData(project);
   const nav = useManageNav(project.header.id);
@@ -170,7 +173,7 @@ export function ManageShell({
       page = <FichePage data={data} onEditCharacteristics={onEditCharacteristics} />;
       break;
     case "materiel":
-      page = <MaterielPage data={data} nav={nav} />;
+      page = <MaterielPage data={data} nav={nav} onOpenCatalogue={onOpenCatalogue} />;
       break;
     case "cables":
       page = <CablesStubPage nav={nav} />;

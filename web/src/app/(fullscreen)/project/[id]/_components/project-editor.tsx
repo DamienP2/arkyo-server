@@ -311,6 +311,7 @@ function ProjectEditorInner({
     if (normalized) return normalized;
     return storedTab;
   }, [queryTab, storedTab]);
+  const strataManage = useStrataManageSpace(); // arkyo-server: interface Strata — espace Gérer (`?space=gerer`, Strata seulement) ; toujours faux en Classique.
 
   // Sous-onglet de l'onglet Lumière (Plan de feu / Adressage DMX), piloté par
   // le dropdown de la pill, persisté.
@@ -413,6 +414,7 @@ function ProjectEditorInner({
   // raccourcis système et copier/coller.
   useEffect(() => {
     if (activeTab !== "inventaire") return;
+    if (strataManage) return; // arkyo-server: interface Strata — dans Gérer, l'Inventaire n'est pas affiché : pas de raccourcis.
     const SHORTCUT_TO_TOOL: Record<string, InventaireToolId> = {
       e: "equipment",
       a: "adapter",
@@ -446,7 +448,7 @@ function ProjectEditorInner({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, activeTool]);
+  }, [activeTab, activeTool, strataManage]); // arkyo-server: interface Strata (`strataManage`)
 
   // ── État onglet Rack : rack sélectionné + vues + viewMode ──
   const [rackSelectedRackId, setRackSelectedRackId] = useState<string | null>(
@@ -859,7 +861,6 @@ function ProjectEditorInner({
   };
 
   // arkyo-server: interface Strata — espace Gérer (`?space=gerer`, Strata seulement) : pages Gérer sous la topbar projet, aucun onglet monté ; faux en Classique.
-  const strataManage = useStrataManageSpace();
   if (strataManage) {
     return (
       <>
@@ -867,6 +868,7 @@ function ProjectEditorInner({
           project={project}
           topbar={withStrataSaveStatus(saveStatus, <ProjectGlobalTopbar projectName={project.header.name} tenantName={tenantName} status={status} onStatusChange={handleStatusChange} onEditCharacteristics={openCharacteristics} onExport={openDossier} tabs={tabsNode} onClose={() => router.push("/projects")} />)}
           onEditCharacteristics={openCharacteristics}
+          onOpenCatalogue={() => setPersistedTool("equipment")}
         />
         <ProjectCharacteristicsDialog open={characteristicsOpen} onOpenChange={setCharacteristicsOpen} fiche={project.fiche} onSaveStatus={setSaveStatus} />
         {dossierModal}

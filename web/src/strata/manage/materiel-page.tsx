@@ -17,23 +17,15 @@
 
 import { useMemo, useState, type KeyboardEvent } from "react";
 import type { InventaireBomItem, InventaireRack } from "@/app/(fullscreen)/project/[id]/inventaire/inventaire-client";
-import {
-  DEFAULT_BOM_TABLE_OPTIONS,
-  buildBomTable,
-  sanitizeBomTableOptions,
-  type BomTable,
-} from "@/app/(fullscreen)/project/[id]/inventaire/_lib/bom-table";
-import type { Slot } from "@/components/synoptique/lib/types";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Box as BoxIcon, MapPin, MousePointer2, Plus, Server, Workflow } from "@/components/ui/icons";
-import { LoadingState } from "@/components/ui/loading-state";
 import { cn } from "@/lib/utils";
 import { AdvancedSection } from "../advanced/advanced-section";
-import { flattenSlots } from "../bottom/rack-model";
-import { useRacksLive } from "../bottom/use-rack-live";
-import { EquipmentFaceCard } from "../inspector/equipment-face-card";
+import { plural } from "./format";
 import { ADD_BTN, Kv, PageHead, Pill, SECTION_LABEL, SMALL_BTN, TabPanel, Tabs, useTabIds } from "./manage-ui";
 import { equipmentCount, isRackableContainer, placementOf, slotStartU, type Placement } from "./todo-model";
+import { MaterielFaces } from "./materiel-faces";
+import { Nomenclature } from "./materiel-nomenclature";
 import type { ManageNav, ManageState } from "./use-manage";
 
 type MaterielTab = "inventaire" | "nomenclature";
@@ -44,8 +36,6 @@ const KIND_LABEL: Record<InventaireBomItem["kind"], string> = {
   adapter: "Adaptateur",
   accessory: "Accessoire",
 };
-
-const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n > 1 ? many : one}`;
 
 /** Ligne d'inventaire et son contexte. */
 type Row = {
@@ -90,7 +80,16 @@ function groupsOf(data: ManageState): Group[] {
   return groups;
 }
 
-export function MaterielPage({ data, nav }: { data: ManageState; nav: ManageNav }) {
+export function MaterielPage({
+  data,
+  nav,
+  onOpenCatalogue,
+}: {
+  data: ManageState;
+  nav: ManageNav;
+  /** Ouvre l'outil Équipements de l'Inventaire (état de l'éditeur, pas seulement le stockage local). */
+  onOpenCatalogue: () => void;
+}) {
   const [tab, setTab] = useState<MaterielTab>("inventaire");
   const [query, setQuery] = useState("");
   const idBase = useTabIds();
@@ -112,14 +111,9 @@ export function MaterielPage({ data, nav }: { data: ManageState; nav: ManageNav 
       .includes(q);
   const shown = allRows.filter(match).length;
 
+  // Le parcours d'ajout d'arkyo : l'onglet Inventaire, outil Équipements.
   const addFromCatalogue = () => {
-    // Le parcours d'ajout d'arkyo : l'onglet Inventaire, outil Équipements
-    // (même clé de stockage que `project-editor.tsx`).
-    try {
-      window.localStorage.setItem(`inventaire-active-tool:${data.projectId}`, JSON.stringify("equipment"));
-    } catch {
-      /* stockage indisponible : l'onglet s'ouvre sur son outil par défaut (Équipements) */
-    }
+    onOpenCatalogue();
     nav.goToTab("inventaire");
   };
 
@@ -295,7 +289,7 @@ function ItemTable({ label, rows, data, nav }: { label: string; rows: Row[]; dat
             <tr
               key={r.item.id}
               tabIndex={0}
-              aria-selected={on}
+              aria-current={on ? "true" : undefined}
               onClick={open}
               onKeyDown={(e: KeyboardEvent) => {
                 if (e.key === "Enter" || e.key === " ") {
@@ -341,6 +335,8 @@ function positionText(row: Row, data: ManageState): string {
     case "component":
       return `${rack.name} · composant d'un châssis`;
     case "none":
+    case "unavailable":
+      return `${rack.name} · lecture impossible`;
     case "loading":
       return rack.name;
     case "unplaced":
@@ -351,8 +347,6 @@ function positionText(row: Row, data: ManageState): string {
     }
   }
 }
-
-const NONE: string[] = [];
 
 function ItemDetail({ row, data, nav }: { row: Row; data: ManageState; nav: ManageNav }) {
   const { item, rack, placement } = row;
@@ -371,18 +365,20 @@ function ItemDetail({ row, data, nav }: { row: Row; data: ManageState; nav: Mana
         <div className="flex flex-col gap-2">
           <span className={SECTION_LABEL}>Position</span>
           <div className="text-[12.5px] text-[var(--foreground)]">{positionText(row, data)}</div>
-          {isEquipment && (
+          {(isEquipment || rackable) && placement.status !== "none" && placement.status !== "component" && (
             <div className="flex flex-wrap gap-1.5">
-              {rackable && placement.status !== "component" && placement.status !== "none" && (
+              {rackable && (
                 <button type="button" onClick={() => nav.goToRack(rack.id)} className={SMALL_BTN}>
                   <Server className="h-3.5 w-3.5 text-[var(--muted-foreground)]" />
                   {placement.missing > 0 ? "Placer dans un rack" : "Voir dans le rack"}
                 </button>
               )}
-              <button type="button" onClick={() => nav.goToTab("synoptique")} className={SMALL_BTN}>
-                <Workflow className="h-3.5 w-3.5 text-[var(--muted-foreground)]" />
-                Voir sur le synoptique
-              </button>
+              {(isEquipment || item.kind === "panel") && (
+                <button type="button" onClick={() => nav.goToTab("synoptique")} className={SMALL_BTN}>
+                  <Workflow className="h-3.5 w-3.5 text-[var(--muted-foreground)]" />
+                  Voir sur le synoptique
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -395,7 +391,9 @@ function ItemDetail({ row, data, nav }: { row: Row; data: ManageState; nav: Mana
           ]}
         />
 
-        {isEquipment && <Faces row={row} data={data} locationName={location?.name ?? null} />}
+        {isEquipment && (
+          <MaterielFaces item={item} rack={rack} placed={placement.slots} data={data} locationName={location?.name ?? null} />
+        )}
 
         <AdvancedSection kind="materiel" summary="Référence, type, identifiants">
           <Kv
@@ -411,137 +409,6 @@ function ItemDetail({ row, data, nav }: { row: Row; data: ManageState; nav: Mana
           />
         </AdvancedSection>
       </div>
-    </div>
-  );
-}
-
-/** Faces et connectique de l'équipement (`canvas-data` et câbles de son contenant). */
-function Faces({ row, data, locationName }: { row: Row; data: ManageState; locationName: string | null }) {
-  const { item, rack } = row;
-  // Les contenants rackables sont déjà lus ; les autres (libres, non
-  // rackables) le sont ici, le temps du détail.
-  const live = useRacksLive(item.refId ? [rack.id] : NONE, data.projectId)[rack.id];
-  const canvas = live?.canvas ?? null;
-  if (!item.refId) return null;
-  if (!canvas || canvas.rack.id !== rack.id) {
-    if (live?.canvasError)
-      return (
-        <p role="status" className="m-0 text-[12px] text-[var(--muted-foreground)]">
-          Faces indisponibles : le contenant n'a pas pu être lu.
-        </p>
-      );
-    return <LoadingState className="py-8" />;
-  }
-  const slots = canvas.rack.slots as Slot[];
-  const mine = flattenSlots(slots).filter(
-    (s) => (s as Slot & { inventoryItemId?: string | null }).inventoryItemId === item.id,
-  );
-  // Un exemplaire posé d'abord ; à défaut un slot fantôme (câblable sur le synoptique).
-  const slot = row.placement.slots[0] ?? mine[0] ?? null;
-  const parent = slot?.parentSlotId ? flattenSlots(slots).find((s) => s.id === slot.parentSlotId) : undefined;
-  const equipment = slot?.equipment ?? canvas.allEquipment.find((e) => e.id === item.refId) ?? null;
-  if (!equipment) return null;
-  return (
-    <div className="-mx-[18px] border-y border-[var(--border)]">
-      <EquipmentFaceCard
-        slot={slot && slot.startU == null && parent ? { ...slot, startU: parent.startU, heightU: parent.heightU } : slot}
-        equipment={equipment}
-        canvasData={canvas}
-        connections={live?.connections ?? null}
-        slots={slots}
-        rackName={rack.isVirtual ? `Pose libre${locationName ? ` · ${locationName}` : ""}` : rack.name}
-      />
-    </div>
-  );
-}
-
-/** Lecture des réglages de contenu de l'export Inventaire (mêmes défauts qu'arkyo). */
-function bomOptions(projectId: string) {
-  let stored = DEFAULT_BOM_TABLE_OPTIONS;
-  try {
-    const raw = window.localStorage.getItem(`export:inventaire:${projectId}:table`);
-    if (raw) stored = { ...DEFAULT_BOM_TABLE_OPTIONS, ...JSON.parse(raw) };
-  } catch {
-    /* réglage illisible → défauts */
-  }
-  return sanitizeBomTableOptions(stored);
-}
-
-function Nomenclature({ data }: { data: ManageState }) {
-  const table: BomTable = useMemo(
-    () => buildBomTable(data.racks, data.locations, bomOptions(data.projectId)),
-    [data.racks, data.locations, data.projectId],
-  );
-  return (
-    <div className="min-h-0 overflow-auto px-6 pt-3.5 pb-24">
-      {table.itemCount === 0 ? (
-        <EmptyState icon={<BoxIcon strokeWidth={1.5} />} title="Aucun équipement" />
-      ) : (
-        <div className="overflow-hidden rounded-[10px] border border-[var(--border)] bg-[var(--card)]">
-          <table aria-label="Nomenclature" className="w-full border-collapse text-[12.5px]">
-            <thead>
-              <tr>
-                {table.columns.map((c) => (
-                  <th
-                    key={c.key}
-                    scope="col"
-                    className={cn(
-                      "bg-[var(--muted)] px-3.5 py-2 text-left text-[11px] font-semibold tracking-[0.04em] text-[var(--muted-foreground)] uppercase",
-                      c.numeric && "text-right",
-                    )}
-                  >
-                    {c.label}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {table.rows.map((r, i) => {
-                if (r.kind === "group-location" || r.kind === "group-container") {
-                  return (
-                    <tr key={i}>
-                      <th
-                        scope="rowgroup"
-                        colSpan={table.columns.length}
-                        className={cn(
-                          "border-t border-[var(--border)] px-3.5 py-2 text-left",
-                          r.kind === "group-location"
-                            ? "text-[11px] font-bold tracking-[0.06em] text-[var(--foreground)]"
-                            : "font-semibold text-[var(--foreground)]",
-                          r.kind === "group-container" && r.free && "italic",
-                        )}
-                      >
-                        {r.label}
-                        {r.kind === "group-container" && r.meta && (
-                          <span className="ml-2 font-normal text-[var(--text-tertiary)]">{r.meta}</span>
-                        )}
-                      </th>
-                    </tr>
-                  );
-                }
-                const strong = r.kind === "subtotal" || r.kind === "total";
-                return (
-                  <tr key={i} className={cn(r.kind === "total" && "bg-[var(--muted)]")}>
-                    {r.cells.map((cell, ci) => (
-                      <td
-                        key={ci}
-                        className={cn(
-                          "border-t border-[var(--border)] px-3.5 py-[7px] text-[var(--foreground)]",
-                          table.columns[ci]?.numeric && "text-right font-mono tabular-nums",
-                          strong && "font-semibold",
-                          r.kind === "subtotal" && "text-[var(--muted-foreground)]",
-                        )}
-                      >
-                        {cell}
-                      </td>
-                    ))}
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
     </div>
   );
 }

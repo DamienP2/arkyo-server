@@ -66,14 +66,19 @@ export function rack(id: string, name: string, extra: Record<string, unknown> = 
   };
 }
 
-/** Baie 1 : la caméra posée (U1), un moniteur posé (U10), deux moniteurs à placer. */
+/** Baie 1 : la caméra posée (U1), trois moniteurs dont un posé (U10) et deux à placer. */
 export const BAIE = rack("r1", "Baie 1", {
   bom: [
     bomItem("i1", "Caméra X"),
-    bomItem("i2", "Moniteur 17", { refId: "eq2", reference: "MON-17", brandName: "TVLogic", heightU: 1 }),
-    bomItem("i9", "Moniteur 17", { refId: "eq2", reference: "MON-17", brandName: "TVLogic", heightU: 1, quantity: 2 }),
+    bomItem("i2", "Moniteur 17", { refId: "eq2", reference: "MON-17", brandName: "TVLogic", heightU: 1, quantity: 3 }),
   ],
 });
+
+/** `GET …/racks/r1/inventory` de la Baie 1. */
+export const BAIE_INVENTORY = [
+  { id: "i1", kind: "equipment", refId: "eq1", quantity: 1, hostItemId: null },
+  { id: "i2", kind: "equipment", refId: "eq2", quantity: 3, hostItemId: null },
+];
 /** Équipements libres du lieu (rack virtuel). */
 export const LIBRE = rack("v1", "", {
   isVirtual: true,
@@ -87,8 +92,8 @@ export const CAISSE = rack("r2", "Caisse", {
 });
 
 const GHOSTS = [
-  { ...MONITOR_SLOT, id: "g1", inventoryItemId: "i9", startU: null, heightU: null },
-  { ...MONITOR_SLOT, id: "g2", inventoryItemId: "i9", startU: null, heightU: null },
+  { ...MONITOR_SLOT, id: "g1", inventoryItemId: "i2", startU: null, heightU: null },
+  { ...MONITOR_SLOT, id: "g2", inventoryItemId: "i2", startU: null, heightU: null },
 ];
 export const BAIE_CANVAS = canvasData("r1", "Baie 1", [SLOT, { ...MONITOR_SLOT, inventoryItemId: "i2" }, ...GHOSTS]);
 
@@ -133,7 +138,7 @@ export function manageApi(iface: UiInterface, racks: unknown[] = [BAIE, LIBRE, C
     "GET /api/tenant/projects/p1/racks/r1/canvas-data": { body: BAIE_CANVAS },
     "GET /api/tenant/projects/p1/racks/r2/canvas-data": { body: canvasData("r2", "Caisse", []) },
     "GET /api/tenant/projects/p1/racks/v1/canvas-data": { body: canvasData("v1", "", []) },
-    "GET /api/tenant/projects/p1/racks/r1/inventory": { body: { items: [] } },
+    "GET /api/tenant/projects/p1/racks/r1/inventory": { body: { items: BAIE_INVENTORY } },
     "GET /api/racks/r1/connections": { body: CONNECTIONS },
     "GET /api/racks/r2/connections": { body: [] },
     "GET /api/racks/v1/connections": { body: [] },
@@ -142,4 +147,16 @@ export function manageApi(iface: UiInterface, racks: unknown[] = [BAIE, LIBRE, C
     "GET /api/tenant/espace/informations": { body: { name: "Régie A", logoUrl: null } },
     ...extra,
   };
+}
+
+/**
+ * URL comparable : paramètres triés, sans le `tab=inventaire` que l'éditeur
+ * ajoute de lui-même quand `?tab=` manque (onglet par défaut, comme en
+ * Classique), à un moment qui dépend du rendu.
+ */
+export function normUrl(url: string): string {
+  const u = new URL(url, "http://localhost");
+  const q = [...u.searchParams.entries()].filter(([k, v]) => !(k === "tab" && v === "inventaire"));
+  q.sort(([a], [b]) => a.localeCompare(b));
+  return u.pathname + (q.length ? `?${new URLSearchParams(q).toString()}` : "");
 }

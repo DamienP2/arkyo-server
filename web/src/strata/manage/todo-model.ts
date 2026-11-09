@@ -4,21 +4,17 @@
  * d'ensemble, calculés sur les données que l'éditeur tient déjà :
  *   - `GET /api/tenant/projects/{id}/editor` (fiche, contenants et leur BOM,
  *     emplacements) ;
- *   - `canvas-data` des contenants rackables (slots, dont les slots fantômes
- *     `startU = null` des équipements ajoutés mais pas encore posés, liés à
- *     leur ligne d'inventaire par `inventoryItemId`) ;
+ *   - `canvas-data` et inventaire (`racks/{id}/inventory`) des contenants
+ *     rackables : slots posés et « à placer », par la règle de l'onglet Rack
+ *     d'arkyo (`placement.ts`) ;
  *   - câbles de chaque contenant (`GET /api/racks/{id}/connections`) ;
- *   - rapport de validation que le synoptique publie
- *     (`useTopbarActions().validationReport`), s'il existe.
+ *   - rapport de validation que le synoptique de CE projet a publié
+ *     (`validation-record.ts`), s'il existe.
  *
- * Longueur de câble : arkyo n'en stocke aucune (ni colonne `RackConnection`,
- * ni champ d'API ; seule une estimation est calculée sur le rack). Une
- * longueur n'est « manquante » que si la ligne de câble porte le champ
- * `lengthM` à `null` ; absent, il n'est pas connu et rien n'est signalé.
+ * Longueur de câble : arkyo n'en stocke aucune (Ruling 9) ; elle n'est pas une
+ * source de « Ce qu'il reste à faire ».
  */
 
-import { format } from "date-fns";
-import { fr } from "date-fns/locale";
 import type { ProjectFicheData } from "@/app/(fullscreen)/project/[id]/fiche/fiche-client";
 import type {
   InventaireBomItem,
@@ -30,6 +26,8 @@ import type { ProjectTabId } from "@/app/(fullscreen)/project/[id]/_editor/tab-b
 import type { Slot } from "@/components/synoptique/lib/types";
 import type { IssueKind, IssueSeverity, ValidationReport } from "@/lib/services/rack-validation";
 import { flattenSlots, rackBilan, type RackConnectionRow } from "../bottom/rack-model";
+import { fmtDay, plural } from "./format";
+import { isPlaceable, remainingByItem, type InventoryDto } from "./placement";
 
 // ── Pages et cibles ─────────────────────────────────────────────────────────
 
@@ -69,10 +67,13 @@ export type ManageData = {
   canvas: Readonly<Record<string, RackCanvasData | null | undefined>>;
   /** Câbles par contenant (absent ou `null` : pas encore lus). */
   connections: Readonly<Record<string, readonly RackConnectionRow[] | null | undefined>>;
-  validationReport: ValidationReport | null;
+  /** Inventaire par contenant rackable (absent ou `null` : pas encore lu). */
+  inventory: Readonly<Record<string, readonly InventoryDto[] | null | undefined>>;
+  /** Contenants dont une lecture (`canvas-data` ou inventaire) a échoué. */
+  unavailable: Readonly<Record<string, boolean | undefined>>;
+  /** Rapport du synoptique de ce projet, et la vue qu'il couvre (« Régie »). */
+  validation: { report: ValidationReport; view: string | null } | null;
 };
-
-const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n > 1 ? many : one}`;
 
 /** Contenant réel où l'on pose en U : rackable, pas un rack virtuel de lieu. */
 export const isRackableContainer = (r: Pick<InventaireRack, "isRackable" | "isVirtual">) =>
@@ -85,18 +86,19 @@ export type Placement = {
    * - `free` : équipement libre du lieu (rack virtuel) ;
    * - `container` : dans un contenant non rackable ;
    * - `component` : composant d'un châssis ;
-   * - `none` : élément qui ne se pose pas en U (adaptateur, accessoire…) ;
+   * - `none` : élément qui ne se pose pas (adaptateur…) ;
    * - `loading` : contenant pas encore lu ;
-   * - `placed` / `partial` / `unplaced` : équipement d'un contenant rackable.
+   * - `unavailable` : lecture du contenant en échec ;
+   * - `placed` / `partial` / `unplaced` : élément d'un contenant rackable.
    */
-  status: "free" | "container" | "component" | "none" | "loading" | "placed" | "partial" | "unplaced";
+  status: "free" | "container" | "component" | "none" | "loading" | "unavailable" | "placed" | "partial" | "unplaced";
   /** Slots posés de la ligne (U de départ, face). */
   slots: Slot[];
   /** Exemplaires encore à poser. */
   missing: number;
 };
 
-/** Slots posés d'une ligne d'inventaire : en U, ou sur une étagère posée. */
+/** Slots posés d'une ligne d'inventaire (équipement, panel) : en U, ou sur une étagère posée. */
 function placedSlots(canvas: RackCanvasData, itemId: string): Slot[] {
   const all = canvas.rack.slots as Slot[];
   const byId = new Map(flattenSlots(all).map((s) => [s.id, s]));
@@ -108,28 +110,33 @@ function placedSlots(canvas: RackCanvasData, itemId: string): Slot[] {
   });
 }
 
-/** Un équipement qui se pose dans un rack (arkyo : `BomItemsList` de l'onglet Rack). */
-function placeable(item: InventaireBomItem): boolean {
-  if (item.kind !== "equipment" || item.hostItemId) return false;
-  // Rackable sans hauteur connue : impossible à poser en U (arkyo l'écarte aussi).
-  return !(item.isRackable && !(item.heightU != null && item.heightU > 0));
+/** Restants d'un contenant, calculés une fois par couple (inventaire, `canvas-data`). */
+const remainingCache = new WeakMap<readonly InventoryDto[], WeakMap<RackCanvasData, Map<string, number>>>();
+function remainingOf(inventory: readonly InventoryDto[], canvas: RackCanvasData): Map<string, number> {
+  let byCanvas = remainingCache.get(inventory);
+  if (!byCanvas) remainingCache.set(inventory, (byCanvas = new WeakMap()));
+  let out = byCanvas.get(canvas);
+  if (!out) byCanvas.set(canvas, (out = remainingByItem(inventory, canvas.rack.slots as Slot[])));
+  return out;
 }
 
 export function placementOf(
   item: InventaireBomItem,
   rack: InventaireRack,
-  data: Pick<ManageData, "canvas">,
+  data: Pick<ManageData, "canvas" | "inventory" | "unavailable">,
 ): Placement {
   if (item.hostItemId) return { status: "component", slots: [], missing: 0 };
   if (rack.isVirtual) return { status: "free", slots: [], missing: 0 };
   if (!rack.isRackable) return { status: "container", slots: [], missing: 0 };
-  if (!placeable(item)) return { status: "none", slots: [], missing: 0 };
+  if (!isPlaceable(item)) return { status: "none", slots: [], missing: 0 };
+  if (data.unavailable[rack.id]) return { status: "unavailable", slots: [], missing: 0 };
   const canvas = data.canvas[rack.id];
-  if (!canvas || canvas.rack.id !== rack.id) return { status: "loading", slots: [], missing: 0 };
+  const inventory = data.inventory[rack.id];
+  if (!canvas || canvas.rack.id !== rack.id || !inventory) return { status: "loading", slots: [], missing: 0 };
   const slots = placedSlots(canvas, item.id);
-  const missing = Math.max(0, item.quantity - slots.length);
+  const missing = remainingOf(inventory, canvas).get(item.id) ?? 0;
   return {
-    status: missing === 0 ? "placed" : slots.length > 0 ? "partial" : "unplaced",
+    status: missing === 0 ? "placed" : missing < item.quantity ? "partial" : "unplaced",
     slots,
     missing,
   };
@@ -190,9 +197,6 @@ export function allCables(data: ManageData): RackConnectionRow[] | null {
   return out;
 }
 
-/** Longueur connue comme manquante (voir l'en-tête : champ présent et `null`). */
-const lengthMissing = (c: RackConnectionRow) => "lengthM" in c && (c as { lengthM?: unknown }).lengthM == null;
-
 // ── Validation ──────────────────────────────────────────────────────────────
 
 /** Libellés et ordre des contrôles du synoptique d'arkyo (`validation-panel.tsx`). */
@@ -221,7 +225,7 @@ export function computeTodo(data: ManageData): TodoItem[] {
   const out: TodoItem[] = [];
 
   // Contrôles de validation, un par contrôle (dans l'ordre du synoptique).
-  const report = data.validationReport;
+  const report = data.validation?.report ?? null;
   if (report) {
     for (const kind of Object.keys(CHECK_LABEL) as IssueKind[]) {
       const issues = report.issues.filter((i) => i.kind === kind);
@@ -255,18 +259,15 @@ export function computeTodo(data: ManageData): TodoItem[] {
     });
   }
 
-  // Longueurs de câble manquantes.
-  const noLength = (allCables(data) ?? []).filter(lengthMissing);
-  if (noLength.length > 0) {
+  // Contenants illisibles : leurs « à placer » ne sont pas connus.
+  for (const rack of data.racks) {
+    if (!isRackableContainer(rack) || !data.unavailable[rack.id]) continue;
     out.push({
-      id: "lengths",
-      label: `Renseigner ${plural(noLength.length, "longueur")} de câble`,
-      detail: noLength
-        .slice(0, 6)
-        .map((c) => c.label?.trim() || "sans numéro")
-        .join(", "),
+      id: `unavailable:${rack.id}`,
+      label: `${rack.name} : lecture impossible`,
+      detail: "Éléments à placer non comptés",
       severity: "warn",
-      target: { space: "gerer", page: "cables" },
+      target: { space: "concevoir", tab: "rack", objectId: rack.id },
     });
   }
 
@@ -303,7 +304,6 @@ export type DomainRow = {
   target: TodoTarget;
 };
 
-const fmtDate = (iso: string | null) => (iso ? format(new Date(iso), "d MMM yyyy", { locale: fr }) : null);
 const fmtInt = (n: number) => Math.round(n).toLocaleString("fr-FR");
 
 /** Nombre d'équipements (exemplaires) du projet, libres compris. */
@@ -316,14 +316,15 @@ export function computeDomains(data: ManageData): DomainRow[] {
   const containers = data.racks.filter((r) => !r.isVirtual);
   const rackable = data.racks.filter(isRackableContainer);
   const unplaced = unplacedItems(data).reduce((n, u) => n + u.missing, 0);
+  const unreadable = rackable.filter((r) => data.unavailable[r.id]).length;
   const cables = allCables(data);
   const missingFields = missingFicheFields(fiche);
 
   // Fiche : client, lieu, échéance ; tâches et messages.
   const due =
     fiche.interventionType === "PRESTATION"
-      ? fmtDate(fiche.shootingDate) && `tournage le ${fmtDate(fiche.shootingDate)}`
-      : fmtDate(fiche.commissioningDate) && `mise en service le ${fmtDate(fiche.commissioningDate)}`;
+      ? fmtDay(fiche.shootingDate) && `tournage le ${fmtDay(fiche.shootingDate)}`
+      : fmtDay(fiche.commissioningDate) && `mise en service le ${fmtDay(fiche.commissioningDate)}`;
   const ficheParts = [fiche.clientName?.trim(), fiche.location?.trim(), due].filter(Boolean) as string[];
   if (fiche.counts.tasks > 0) ficheParts.push(plural(fiche.counts.tasks, "tâche"));
 
@@ -333,6 +334,7 @@ export function computeDomains(data: ManageData): DomainRow[] {
     plural(data.locations.length, "emplacement"),
     plural(containers.length, "contenant"),
     ...(unplaced > 0 ? [`${unplaced} à placer`] : []),
+    ...(unreadable > 0 ? [`${plural(unreadable, "contenant illisible", "contenants illisibles")}`] : []),
   ].join(" · ");
 
   // Racks : U occupés et puissance des équipements posés (bilan d'arkyo).
@@ -364,7 +366,6 @@ export function computeDomains(data: ManageData): DomainRow[] {
 
   // Câblage.
   const unlabelled = cables?.filter((c) => !c.label?.trim()).length ?? 0;
-  const noLength = cables?.filter(lengthMissing).length ?? 0;
   const cablesSummary =
     cables == null
       ? "Lecture des câbles…"
@@ -373,11 +374,10 @@ export function computeDomains(data: ManageData): DomainRow[] {
         : [
             plural(cables.length, "câble"),
             ...(unlabelled > 0 ? [`${unlabelled} sans numéro`] : []),
-            ...(noLength > 0 ? [`${plural(noLength, "longueur")} ${noLength > 1 ? "manquantes" : "manquante"}`] : []),
           ].join(" · ");
 
   // Validation (rapport du synoptique).
-  const report = data.validationReport;
+  const report = data.validation?.report ?? null;
   let validation: Pick<DomainRow, "summary" | "severity">;
   if (!report) validation = { summary: "Aucun rapport", severity: "neutral" };
   else if (report.counts.error + report.counts.warning === 0)
@@ -414,7 +414,7 @@ export function computeDomains(data: ManageData): DomainRow[] {
       label: "Matériel",
       summary: materiel,
       aside: null,
-      severity: unplaced > 0 ? "warn" : "ok",
+      severity: unplaced + unreadable > 0 ? "warn" : "ok",
       target: { space: "gerer", page: "materiel" },
     },
     {
@@ -430,12 +430,12 @@ export function computeDomains(data: ManageData): DomainRow[] {
       label: "Câblage",
       summary: cablesSummary,
       aside: null,
-      severity: cables == null || cables.length === 0 ? "neutral" : unlabelled + noLength > 0 ? "warn" : "ok",
+      severity: cables == null || cables.length === 0 ? "neutral" : unlabelled > 0 ? "warn" : "ok",
       target: { space: "gerer", page: "cables" },
     },
     {
       id: "validation",
-      label: "Validation",
+      label: data.validation?.view ? `Validation · ${data.validation.view}` : "Validation",
       ...validation,
       aside: "Concevoir",
       target: { space: "concevoir", tab: "synoptique" },

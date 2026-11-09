@@ -24,6 +24,7 @@ import {
 import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingState } from "@/components/ui/loading-state";
 import { cn } from "@/lib/utils";
+import { INTERVENTION_LABEL, RIG_LABEL } from "./format";
 import { Box, PageHead, SMALL_BTN, Sev } from "./manage-ui";
 import { computeDomains, computeTodo, type DomainId } from "./todo-model";
 import type { ManageNav, ManageState } from "./use-manage";
@@ -39,14 +40,6 @@ const DOMAIN_ICON: Record<DomainId, ReactNode> = {
   dossier: <FileStack />,
 };
 
-const INTERVENTION: Record<string, string> = { PRESTATION: "Prestation", INTEGRATION: "Intégration" };
-const RIG: Record<string, string> = {
-  FLIGHT_CASE: "Flight case",
-  CAR: "Car régie",
-  FIXED_INSTALL: "Installation fixe",
-  MIXED: "Mixte",
-};
-
 const ROW =
   "flex w-full items-center gap-2.5 border-b border-[var(--border)] bg-transparent px-3.5 py-2.5 text-left text-[12.5px] text-[var(--foreground)] transition-colors outline-none last:border-b-0 hover:bg-[var(--muted)] focus-visible:bg-[var(--muted)] focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:ring-inset";
 
@@ -54,7 +47,7 @@ export function OverviewPage({ data, nav }: { data: ManageState; nav: ManageNav 
   const { fiche } = data;
   const domains = computeDomains(data);
   const todo = computeTodo(data);
-  const eyebrow = [INTERVENTION[fiche.interventionType], fiche.rigType ? RIG[fiche.rigType] : null]
+  const eyebrow = [INTERVENTION_LABEL[fiche.interventionType], fiche.rigType ? RIG_LABEL[fiche.rigType] : null]
     .filter(Boolean)
     .join(" · ");
   const subtitle = domains.find((d) => d.id === "fiche")?.summary;

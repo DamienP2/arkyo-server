@@ -9,8 +9,11 @@ import { forwardRef, useImperativeHandle } from "react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { renderApp, resetApp } from "@/tests/app-harness";
+import { useTopbarActions } from "@/components/editor-shell/topbar-actions-context";
+import type { ValidationReport } from "@/lib/services/rack-validation";
 import { useRackFocusStore } from "../editor/rack-focus";
-import { CAISSE, LIBRE, manageApi } from "./manage-fixtures";
+import { useValidationRecordStore } from "./validation-record";
+import { CAISSE, LIBRE, manageApi, normUrl } from "./manage-fixtures";
 
 const FIRST_LOAD = { timeout: 15000 };
 
@@ -37,7 +40,7 @@ vi.mock("@/app/(fullscreen)/project/[id]/rack/_components/rack-placement-canvas"
 }));
 
 const here = (router: { state: { location: { pathname: string; search: string } } }) =>
-  router.state.location.pathname + router.state.location.search;
+  normUrl(router.state.location.pathname + router.state.location.search);
 const nav = () => screen.getByRole("navigation", { name: "Gérer" });
 const domains = () => screen.getByRole("list", { name: "Le projet, domaine par domaine" });
 const todo = () => screen.getByRole("list", { name: "Ce qu'il reste à faire" });
@@ -47,6 +50,8 @@ afterEach(() => {
   resetApp();
   window.localStorage.clear();
   useRackFocusStore.getState().clear();
+  useValidationRecordStore.setState({ byProject: {} });
+  useTopbarActions.getState().setValidationReport(null);
   delete document.documentElement.dataset.interface;
 });
 
@@ -84,7 +89,7 @@ describe("Gérer › navigation", () => {
     expect(await screen.findByRole("heading", { name: "Réseau" }, FIRST_LOAD)).toBeInTheDocument();
     expect(screen.getByText("Bientôt disponible")).toBeInTheDocument();
     fireEvent.click(within(nav()).getByRole("link", { name: /Livraison/ }));
-    await waitFor(() => expect(here(router)).toBe("/project/p1?space=gerer&page=livraison"));
+    await waitFor(() => expect(here(router)).toBe(normUrl("/project/p1?space=gerer&page=livraison")));
     expect(screen.getByRole("heading", { name: "Livraison" })).toBeInTheDocument();
     expect(screen.getByText("Bientôt disponible")).toBeInTheDocument();
     fireEvent.click(within(nav()).getByRole("link", { name: /Dossier/ }));
@@ -95,8 +100,16 @@ describe("Gérer › navigation", () => {
     // Les câbles restent éditables dans le synoptique.
     fireEvent.click(screen.getByRole("button", { name: "Ouvrir le synoptique" }));
     // Le dernier écran de Gérer reste dans l'URL (retour par le sélecteur d'espace).
-    await waitFor(() => expect(here(router)).toBe("/project/p1?page=cables&tab=synoptique"));
+    await waitFor(() => expect(here(router)).toBe(normUrl("/project/p1?page=cables&tab=synoptique")));
     expect(screen.queryByRole("navigation", { name: "Gérer" })).toBeNull();
+  });
+
+  test("dans Gérer, les raccourcis de l'Inventaire (E, A, P, X, Échap) n'agissent pas", async () => {
+    renderApp("/project/p1?tab=inventaire&space=gerer", manageApi("strata"));
+    await screen.findByRole("navigation", { name: "Gérer" }, FIRST_LOAD);
+    fireEvent.keyDown(document.body, { key: "a" });
+    fireEvent.keyDown(document.body, { key: "Escape" });
+    expect(window.localStorage.getItem("inventaire-active-tool:p1")).toBeNull();
   });
 
   test("en Classique : ?space=gerer ne change rien", async () => {
@@ -131,15 +144,15 @@ describe("Gérer › Vue d'ensemble", () => {
 
     // Gérer › Matériel.
     fireEvent.click(within(domains()).getByRole("button", { name: /^Matériel/ }));
-    await waitFor(() => expect(here(router)).toBe("/project/p1?tab=rack&space=gerer&page=materiel"));
+    await waitFor(() => expect(here(router)).toBe(normUrl("/project/p1?tab=rack&space=gerer&page=materiel")));
     expect(await screen.findByRole("heading", { level: 1, name: "Matériel" })).toBeInTheDocument();
     expect(within(nav()).getByRole("link", { name: /Matériel/ })).toHaveAttribute("aria-current", "page");
 
     // Concevoir › Racks.
     fireEvent.click(within(nav()).getByRole("link", { name: /Vue d'ensemble/ }));
-    await waitFor(() => expect(here(router)).toBe("/project/p1?tab=rack&space=gerer"));
+    await waitFor(() => expect(here(router)).toBe(normUrl("/project/p1?tab=rack&space=gerer")));
     fireEvent.click(within(domains()).getByRole("button", { name: /^Racks/ }));
-    await waitFor(() => expect(here(router)).toBe("/project/p1?tab=rack"));
+    await waitFor(() => expect(here(router)).toBe(normUrl("/project/p1?tab=rack")));
     expect(await screen.findByTestId("rack-canvas")).toBeInTheDocument();
   });
 
@@ -153,7 +166,7 @@ describe("Gérer › Vue d'ensemble", () => {
     );
     expect(item).toHaveTextContent("Baie 1 · 2 à placer");
     fireEvent.click(item);
-    await waitFor(() => expect(here(router)).toBe("/project/p1?tab=rack"));
+    await waitFor(() => expect(here(router)).toBe(normUrl("/project/p1?tab=rack")));
     expect(request).toHaveBeenCalledWith({ projectId: "p1", rackId: "r1" });
     expect(window.localStorage.getItem("project-editor-tab")).toBe('"rack"');
     expect(await screen.findByTestId("rack-canvas")).toHaveAttribute("data-rack", "r1");
@@ -173,8 +186,7 @@ describe("Gérer › Vue d'ensemble", () => {
     );
     expect(row).toHaveTextContent("Client");
     fireEvent.click(row);
-    // L'éditeur pose `?tab=` (onglet mémorisé, comme en Classique) : Concevoir y reviendra.
-    await waitFor(() => expect(here(router)).toBe("/project/p1?space=gerer&tab=inventaire&page=fiche"));
+    await waitFor(() => expect(here(router)).toBe(normUrl("/project/p1?space=gerer&tab=inventaire&page=fiche")));
     expect(await screen.findByRole("heading", { level: 1, name: "Fiche" })).toBeInTheDocument();
   });
 
@@ -187,6 +199,52 @@ describe("Gérer › Vue d'ensemble", () => {
     );
     // Rien à faire : l'état vide partagé.
     expect(within(todo()).getByText("Tout est fait")).toBeInTheDocument();
+  });
+});
+
+const REPORT: ValidationReport = {
+  issues: [{ id: "iss-1", severity: "error", kind: "duplicate_label", subject: "V-0101", message: "Label utilisé deux fois", refs: {} }],
+  counts: { error: 1, warning: 0, info: 0 },
+};
+
+describe("Gérer › rapport de validation", () => {
+  test("le rapport d'un autre projet n'est pas montré", async () => {
+    // Le synoptique du projet A a publié un rapport ; le store du shell le garde.
+    useValidationRecordStore.getState().record({ projectId: "pA", viewId: "loc:l1", report: REPORT });
+    useTopbarActions.getState().setValidationReport(REPORT);
+    renderApp("/project/p1?space=gerer", manageApi("strata"));
+    await screen.findByRole("list", { name: "Le projet, domaine par domaine" }, FIRST_LOAD);
+    const row = within(domains()).getByRole("button", { name: /^Validation/ });
+    expect(row).toHaveTextContent("Aucun rapport");
+    expect(row).toHaveTextContent("Concevoir");
+    await waitFor(() => expect(within(todo()).queryByRole("button", { name: /Label en doublon/ })).toBeNull());
+  });
+
+  test("le rapport noté pour ce projet : sa vue, ses compteurs, ses contrôles", async () => {
+    useValidationRecordStore.getState().record({ projectId: "p1", viewId: "loc:l1", report: REPORT });
+    renderApp("/project/p1?space=gerer", manageApi("strata"));
+    await screen.findByRole("list", { name: "Le projet, domaine par domaine" }, FIRST_LOAD);
+    expect(within(domains()).getByRole("button", { name: /^Validation · Régie/ })).toHaveTextContent("1 erreur");
+    expect(await within(todo()).findByRole("button", { name: /Label en doublon \(1\)/ }, FIRST_LOAD)).toBeInTheDocument();
+  });
+});
+
+describe("Gérer › lecture en échec", () => {
+  test("canvas-data illisible : une ligne « lecture impossible », pas « Tout est fait »", async () => {
+    renderApp(
+      "/project/p1?space=gerer",
+      manageApi("strata", undefined, {
+        "GET /api/tenant/projects/p1/racks/r1/canvas-data": { status: 500, body: { error: "Erreur" } },
+      }),
+    );
+    expect(
+      await within(await screen.findByRole("list", { name: "Ce qu'il reste à faire" }, FIRST_LOAD)).findByRole(
+        "button",
+        { name: /Baie 1 : lecture impossible/ },
+        FIRST_LOAD,
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Tout est fait")).toBeNull();
   });
 });
 

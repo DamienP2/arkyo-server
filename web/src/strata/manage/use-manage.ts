@@ -5,33 +5,76 @@
  *   - `useManageData` : données de l'éditeur (`ProjectEditorData`, tenues à
  *     jour par `router.refresh()` sur les évènements temps réel), plus le
  *     `canvas-data` des contenants rackables et les câbles de chaque
- *     contenant (`useRacksLive`, lectures partagées et suivies), plus le
- *     rapport de validation publié par le synoptique ;
+ *     contenant (`useRacksLive`, lectures partagées et suivies), l'inventaire
+ *     des contenants rackables (`racks/{id}/inventory`, relu sur l'évènement
+ *     `rack_inventory`, comme l'onglet Rack), et le rapport de validation
+ *     noté pour CE projet (`validation-record.tsx`) ;
  *   - `useManageNav` : page courante (`?page=`, Vue d'ensemble par défaut),
  *     objet sélectionné (`?sel=`), et passage vers une cible (page de Gérer,
  *     ou onglet de Concevoir par la logique de `handleTabChange`).
  */
 
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { ProjectEditorData } from "@/app/(fullscreen)/project/[id]/_components/project-editor";
 import type { ProjectTabId } from "@/app/(fullscreen)/project/[id]/_editor/tab-bar";
-import { useTopbarActions } from "@/components/editor-shell/topbar-actions-context";
+import { parseLocationViewId } from "@/app/(fullscreen)/project/[id]/synoptique/_components/synoptique-rack-selector";
+import { api } from "@/lib/api-client";
+import { subscribeAppEvents } from "@/lib/app-events-client";
 import type { RackCanvasData } from "@/app/(fullscreen)/project/[id]/rack/rack-tab-client";
 import type { RackConnectionRow } from "../bottom/rack-model";
 import { useRacksLive } from "../bottom/use-rack-live";
 import { useRackFocusStore } from "../editor/rack-focus";
 import { spaceQuery } from "../shell/space-switch";
 import { useGoToProjectTab } from "../shell/tab-nav";
+import type { InventoryDto } from "./placement";
+import { useProjectValidation } from "./validation-record";
 import { isManagePage, isRackableContainer, type ManageData, type ManagePage, type TodoTarget } from "./todo-model";
 
 export type ManageState = ManageData & {
   projectId: string;
   /** Un contenant rackable n'est pas encore lu : les « à placer » ne sont pas connus. */
   loading: boolean;
-  /** Lecture en échec par contenant (`canvas-data`). */
-  canvasError: Readonly<Record<string, boolean>>;
 };
+
+type Inventories = { byRack: Record<string, InventoryDto[]>; failed: Record<string, boolean> };
+
+/** Inventaire des contenants rackables, relu quand l'inventaire d'un contenant change. */
+function useInventories(projectId: string, rackIds: readonly string[]): Inventories {
+  const key = rackIds.join(",");
+  const [state, setState] = useState<Inventories>({ byRack: {}, failed: {} });
+
+  useEffect(() => {
+    if (!key) return;
+    const ids = key.split(",");
+    let cancelled = false;
+    const load = (id: string) =>
+      api
+        .get<{ items?: InventoryDto[] }>(`/api/tenant/projects/${projectId}/racks/${id}/inventory`)
+        .then((r) => {
+          if (cancelled) return;
+          setState((s) => ({
+            byRack: { ...s.byRack, [id]: Array.isArray(r?.items) ? r.items : [] },
+            failed: { ...s.failed, [id]: false },
+          }));
+        })
+        .catch(() => {
+          if (!cancelled) setState((s) => ({ ...s, failed: { ...s.failed, [id]: true } }));
+        });
+    ids.forEach(load);
+    const unsubscribe = subscribeAppEvents((data) => {
+      const e = data as { entity?: string; id?: string } | null;
+      if (e?.entity !== "rack_inventory") return;
+      if (e.id && ids.includes(e.id)) void load(e.id);
+      else if (!e.id) ids.forEach(load);
+    });
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, [projectId, key]);
+  return state;
+}
 
 export function useManageData(project: ProjectEditorData): ManageState {
   const projectId = project.header.id;
@@ -41,30 +84,41 @@ export function useManageData(project: ProjectEditorData): ManageState {
   // Câbles de tous les contenants ; `canvas-data` des rackables (positions en U).
   const live = useRacksLive(allIds);
   useRacksLive(rackableIds, projectId);
-  const validationReport = useTopbarActions((s) => s.validationReport);
+  const inventories = useInventories(projectId, rackableIds);
+  const recorded = useProjectValidation(projectId);
+  const locations = project.inventaire.locations;
 
   return useMemo(() => {
     const canvas: Record<string, RackCanvasData | null> = {};
     const connections: Record<string, RackConnectionRow[] | null> = {};
-    const canvasError: Record<string, boolean> = {};
+    const inventory: Record<string, InventoryDto[] | null> = {};
+    const unavailable: Record<string, boolean> = {};
     for (const id of allIds) {
       canvas[id] = live[id]?.canvas ?? null;
       connections[id] = live[id]?.connections ?? null;
-      canvasError[id] = !!live[id]?.canvasError;
     }
-    const loading = rackableIds.some((id) => !canvas[id] && !canvasError[id]);
+    for (const id of rackableIds) {
+      inventory[id] = inventories.byRack[id] ?? null;
+      // Une lecture en échec rend le contenant illisible, même avec une valeur plus ancienne.
+      unavailable[id] = !!live[id]?.canvasError || !!inventories.failed[id];
+    }
+    const loading = rackableIds.some((id) => !unavailable[id] && (!canvas[id] || !inventory[id]));
+    const locationId = parseLocationViewId(recorded?.viewId ?? null);
     return {
       projectId,
       fiche: project.fiche,
       racks,
-      locations: project.inventaire.locations,
+      locations,
       canvas,
       connections,
-      canvasError,
-      validationReport,
+      inventory,
+      unavailable,
+      validation: recorded?.report
+        ? { report: recorded.report, view: locations.find((l) => l.id === locationId)?.name ?? null }
+        : null,
       loading,
     };
-  }, [allIds, rackableIds, live, projectId, project.fiche, project.inventaire.locations, racks, validationReport]);
+  }, [allIds, rackableIds, live, inventories, recorded, projectId, project.fiche, locations, racks]);
 }
 
 export type ManageNav = {
