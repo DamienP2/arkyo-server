@@ -251,7 +251,7 @@ describe("StrataCanvasShell", () => {
         </InterfaceProvider>
       </MemoryRouter>,
     );
-    expect(screen.getByText("Gérer arrive")).toBeInTheDocument();
+    expect(zone("manage")).not.toBeNull();
     expect(zone("canvas")).toBeNull();
     expect(zone("drawer")).toBeNull();
     expect(zone("tools")).toBeNull();

@@ -192,13 +192,13 @@ describe("topbar projet v2", () => {
     expect(document.querySelector("[data-dock]")).toBeNull();
   });
 
-  test("Gérer → ?space=gerer (espace à venir), Concevoir y revient", async () => {
+  test("Gérer → ?space=gerer (pages Gérer), Concevoir y revient", async () => {
     const { router } = renderApp("/project/p1?tab=rack", api("strata"));
     await screen.findByTestId("rack-canvas", {}, FIRST_LOAD);
     expect(within(spaceNav()).getByRole("link", { name: "Gérer" })).toHaveAttribute("href", "?tab=rack&space=gerer");
     fireEvent.click(within(spaceNav()).getByRole("link", { name: "Gérer" }));
     await waitFor(() => expect(here(router)).toBe("/project/p1?tab=rack&space=gerer"));
-    expect(await screen.findByText("Gérer arrive")).toBeInTheDocument();
+    expect(await screen.findByRole("navigation", { name: "Gérer" })).toBeInTheDocument();
     expect(within(spaceNav()).getByRole("link", { name: "Gérer" })).toHaveAttribute("aria-current", "page");
     expect(zone("canvas")).toBeNull();
     // Le canevas de Concevoir n'est pas monté dans Gérer.
@@ -211,7 +211,7 @@ describe("topbar projet v2", () => {
 
   test("Vues : chaque onglet d'arkyo reste atteignable, et y mène dans Concevoir", async () => {
     const { router } = renderApp("/project/p1?tab=rack&space=gerer", api("strata"));
-    await screen.findByText("Gérer arrive", {}, FIRST_LOAD);
+    await screen.findByRole("navigation", { name: "Gérer" }, FIRST_LOAD);
     let menu = await openMenu("Vues");
     const items = within(menu).getAllByRole("menuitem").map((i) => i.textContent);
     expect(items).toEqual([

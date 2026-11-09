@@ -75,6 +75,7 @@ import {
 } from "../rack/rack-tab-client";
 import { StrataRackDrawerTop } from "@/strata/editor/rack-strata"; // arkyo-server: interface Strata
 import { withStrataSaveStatus } from "@/strata/shell/save-status"; // arkyo-server: interface Strata
+import { ManageShell, useStrataManageSpace } from "@/strata/manage/manage-shell"; // arkyo-server: interface Strata
 import {
   RackTabLeftToolbar,
   type RackRenderMode,
@@ -856,6 +857,22 @@ function ProjectEditorInner({
     };
     setRackVisibleViews(new Set(PRESET_VIEWS[preset]));
   };
+
+  // arkyo-server: interface Strata — espace Gérer (`?space=gerer`, Strata seulement) : pages Gérer sous la topbar projet, aucun onglet monté ; faux en Classique.
+  const strataManage = useStrataManageSpace();
+  if (strataManage) {
+    return (
+      <>
+        <ManageShell
+          project={project}
+          topbar={withStrataSaveStatus(saveStatus, <ProjectGlobalTopbar projectName={project.header.name} tenantName={tenantName} status={status} onStatusChange={handleStatusChange} onEditCharacteristics={openCharacteristics} onExport={openDossier} tabs={tabsNode} onClose={() => router.push("/projects")} />)}
+          onEditCharacteristics={openCharacteristics}
+        />
+        <ProjectCharacteristicsDialog open={characteristicsOpen} onOpenChange={setCharacteristicsOpen} fiche={project.fiche} onSaveStatus={setSaveStatus} />
+        {dossierModal}
+      </>
+    );
+  }
 
   // ── Drawings (multi-pages) — UN type par onglet projet ───────────────────
   // Le même éditeur de plans (model ProjectDrawing) est filtré par type :

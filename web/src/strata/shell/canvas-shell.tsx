@@ -23,7 +23,9 @@
  * outils et barre contextuelle dans une bande au-dessus du contenu, panneau
  * latéral en colonne, rien en surimpression du contenu.
  *
- * `?space=gerer` : l'espace Gérer (à venir, tâche 5) remplace le canevas.
+ * `?space=gerer` : l'espace Gérer (`ManageShell`) est rendu par l'éditeur
+ * projet à la place de l'onglet ; une coquille montée malgré tout ne monte
+ * pas son canevas (zone vide).
  *
  * Bascule Classique ↔ Strata en direct (Review Focus 1) : `useCanvasStage`,
  * appelé par `EditorShell` dans les deux interfaces, rend le canevas une seule
@@ -51,8 +53,7 @@ import { UNSAFE_LocationContext } from "react-router";
 import type { EditorShellSlots } from "@/components/editor-shell/editor-shell";
 import { useWorkspace } from "@/components/editor-shell/hooks/use-workspace";
 import { SHELL_LEFT_SIDE_PANEL_W, SHELL_SLIDEOVER_W, SHELL_TOPBAR_CTX_H } from "@/components/synoptique/lib/constants";
-import { EmptyState } from "@/components/ui/empty-state";
-import { ChevronDown, LayoutList, PanelLeft, SlidersHorizontal, X } from "@/components/ui/icons";
+import { ChevronDown, PanelLeft, SlidersHorizontal, X } from "@/components/ui/icons";
 import { cn } from "@/lib/utils";
 import type { UiInterface } from "../interface-context";
 import { ModeSwitch, useConcevoirMode } from "./mode-switch";
@@ -72,7 +73,7 @@ const RACK_STAGE = "absolute inset-x-0 bottom-0 top-[60px]";
 const CLASSIC_CANVAS = "relative flex-1 overflow-hidden";
 const STRATA_CANVAS = "relative h-full w-full overflow-hidden";
 
-const SHELL_TOP = "calc(var(--dev-banner-height) + var(--impersonation-banner-height, 0px))";
+export const SHELL_TOP = "calc(var(--dev-banner-height) + var(--impersonation-banner-height, 0px))";
 
 /**
  * Barres d'outils verticales d'arkyo (`LeftToolbar`, `InventaireLeftToolbar`,
@@ -334,16 +335,9 @@ function Drawer({ slots, drawer }: { slots: EditorShellSlots; drawer: StrataDraw
   );
 }
 
-function ManagePlaceholder() {
-  return (
-    <main className="flex min-h-0 flex-1 items-center justify-center overflow-auto">
-      <EmptyState
-        icon={<LayoutList strokeWidth={1.5} />}
-        title="Gérer arrive"
-        description="En attendant, toutes les vues du projet restent dans le menu Vues de la barre du haut."
-      />
-    </main>
-  );
+/** Gérer est rendu par l'éditeur projet (`ManageShell`) : ici, ni canevas ni outils. */
+function ManageZone() {
+  return <main data-zone="manage" className="min-h-0 flex-1" />;
 }
 
 export function StrataCanvasShell(slots: EditorShellSlots) {
@@ -416,7 +410,7 @@ export function StrataCanvasShell(slots: EditorShellSlots) {
 
   let body: ReactNode;
   if (space === "gerer") {
-    body = <ManagePlaceholder />;
+    body = <ManageZone />;
   } else if (mode === "page") {
     body = (
       <>
