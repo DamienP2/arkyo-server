@@ -198,7 +198,11 @@ describe("StrataCanvasShell", () => {
   test("sans rightPanel ni drawerTop : pas de tiroir ; un slot null ne réserve rien", () => {
     render(<Shell iface="strata" globalTopbar={slot("topbar")} canvas={slot("canevas")} contextualTopbar={null} leftToolbar={null} />);
     expect(zone("drawer")).toBeNull();
-    expect(zone("tools")).toBeNull();
+    // Sans outils ni barre contextuelle, la barre flottante ne porte que le
+    // sélecteur de mode de Concevoir (`?tab=synoptique`).
+    const tools = zone("tools")!;
+    expect(within(tools).getAllByRole("button").map((b) => b.getAttribute("aria-label"))).toEqual(["Mode : Synoptique"]);
+    expect(within(tools).queryByRole("toolbar")).toBeNull();
     expect(screen.queryByRole("button", { name: "Ouvrir l'inspecteur" })).toBeNull();
     expect(screen.queryByRole("complementary", { name: "Panneau latéral" })).toBeNull();
   });

@@ -5,9 +5,12 @@
  * `EditorShell` en Strata avec les mêmes emplacements (`EditorShellSlots`) :
  *   - topbar projet (46 px) : le slot `globalTopbar` (topbar projet v2) ;
  *   - canevas sur toute la surface ;
- *   - barre d'outils flottante en haut au centre : le `leftToolbar` existant,
- *     mis à plat, précédé de la barre contextuelle existante repliée dans le
- *     menu « Options de la vue » (toujours montée, masquée quand il est fermé) ;
+ *   - barre d'outils flottante en haut au centre : le sélecteur de mode
+ *     (`Synoptique` · `Racks` · `Plan`…, onglets de l'éditeur projet), la
+ *     barre contextuelle existante repliée dans le menu « Options de la vue »
+ *     (toujours montée, masquée quand il est fermé), puis le `leftToolbar`
+ *     existant, mis à plat. En mode Racks, l'élévation commence sous la
+ *     barre (le cadrage du canevas ne passe pas dessous) ;
  *   - panneau latéral existant (`leftSidePanel`), flottant à gauche ;
  *   - bandeau de validation sous la barre d'outils (synoptique) ;
  *   - tiroir à droite (360-420 px) : `strata.drawerTop` au-dessus du
@@ -52,6 +55,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { ChevronDown, LayoutList, PanelLeft, SlidersHorizontal, X } from "@/components/ui/icons";
 import { cn } from "@/lib/utils";
 import type { UiInterface } from "../interface-context";
+import { ModeSwitch, useConcevoirMode } from "./mode-switch";
 import { spaceOf, useProjectSpace } from "./space-switch";
 import { ValidationBanner } from "./validation-banner";
 
@@ -60,6 +64,9 @@ export const STRATA_TOPBAR_H = 46;
 
 /** Largeur du tiroir (spec v2 §4.1 : 360 à 420 px). */
 const DRAWER_W = "clamp(360px, 30vw, 420px)";
+
+/** Haut du canevas en mode Racks : sous la barre d'outils flottante (12 + 42 px, plus une marge). */
+const RACK_STAGE = "absolute inset-x-0 bottom-0 top-[60px]";
 
 /** Conteneur du canevas d'`EditorShell` en Classique (arkyo). */
 const CLASSIC_CANVAS = "relative flex-1 overflow-hidden";
@@ -344,6 +351,7 @@ export function StrataCanvasShell(slots: EditorShellSlots) {
   const localDrawer = useDrawerState();
   const drawer = stage?.drawer ?? localDrawer;
   const space = useProjectSpace();
+  const concevoirMode = useConcevoirMode();
   const slideOverOpen = useWorkspace((s) => s.slideOver);
   const mode = slots.strata?.mode ?? "canvas";
   const hasDrawer = !!slots.rightPanel || !!slots.strata?.drawerTop;
@@ -452,13 +460,15 @@ export function StrataCanvasShell(slots: EditorShellSlots) {
   } else {
     body = (
       <div data-zone="stage" style={stageStyle} className="relative min-h-0 flex-1 overflow-hidden">
-        {canvasZone("absolute inset-0")}
-        {hasTools && (
+        {canvasZone(concevoirMode === "rack" ? RACK_STAGE : "absolute inset-0")}
+        {(hasTools || concevoirMode) && (
           <div
             data-zone="tools"
             style={{ left: "calc((100% - var(--dwo)) / 2)" }}
             className={cn("absolute top-3 z-[25] flex -translate-x-1/2 items-center gap-0.5 p-1", FLOAT)}
           >
+            {concevoirMode && <ModeSwitch mode={concevoirMode} />}
+            {concevoirMode && hasTools && <Sep />}
             {slots.contextualTopbar && <ViewOptions>{slots.contextualTopbar}</ViewOptions>}
             {slots.leftToolbar && slots.contextualTopbar && <Sep />}
             {slots.leftToolbar && <Tools>{slots.leftToolbar}</Tools>}

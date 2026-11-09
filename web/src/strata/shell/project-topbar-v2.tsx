@@ -21,7 +21,7 @@
 
 import { isValidElement, type ComponentProps, type ReactNode } from "react";
 import Link from "next/link";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { Check, ChevronDown, ClipboardList, Download, Layers, Search, X } from "@/components/ui/icons";
 import { StrataBrand } from "@/components/brand/strata-brand";
@@ -34,7 +34,8 @@ import { cn } from "@/lib/utils";
 import { CommandPalette } from "../palette/command-palette";
 import { StrataSaveBadge, useStrataSaveStatus } from "./save-status";
 import { TOPBAR_ICON_BTN } from "./seg-tabs";
-import { SPACE_PARAM, SpaceSwitch } from "./space-switch";
+import { SpaceSwitch } from "./space-switch";
+import { useGoToProjectTab } from "./tab-nav";
 import { openStrataPalette } from "./topbar-v2";
 
 /** Onglets d'arkyo rangés par espace (spec v2 §7). */
@@ -44,9 +45,6 @@ export const VIEW_GROUPS: { label: string; tabs: ProjectTabId[] }[] = [
 ];
 
 const ALL_TAB_IDS = VIEW_GROUPS.flatMap((g) => g.tabs);
-
-/** Clé de stockage de l'onglet de l'éditeur (`project-editor.tsx`). */
-const EDITOR_TAB_KEY = "project-editor-tab";
 
 /** Libellés de `TABS` (project-editor.tsx), si la pill n'est pas fournie. */
 const DEFAULT_LABELS: Record<ProjectTabId, string> = {
@@ -156,9 +154,8 @@ function ViewsMenu({
   onEditCharacteristics?: () => void;
   onExport?: () => void;
 }) {
-  const router = useRouter();
   const searchParams = useSearchParams();
-  const params = useParams<{ id: string }>();
+  const goToTab = useGoToProjectTab();
   const pill = isValidElement(tabs) && tabs.type === ProjectTabsPill ? (tabs.props as PillProps) : null;
 
   const labels: Partial<Record<ProjectTabId, string>> = {};
@@ -174,16 +171,8 @@ function ViewsMenu({
 
   // `?tab=` et stockage local comme `handleTabChange` ; une vue se montre dans Concevoir.
   const go = (id: ProjectTabId, sub?: string) => {
-    try {
-      window.localStorage.setItem(EDITOR_TAB_KEY, JSON.stringify(id));
-    } catch {
-      /* stockage indisponible */
-    }
     if (sub) pill?.onSubChange?.(id, sub);
-    const query = new URLSearchParams(searchParams?.toString() ?? "");
-    query.set("tab", id);
-    query.delete(SPACE_PARAM);
-    router.replace(`/project/${params?.id}?${query.toString()}`, { scroll: false });
+    goToTab(id);
   };
 
   return (

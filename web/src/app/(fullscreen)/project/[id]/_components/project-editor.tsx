@@ -73,8 +73,7 @@ import {
   type RackCanvasData,
   type LocationCanvasData,
 } from "../rack/rack-tab-client";
-import { withStrataRack } from "@/strata/editor/rack-strata"; // arkyo-server: interface Strata
-import { withStrataInventaireFace } from "@/strata/editor/inventaire-strata"; // arkyo-server: interface Strata
+import { StrataRackDrawerTop } from "@/strata/editor/rack-strata"; // arkyo-server: interface Strata
 import { withStrataSaveStatus } from "@/strata/shell/save-status"; // arkyo-server: interface Strata
 import {
   RackTabLeftToolbar,
@@ -1275,13 +1274,13 @@ function getEditorSlots(args: {
           onRequestCatalog={() => setActiveTool("equipment")}
         />
       ),
-      rightPanel: withStrataInventaireFace(( // arkyo-server: interface Strata — enveloppe neutre (Strata v2, tâche 3), sans effet en Classique.
+      rightPanel: (
         <InventaireRightPanel
           fiche={project.fiche}
           status={status}
           onStatusChange={onStatusChange}
         />
-      )), // arkyo-server: interface Strata
+      ),
       strata: { mode: "page" }, // arkyo-server: interface Strata — page défilante : outils en bande, rien sur le contenu (ignoré en Classique).
     };
   }
@@ -1379,8 +1378,7 @@ function getEditorSlots(args: {
         }
       />
     );
-    // arkyo-server: interface Strata — enveloppe neutre (Strata v2, tâche 3 ; la tâche 4 y branche le tiroir), sans effet en Classique.
-    return withStrataRack({
+    return {
       globalTopbar,
       contextualTopbar: rackContextualTopbar,
       leftToolbar: (
@@ -1493,7 +1491,9 @@ function getEditorSlots(args: {
           }}
         />
       ),
-    }, { scope: isLocationScope ? "location" : "container", selectedRackId: rackSelectedRackId, canvasData: rackCanvasData, liveSlots: rackLiveSlots, locationData: rackLocationData, locationLiveSlots: rackLocationLiveSlots, visibleViews: rackVisibleViews, locationView: effectiveLocationView, projectId: project.header.id, locationRackIds, selectedSlot: rackSelectedSlot, onSlotSelect: onRackSlotSelect }); // arkyo-server: interface Strata
+      // arkyo-server: interface Strata — tiroir du mode Racks (bibliothèque, face de l'emplacement sélectionné), ignoré en Classique.
+      strata: { drawerTop: <StrataRackDrawerTop state={{ scope: isLocationScope ? "location" : "container", selectedRackId: rackSelectedRackId, canvasData: rackCanvasData, liveSlots: rackLiveSlots, locationData: rackLocationData, locationLiveSlots: rackLocationLiveSlots, visibleViews: rackVisibleViews, locationView: effectiveLocationView, projectId: project.header.id, locationRackIds, selectedSlot: rackSelectedSlot, racks: rackLiveRacks, selectedLocationId: rackSelectedLocationId, onSelectRack: setRackSelectedRackId, onSelectLocation: setRackSelectedLocationId, onDisplayScopeChange: setRackDisplayScope }} /> },
+    };
   }
 
   // Note : l'onglet "synoptique" est traité hors de `getEditorSlots` car il

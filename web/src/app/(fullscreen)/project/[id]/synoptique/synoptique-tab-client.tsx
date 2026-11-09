@@ -116,6 +116,7 @@ import { usePendingExport } from "../_components/pending-export-store";
 import type { SaveStatus } from "../_editor/project-contextual-topbar";
 import { useProjectSync } from "../_hooks/use-project-sync";
 import { subscribeAppEvents } from "@/lib/app-events-client";
+import { StrataSynopticDrawerTop } from "@/strata/editor/synoptic-drawer"; // arkyo-server: interface Strata
 
 // ── Sélection : "__general__" = vue Générale (tous les emplacements),
 // `loc:<id>` = vue d'un emplacement. La vue « focus par contenant » a été
@@ -1451,6 +1452,8 @@ function SynoptiqueTabClientInner({
         rightPanel={synopticRightPanel}
         slideOver={<SlideOverPanel registry={slideOverRegistry} />}
         canvas={canvasContent}
+        // arkyo-server: interface Strata — carte Faces de l'équipement sélectionné et ouverture du tiroir à la sélection, à partir des détails tenus ici (ignoré en Classique).
+        strata={{ drawerTop: <StrataSynopticDrawerTop projectId={projectId} racks={racks} locations={locations} selection={{ node: nodeDetails, nodeRackId, cable: cableDetails, adapter: adapterDetails, zone: zoneDetails, label: labelDetails, external: externalDetails, multiCable: multiCableSummaries, multiNode: multiNodeSummary, multiExternal: multiExternalSummaries, generalRack: generalRackDetails, generalConnection: generalConnectionDetails }} /> }}
       />
       <CursorHint />
     </>
