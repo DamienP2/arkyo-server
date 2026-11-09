@@ -40,6 +40,7 @@ import { OverviewPage } from "./overview";
 import { ComingSoonPage } from "./stub-page";
 import { allCables, computeTodo, unplacedItems, type ManagePage } from "./todo-model";
 import { useManageData, useManageNav, type ManageNav, type ManageState } from "./use-manage";
+import { useProjectCables } from "./use-project-cables";
 
 /** Espace Gérer demandé (Strata seulement) : `?space=gerer`. */
 export function useStrataManageSpace(): boolean {
@@ -82,6 +83,7 @@ function ManageNavColumn({ data, nav }: { data: ManageState; nav: ManageNav }) {
   const todo = data.loading ? null : computeTodo(data).length;
   const unplaced = unplacedItems(data).reduce((n, u) => n + u.missing, 0);
   const cables = allCables(data);
+  // Même liste que la page Câbles et la Vue d'ensemble (`useProjectCables`).
   const badge: Partial<Record<ManagePage, ReactNode>> = {
     overview: todo ? <Badge n={todo} tone="warn" /> : null,
     fiche: data.fiche.counts.tasks > 0 ? <Badge n={data.fiche.counts.tasks} tone="count" /> : null,
@@ -90,7 +92,7 @@ function ManageNavColumn({ data, nav }: { data: ManageState; nav: ManageNav }) {
   };
 
   const concevoir = (e: MouseEvent<HTMLAnchorElement>, go: () => void) => {
-    if (!plainClick(e)) return;
+    if (e.defaultPrevented || !plainClick(e)) return;
     e.preventDefault();
     go();
   };
@@ -109,7 +111,8 @@ function ManageNavColumn({ data, nav }: { data: ManageState; nav: ManageNav }) {
             href={nav.href(p.id)}
             aria-current={on ? "page" : undefined}
             onClick={(e) => {
-              if (!plainClick(e)) return;
+              // Saisie non enregistrée : le garde de navigation a retenu le clic.
+              if (e.defaultPrevented || !plainClick(e)) return;
               e.preventDefault();
               if (!on || nav.sel) nav.go(p.id);
             }}
@@ -129,7 +132,7 @@ function ManageNavColumn({ data, nav }: { data: ManageState; nav: ManageNav }) {
 
       <span className={cn(SECTION_LABEL, "px-2.5 pt-4 pb-1.5")}>Concevoir</span>
       <a
-        href="?tab=synoptique"
+        href={`/project/${nav.projectId}?tab=synoptique`}
         onClick={(e) => concevoir(e, () => nav.goToTab("synoptique"))}
         className={cn(NAV_ITEM, "text-[var(--muted-foreground)] hover:bg-[var(--muted)] hover:text-[var(--foreground)]")}
       >
@@ -137,7 +140,7 @@ function ManageNavColumn({ data, nav }: { data: ManageState; nav: ManageNav }) {
         <span className="flex-1">Synoptique</span>
       </a>
       <a
-        href="?tab=rack"
+        href={`/project/${nav.projectId}?tab=rack`}
         onClick={(e) => concevoir(e, () => nav.goToRack(null))}
         className={cn(NAV_ITEM, "text-[var(--muted-foreground)] hover:bg-[var(--muted)] hover:text-[var(--foreground)]")}
       >
@@ -165,7 +168,9 @@ export function ManageShell({
   /** Ouvre l'outil Équipements de l'Inventaire (état de l'éditeur). */
   onOpenCatalogue: () => void;
 }) {
-  const data = useManageData(project);
+  // Une seule lecture des câbles pour tout l'espace Gérer.
+  const cables = useProjectCables(project.header.id, project.inventaire.racks);
+  const data = useManageData(project, cables);
   const nav = useManageNav(project.header.id);
 
   let page: ReactNode;
@@ -177,7 +182,7 @@ export function ManageShell({
       page = <MaterielPage data={data} nav={nav} onOpenCatalogue={onOpenCatalogue} />;
       break;
     case "cables":
-      page = <CablesPage data={data} nav={nav} />;
+      page = <CablesPage data={data} nav={nav} cables={cables} />;
       break;
     case "reseau":
       page = <ComingSoonPage title="Réseau" />;

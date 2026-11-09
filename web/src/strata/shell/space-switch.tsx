@@ -44,7 +44,8 @@ export function SpaceSwitch() {
   const space = spaceOf(searchParams);
 
   const go = (e: MouseEvent<HTMLAnchorElement>, next: ProjectSpace) => {
-    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+    // `defaultPrevented` : le garde des saisies non enregistrées a retenu le clic.
+    if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
     e.preventDefault();
     if (next === space) return;
     router.replace(`/project/${params?.id}?${spaceQuery(searchParams, next)}`, { scroll: false });
@@ -60,7 +61,7 @@ export function SpaceSwitch() {
         return (
           <a
             key={id}
-            href={`?${spaceQuery(searchParams, id)}`}
+            href={`/project/${params?.id}?${spaceQuery(searchParams, id)}`}
             onClick={(e) => go(e, id)}
             aria-current={on ? "page" : undefined}
             className={cn(

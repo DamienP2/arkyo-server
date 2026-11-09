@@ -195,7 +195,7 @@ describe("topbar projet v2", () => {
   test("Gérer → ?space=gerer (pages Gérer), Concevoir y revient", async () => {
     const { router } = renderApp("/project/p1?tab=rack", api("strata"));
     await screen.findByTestId("rack-canvas", {}, FIRST_LOAD);
-    expect(within(spaceNav()).getByRole("link", { name: "Gérer" })).toHaveAttribute("href", "?tab=rack&space=gerer");
+    expect(within(spaceNav()).getByRole("link", { name: "Gérer" })).toHaveAttribute("href", "/project/p1?tab=rack&space=gerer");
     fireEvent.click(within(spaceNav()).getByRole("link", { name: "Gérer" }));
     await waitFor(() => expect(here(router)).toBe("/project/p1?tab=rack&space=gerer"));
     expect(await screen.findByRole("navigation", { name: "Gérer" })).toBeInTheDocument();

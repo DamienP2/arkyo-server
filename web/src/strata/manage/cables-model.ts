@@ -543,7 +543,7 @@ export const isHexColor = (v: string) => /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(v.
 export function cableCellError(row: CableRow, field: CableField, value: string): string | null {
   const v = value.trim();
   if (field === "color") {
-    if (!v) return row.kind === "rack" && row.color ? "Couleur obligatoire" : null;
+    if (!v) return row.kind === "rack" && row.color ? "La couleur d'un câble de contenant ne s'efface pas" : null;
     return isHexColor(v) ? null : "Couleur invalide (#rrggbb)";
   }
   if (field === "notes" && value.length > 2000) return "2 000 caractères au plus";

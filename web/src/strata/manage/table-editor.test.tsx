@@ -6,10 +6,10 @@
  */
 
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { renderApp, resetApp } from "@/tests/app-harness";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { emitAppEvent, renderApp, resetApp } from "@/tests/app-harness";
 import { CONNECTIONS } from "../bottom/test-fixtures";
-import { cablesApi } from "./manage-fixtures";
+import { cablesApi, locationPayload, normUrl } from "./manage-fixtures";
 import { fillDown, TableEditor, type Drafts, type TableColumn } from "./table-editor";
 
 const FIRST_LOAD = { timeout: 15000 };
@@ -138,5 +138,111 @@ describe("Gérer › Câbles, mode tableau", () => {
     fireEvent.change(input, { target: { value: "10" } });
     fireEvent.keyDown(input, { key: "Enter" });
     expect(drafts).toEqual({ a: { n: "10" } });
+  });
+
+  test("saisie pendant un enregistrement : la nouvelle valeur reste un brouillon", async () => {
+    let release: () => void = () => {};
+    const gate = new Promise<void>((r) => (release = r));
+    const { fetchSpy } = renderApp(
+      "/project/p1?space=gerer&page=cables",
+      cablesApi("strata", CONNECTIONS, { "PATCH /api/racks/r1/connections/c3": patched("c3") }),
+    );
+    // Le PATCH reste en vol jusqu'à `release()`.
+    const reply = fetchSpy.getMockImplementation()!;
+    fetchSpy.mockImplementation(async (input, init) => {
+      if ((init?.method ?? "GET").toUpperCase() === "PATCH") await gate;
+      return reply(input, init);
+    });
+    fireEvent.click(await screen.findByRole("button", { name: "Tableau" }, FIRST_LOAD));
+    const grid = screen.getByRole("grid", { name: "Câbles" });
+    const edit = (row: number, col: number, value: string) => {
+      fireEvent.mouseDown(cell(grid, row, col));
+      fireEvent.keyDown(grid, { key: "Enter" });
+      const input = within(grid).getByRole("textbox");
+      fireEvent.change(input, { target: { value } });
+      fireEvent.keyDown(input, { key: "Enter" });
+    };
+    edit(0, 0, "V-0200");
+    fireEvent.click(screen.getByRole("button", { name: "Enregistrer" }));
+    expect(await screen.findByRole("button", { name: "Enregistrement…" })).toBeDisabled();
+
+    // Pendant l'enregistrement : le même numéro saisi à nouveau, et une note.
+    edit(0, 0, "V-0300");
+    edit(0, 5, "Repris");
+    await act(async () => {
+      release();
+      await gate;
+    });
+    await waitFor(() => expect(screen.getByRole("button", { name: "Enregistrer" })).toBeEnabled());
+    expect(cell(grid, 0, 0)).toHaveTextContent("V-0300");
+    expect(cell(grid, 0, 0)).toHaveAttribute("data-modified", "true");
+    expect(cell(grid, 0, 5)).toHaveAttribute("data-modified", "true");
+    expect(screen.getByText("1 ligne modifiée")).toBeInTheDocument();
+  });
+
+  test("ordre figé en mode tableau : une relecture ne déplace ni la plage ni la cellule active", async () => {
+    let connections: unknown[] = CONNECTIONS;
+    renderApp(
+      "/project/p1?space=gerer&page=cables",
+      cablesApi("strata", CONNECTIONS, {
+        "GET /api/tenant/projects/p1/synoptic/location/l1": () => ({ body: locationPayload(connections) }),
+      }),
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "Tableau" }, FIRST_LOAD));
+    const grid = screen.getByRole("grid", { name: "Câbles" });
+    // Plage : les deux premières lignes, A-0101 (c3) et V-0101 (c1).
+    fireEvent.mouseDown(cell(grid, 0, 0));
+    fireEvent.mouseDown(cell(grid, 1, 0), { shiftKey: true });
+
+    // Un autre poste renumérote c3 en Z-9999 (trié en dernier) et ajoute un câble.
+    connections = [
+      { ...CONNECTIONS[0] },
+      { ...CONNECTIONS[1] },
+      { ...CONNECTIONS[2], label: "Z-9999" },
+      { ...CONNECTIONS[0], id: "c4", label: "A-0001" },
+    ];
+    act(() => emitAppEvent({ type: "update", entity: "rackConnection", action: "updated", id: "c3", rackId: "r1" }));
+    await waitFor(() => expect(cell(grid, 0, 0)).toHaveTextContent("Z-9999"));
+    const rows = within(grid).getAllByRole("row").slice(1);
+    // Mêmes câbles aux mêmes places ; le nouveau à la fin.
+    expect(rows.map((r) => within(r).getAllByRole("gridcell")[0].textContent)).toEqual(["Z-9999", "V-0101", "", "A-0001"]);
+    expect(cell(grid, 0, 0)).toHaveAttribute("aria-selected", "true");
+    expect(cell(grid, 1, 0)).toHaveAttribute("aria-selected", "true");
+    expect(cell(grid, 2, 0)).toHaveAttribute("aria-selected", "false");
+    expect(screen.getByText("A1:A2")).toBeInTheDocument();
+  });
+
+  test("saisie non enregistrée : quitter la page demande confirmation", async () => {
+    const { router } = renderApp("/project/p1?space=gerer&page=cables", cablesApi("strata"));
+    fireEvent.click(await screen.findByRole("button", { name: "Tableau" }, FIRST_LOAD));
+    const grid = screen.getByRole("grid", { name: "Câbles" });
+    fireEvent.mouseDown(cell(grid, 0, 5));
+    fireEvent.keyDown(grid, { key: "Enter" });
+    const input = within(grid).getByRole("textbox", { name: "Notes" });
+    fireEvent.change(input, { target: { value: "Repris" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+
+    const here = () => normUrl(router.state.location.pathname + router.state.location.search);
+    const fiche = () => within(screen.getByRole("navigation", { name: "Gérer" })).getByRole("link", { name: /Fiche/ });
+    // Navigation de Gérer : retenue, dialogue ; Annuler garde la saisie.
+    fireEvent.click(fiche());
+    let dialog = await screen.findByRole("dialog", { name: "Modifications non enregistrées" });
+    expect(here()).toBe(normUrl("/project/p1?space=gerer&page=cables"));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Annuler" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(cell(grid, 0, 5)).toHaveTextContent("Repris");
+
+    // Bouton vers Concevoir : retenu aussi.
+    fireEvent.click(screen.getByRole("button", { name: "Ouvrir le synoptique" }));
+    dialog = await screen.findByRole("dialog", { name: "Modifications non enregistrées" });
+    expect(here()).toBe(normUrl("/project/p1?space=gerer&page=cables"));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Annuler" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+
+    // Quitter sans enregistrer : la navigation a lieu.
+    fireEvent.click(fiche());
+    dialog = await screen.findByRole("dialog", { name: "Modifications non enregistrées" });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Quitter sans enregistrer" }));
+    await waitFor(() => expect(here()).toBe(normUrl("/project/p1?space=gerer&page=fiche")));
   });
 });

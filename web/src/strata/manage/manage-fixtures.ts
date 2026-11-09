@@ -139,6 +139,9 @@ export function manageApi(iface: UiInterface, racks: unknown[] = [BAIE, LIBRE, C
     "GET /api/tenant/projects/p1/racks/r2/canvas-data": { body: canvasData("r2", "Caisse", []) },
     "GET /api/tenant/projects/p1/racks/v1/canvas-data": { body: canvasData("v1", "", []) },
     "GET /api/tenant/projects/p1/racks/r1/inventory": { body: { items: BAIE_INVENTORY } },
+    // Câbles du projet, lus par `ManageShell` pour tout Gérer.
+    "GET /api/tenant/projects/p1/synoptic/general": { body: GENERAL_EMPTY },
+    "GET /api/tenant/projects/p1/synoptic/location/l1": { body: locationPayload() },
     "GET /api/racks/r1/connections": { body: CONNECTIONS },
     "GET /api/racks/r2/connections": { body: [] },
     "GET /api/racks/v1/connections": { body: [] },
@@ -200,7 +203,6 @@ export const GENERAL_EMPTY = {
 /** Gérer › Câbles : l'API de `manageApi` et les lectures de la liste des câbles. */
 export function cablesApi(iface: UiInterface, connections: unknown[] = CONNECTIONS, extra: Api = {}): Api {
   return manageApi(iface, undefined, {
-    "GET /api/tenant/projects/p1/synoptic/general": { body: GENERAL_EMPTY },
     "GET /api/tenant/projects/p1/synoptic/location/l1": { body: locationPayload(connections) },
     ...extra,
   });

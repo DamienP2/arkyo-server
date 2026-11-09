@@ -4,8 +4,9 @@
  * Données et navigation de l'espace Gérer (interface Strata v2) :
  *   - `useManageData` : données de l'éditeur (`ProjectEditorData`, tenues à
  *     jour par `router.refresh()` sur les évènements temps réel), plus le
- *     `canvas-data` des contenants rackables et les câbles de chaque
- *     contenant (`useRacksLive`, lectures partagées et suivies), l'inventaire
+ *     `canvas-data` des contenants rackables (`useRacksLive`, lectures
+ *     partagées et suivies), les câbles du projet (`useProjectCables`, lus
+ *     une fois par `ManageShell` pour tout Gérer), l'inventaire
  *     des contenants rackables (`racks/{id}/inventory`, relu sur l'évènement
  *     `rack_inventory`, comme l'onglet Rack), et le rapport de validation
  *     noté pour CE projet (`validation-record.tsx`) ;
@@ -15,19 +16,20 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import type { ProjectEditorData } from "@/app/(fullscreen)/project/[id]/_components/project-editor";
 import type { ProjectTabId } from "@/app/(fullscreen)/project/[id]/_editor/tab-bar";
 import { parseLocationViewId } from "@/app/(fullscreen)/project/[id]/synoptique/_components/synoptique-rack-selector";
 import { api } from "@/lib/api-client";
 import { subscribeAppEvents } from "@/lib/app-events-client";
+import { useGuardedRouter } from "@/lib/unsaved-changes";
 import type { RackCanvasData } from "@/app/(fullscreen)/project/[id]/rack/rack-tab-client";
-import type { RackConnectionRow } from "../bottom/rack-model";
 import { useRacksLive } from "../bottom/use-rack-live";
 import { useRackFocusStore } from "../editor/rack-focus";
 import { spaceQuery } from "../shell/space-switch";
 import { useGoToProjectTab } from "../shell/tab-nav";
 import type { InventoryDto } from "./placement";
+import type { ProjectCables } from "./use-project-cables";
 import { useProjectValidation } from "./validation-record";
 import { isManagePage, isRackableContainer, type ManageData, type ManagePage, type TodoTarget } from "./todo-model";
 
@@ -76,28 +78,25 @@ function useInventories(projectId: string, rackIds: readonly string[]): Inventor
   return state;
 }
 
-export function useManageData(project: ProjectEditorData): ManageState {
+export function useManageData(
+  project: ProjectEditorData,
+  cables: Pick<ProjectCables, "rows" | "error">,
+): ManageState {
   const projectId = project.header.id;
   const racks = project.inventaire.racks;
-  const allIds = useMemo(() => racks.map((r) => r.id), [racks]);
   const rackableIds = useMemo(() => racks.filter(isRackableContainer).map((r) => r.id), [racks]);
-  // Câbles de tous les contenants ; `canvas-data` des rackables (positions en U).
-  const live = useRacksLive(allIds);
-  useRacksLive(rackableIds, projectId);
+  // `canvas-data` des rackables (positions en U).
+  const live = useRacksLive(rackableIds, projectId);
   const inventories = useInventories(projectId, rackableIds);
   const recorded = useProjectValidation(projectId);
   const locations = project.inventaire.locations;
 
   return useMemo(() => {
     const canvas: Record<string, RackCanvasData | null> = {};
-    const connections: Record<string, RackConnectionRow[] | null> = {};
     const inventory: Record<string, InventoryDto[] | null> = {};
     const unavailable: Record<string, boolean> = {};
-    for (const id of allIds) {
-      canvas[id] = live[id]?.canvas ?? null;
-      connections[id] = live[id]?.connections ?? null;
-    }
     for (const id of rackableIds) {
+      canvas[id] = live[id]?.canvas ?? null;
       inventory[id] = inventories.byRack[id] ?? null;
       // Une lecture en échec rend le contenant illisible, même avec une valeur plus ancienne.
       unavailable[id] = !!live[id]?.canvasError || !!inventories.failed[id];
@@ -110,7 +109,8 @@ export function useManageData(project: ProjectEditorData): ManageState {
       racks,
       locations,
       canvas,
-      connections,
+      cables: cables.rows,
+      cablesError: cables.rows == null && cables.error != null,
       inventory,
       unavailable,
       validation: recorded?.report
@@ -118,7 +118,7 @@ export function useManageData(project: ProjectEditorData): ManageState {
         : null,
       loading,
     };
-  }, [allIds, rackableIds, live, inventories, recorded, projectId, project.fiche, locations, racks]);
+  }, [rackableIds, live, inventories, recorded, projectId, project.fiche, locations, racks, cables.rows, cables.error]);
 }
 
 export type ManageNav = {
@@ -141,7 +141,8 @@ export type ManageNav = {
 };
 
 export function useManageNav(projectId: string): ManageNav {
-  const router = useRouter();
+  // Routeur gardé : une saisie non enregistrée (mode tableau des câbles) est signalée avant de partir.
+  const router = useGuardedRouter();
   const searchParams = useSearchParams();
   const goToTab = useGoToProjectTab();
   const raw = searchParams?.get("page");
@@ -160,7 +161,11 @@ export function useManageNav(projectId: string): ManageNav {
     },
     [searchParams],
   );
-  const href = useCallback((next: ManagePage, nextSel?: string | null) => `?${query(next, nextSel)}`, [query]);
+  // Chemin complet : le garde des saisies non enregistrées résout un `href` depuis la racine du site.
+  const href = useCallback(
+    (next: ManagePage, nextSel?: string | null) => `/project/${projectId}?${query(next, nextSel)}`,
+    [projectId, query],
+  );
   const go = useCallback(
     (next: ManagePage, nextSel?: string | null) =>
       router.replace(`/project/${projectId}?${query(next, nextSel)}`, { scroll: false }),

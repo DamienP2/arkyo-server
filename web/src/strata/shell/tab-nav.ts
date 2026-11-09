@@ -8,7 +8,8 @@
  */
 
 import { useCallback } from "react";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
+import { useGuardedRouter } from "@/lib/unsaved-changes";
 import type { ProjectTabId } from "@/app/(fullscreen)/project/[id]/_editor/tab-bar";
 import { SPACE_PARAM } from "./space-switch";
 
@@ -16,7 +17,8 @@ import { SPACE_PARAM } from "./space-switch";
 export const EDITOR_TAB_KEY = "project-editor-tab";
 
 export function useGoToProjectTab(): (id: ProjectTabId) => void {
-  const router = useRouter();
+  // Routeur gardé : sans saisie en cours, il navigue comme `useRouter`.
+  const router = useGuardedRouter();
   const searchParams = useSearchParams();
   const params = useParams<{ id: string }>();
   const projectId = params?.id;

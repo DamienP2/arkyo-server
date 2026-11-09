@@ -112,7 +112,7 @@ function data(extra: Partial<ManageData> = {}): ManageData {
     racks: [BAIE, LIBRE, CAISSE],
     locations: [{ id: "l1", name: "Régie", cableCode: "REG", sortOrder: 0, virtualRackId: "v1" }],
     canvas: { r1: canvasData("r1", "Baie 1", [SLOT, { ...MONITOR_SLOT, inventoryItemId: "i2" }, ...GHOSTS]) },
-    connections: { r1: CONNECTIONS, v1: [], r2: [] },
+    cables: CONNECTIONS,
     inventory: { r1: inventoryOf(BAIE) },
     unavailable: {},
     validation: null,

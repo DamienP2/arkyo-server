@@ -7,7 +7,7 @@
  *   - `canvas-data` et inventaire (`racks/{id}/inventory`) des contenants
  *     rackables : slots posés et « à placer », par la règle de l'onglet Rack
  *     d'arkyo (`placement.ts`) ;
- *   - câbles de chaque contenant (`GET /api/racks/{id}/connections`) ;
+ *   - câbles du projet (`useProjectCables`, la liste de la page Câbles) ;
  *   - rapport de validation que le synoptique de CE projet a publié
  *     (`validation-record.ts`), s'il existe.
  *
@@ -25,7 +25,8 @@ import type { RackCanvasData } from "@/app/(fullscreen)/project/[id]/rack/rack-t
 import type { ProjectTabId } from "@/app/(fullscreen)/project/[id]/_editor/tab-bar";
 import type { Slot } from "@/components/synoptique/lib/types";
 import type { IssueKind, IssueSeverity, ValidationReport } from "@/lib/services/rack-validation";
-import { flattenSlots, rackBilan, type RackConnectionRow } from "../bottom/rack-model";
+import { flattenSlots, rackBilan } from "../bottom/rack-model";
+import type { CableRow } from "./cables-model";
 import { fmtDay, plural } from "./format";
 import { isPlaceable, remainingByItem, type InventoryDto } from "./placement";
 
@@ -65,8 +66,14 @@ export type ManageData = {
   locations: readonly InventaireLocation[];
   /** `canvas-data` par contenant (absent ou `null` : pas encore lu). */
   canvas: Readonly<Record<string, RackCanvasData | null | undefined>>;
-  /** Câbles par contenant (absent ou `null` : pas encore lus). */
-  connections: Readonly<Record<string, readonly RackConnectionRow[] | null | undefined>>;
+  /**
+   * Tous les câbles du projet (`useProjectCables` : contenants et câbles
+   * entre lieux), la même liste que la page Câbles ; `null` avant la
+   * première lecture.
+   */
+  cables: readonly Pick<CableRow, "label">[] | null;
+  /** La lecture des câbles a échoué (et aucune liste n'est connue). */
+  cablesError?: boolean;
   /** Inventaire par contenant rackable (absent ou `null` : pas encore lu). */
   inventory: Readonly<Record<string, readonly InventoryDto[] | null | undefined>>;
   /** Contenants dont une lecture (`canvas-data` ou inventaire) a échoué. */
@@ -186,15 +193,9 @@ const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 // ── Câbles ──────────────────────────────────────────────────────────────────
 
-/** Tous les câbles connus des contenants (`null` tant qu'un contenant n'est pas lu). */
-export function allCables(data: ManageData): RackConnectionRow[] | null {
-  const out: RackConnectionRow[] = [];
-  for (const r of data.racks) {
-    const rows = data.connections[r.id];
-    if (rows == null) return null;
-    out.push(...rows);
-  }
-  return out;
+/** Tous les câbles du projet (`null` tant qu'ils ne sont pas lus). */
+export function allCables(data: ManageData): readonly Pick<CableRow, "label">[] | null {
+  return data.cables;
 }
 
 // ── Validation ──────────────────────────────────────────────────────────────
@@ -368,7 +369,9 @@ export function computeDomains(data: ManageData): DomainRow[] {
   const unlabelled = cables?.filter((c) => !c.label?.trim()).length ?? 0;
   const cablesSummary =
     cables == null
-      ? "Lecture des câbles…"
+      ? data.cablesError
+        ? "Lecture des câbles impossible"
+        : "Lecture des câbles…"
       : cables.length === 0
         ? "Aucun câble"
         : [

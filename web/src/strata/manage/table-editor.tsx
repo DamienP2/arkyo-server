@@ -15,7 +15,7 @@
  * Une ligne que l'utilisateur ne peut pas modifier (droits) reste en lecture.
  */
 
-import { useCallback, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import { useCallback, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { ArrowDown } from "@/components/ui/icons";
 import { cn } from "@/lib/utils";
 import { SMALL_BTN } from "./manage-ui";
@@ -45,7 +45,11 @@ export function fillDown(values: readonly string[]): string[] {
 /** Lettre de colonne du repère de cellule (A, B, …). */
 const colLetter = (c: number) => String.fromCharCode(65 + c);
 
-type Cursor = { r: number; c: number; r1: number };
+/**
+ * Cellule active et bout de plage, par clé de ligne : une relecture qui
+ * réordonne ou retire des lignes ne déplace pas la sélection sur d'autres.
+ */
+type Cursor = { k: string | null; c: number; k1: string | null };
 /** Cellule en cours d'édition, par clé de ligne : une relecture qui réordonne les lignes ne la déplace pas. */
 type Editing = { key: string; c: number; value: string };
 
@@ -74,7 +78,7 @@ export function TableEditor<R>({
   toolbar?: ReactNode;
 }) {
   const firstEditable = Math.max(0, columns.findIndex((c) => c.editable));
-  const [cur, setCur] = useState<Cursor>({ r: 0, c: firstEditable, r1: 0 });
+  const [cur, setCur] = useState<Cursor>({ k: null, c: firstEditable, k1: null });
   const [editing, setEditingState] = useState<Editing | null>(null);
   // Miroir de l'édition : le `blur` qui suit Entrée ou Échap ne réécrit rien.
   const editingRef = useRef<Editing | null>(null);
@@ -85,8 +89,11 @@ export function TableEditor<R>({
   const gridRef = useRef<HTMLTableElement>(null);
 
   const last = rows.length - 1;
-  const r = Math.min(cur.r, Math.max(0, last));
-  const r1 = Math.min(cur.r1, Math.max(0, last));
+  const indexOf = useMemo(() => new Map(rows.map((row, i) => [rowKey(row), i])), [rows, rowKey]);
+  // Ligne disparue (ou aucune encore) : la première.
+  const r = (cur.k != null ? indexOf.get(cur.k) : undefined) ?? 0;
+  const r1 = (cur.k1 != null ? indexOf.get(cur.k1) : undefined) ?? r;
+  const keyAt = (i: number) => (rows[i] ? rowKey(rows[i]) : null);
   const lo = Math.min(r, r1);
   const hi = Math.max(r, r1);
   const col = columns[cur.c] ?? columns[0];
@@ -116,11 +123,13 @@ export function TableEditor<R>({
 
   const move = (dr: number, dc: number, extend = false) => {
     if (rows.length === 0) return;
-    setCur((p) => {
-      if (extend) return { ...p, r1: Math.max(0, Math.min(last, p.r1 + dr)) };
-      const nr = Math.max(0, Math.min(last, p.r + dr));
-      return { r: nr, c: Math.max(0, Math.min(columns.length - 1, p.c + dc)), r1: nr };
-    });
+    const clamp = (i: number) => Math.max(0, Math.min(last, i));
+    if (extend) {
+      setCur((p) => ({ ...p, k: keyAt(r), k1: keyAt(clamp(r1 + dr)) }));
+      return;
+    }
+    const k = keyAt(clamp(r + dr));
+    setCur((p) => ({ k, c: Math.max(0, Math.min(columns.length - 1, p.c + dc)), k1: k }));
   };
 
   const startEdit = (initial?: string) => {
@@ -284,8 +293,8 @@ export function TableEditor<R>({
                           if (isEditing) return;
                           e.preventDefault();
                           if (editing) commit(editing.value);
-                          if (e.shiftKey && ci === cur.c) setCur((p) => ({ ...p, r1: ri }));
-                          else setCur({ r: ri, c: ci, r1: ri });
+                          if (e.shiftKey && ci === cur.c) setCur((p) => ({ ...p, k: p.k ?? keyAt(r), k1: key }));
+                          else setCur({ k: key, c: ci, k1: key });
                           gridRef.current?.focus();
                         }}
                         onDoubleClick={() => {
