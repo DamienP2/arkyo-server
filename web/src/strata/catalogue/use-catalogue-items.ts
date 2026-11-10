@@ -65,6 +65,10 @@ export type CatalogueItems<T> = {
   loading: boolean;
   error: string | null;
   reload: () => void;
+  /** Relecture silencieuse (la liste affichée reste en place). */
+  refresh: () => void;
+  /** Retire des fiches de la liste affichée (après suppression). */
+  removeLocal: (ids: string[]) => void;
 };
 
 export function useCatalogueItems<T>(kind: CatalogueKind): CatalogueItems<T> {
@@ -115,5 +119,10 @@ export function useCatalogueItems<T>(kind: CatalogueKind): CatalogueItems<T> {
   useCatalogueSync(() => load(true));
 
   const reload = useCallback(() => load(false), [load]);
-  return { items, loading, error, reload };
+  const refresh = useCallback(() => load(true), [load]);
+  const removeLocal = useCallback((ids: string[]) => {
+    const gone = new Set(ids);
+    setItems((prev) => prev.filter((it) => !gone.has((it as { id: string }).id)));
+  }, []);
+  return { items, loading, error, reload, refresh, removeLocal };
 }

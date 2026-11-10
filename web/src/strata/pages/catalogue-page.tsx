@@ -5,9 +5,11 @@
  * §4.3, maquette `#catalogue`). En Classique, l'URL reste la page d'arkyo
  * (`CatalogueClient`, ses trois panneaux).
  *
- * - Onglets `Équipements` · `Câbles` · `Adaptateurs` · `Modèles`, dans l'URL
- *   (`?tab=`, mêmes valeurs que les liens d'arkyo : `cables` / `cordons`,
- *   `adapters` / `adaptateurs`) ; la fiche montrée suit `?id=`.
+ * - Onglets `Équipements` · `Cordons` (le mot d'arkyo) · `Adaptateurs` ·
+ *   `Modèles`, dans l'URL (`?tab=`, mêmes valeurs que les liens d'arkyo :
+ *   `cables` / `cordons`, `adapters` / `adaptateurs`) ; sans `?tab=`, le
+ *   dernier onglet ouvert (`strata-catalogue-tab`). La fiche montrée suit
+ *   `?id=`.
  * - Liste filtrable (filtres d'arkyo, pickers modaux) et fiche en lecture.
  *   « Modifier » ouvre l'éditeur existant de la fiche, « Nouveau … »
  *   l'assistant existant.
@@ -19,7 +21,7 @@
  * suivent `catalog:write`, la permission d'écriture des routes.
  */
 
-import { useCallback, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { Navigate } from "react-router";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCatalogAdminGuard } from "@/components/client-page";
@@ -29,6 +31,7 @@ import { Package } from "@/components/ui/icons";
 import { LoadingState } from "@/components/ui/loading-state";
 import { usePageTitle } from "@/lib/hooks/use-page-title";
 import { useCatalogueLookup } from "../catalogue-model";
+import { readStoredTab, writeStoredTab } from "../catalogue/catalogue-filters";
 import { AdaptersTab } from "../catalogue/adapters-tab";
 import { CablesTab } from "../catalogue/cables-tab";
 import { EquipmentTab } from "../catalogue/equipment-tab";
@@ -59,7 +62,7 @@ const BASE = "/admin/catalogue";
 
 function catalogueUrl(tab: Tab, id: string | null): string {
   const q = new URLSearchParams();
-  if (tab !== "equipment") q.set("tab", tab);
+  q.set("tab", tab);
   if (id) q.set("id", id);
   const s = q.toString();
   return s ? `${BASE}?${s}` : BASE;
@@ -77,7 +80,9 @@ export default function CataloguePage() {
 function CatalogueContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const tab = TAB_PARAM[searchParams.get("tab") ?? ""] ?? "equipment";
+  // Onglet : `?tab=` d'abord, sinon le dernier ouvert (mémorisé), sinon Équipements.
+  const [storedTab] = useState(() => TAB_PARAM[readStoredTab() ?? ""] ?? "equipment");
+  const tab = TAB_PARAM[searchParams.get("tab") ?? ""] ?? storedTab;
   const selectedId = searchParams.get("id");
   const { has } = useTenantPermissions();
   const canWrite = has("catalog", "write");
@@ -88,13 +93,14 @@ function CatalogueContent() {
   const cables = useCatalogueItems<CatalogueCable>("cables");
   const adapters = useCatalogueItems<CatalogueAdapter>("adapters");
 
+  useEffect(() => writeStoredTab(tab), [tab]);
   const setTab = (t: Tab) => router.replace(catalogueUrl(t, null));
   const select = useCallback((id: string) => router.replace(catalogueUrl(tab, id)), [router, tab]);
 
   const count = (s: CatalogueItems<unknown>) => (s.loading && s.items.length === 0 ? undefined : s.items.length);
   const tabs: TabDef<Tab>[] = [
     { id: "equipment", label: "Équipements", count: count(equipment) },
-    { id: "cables", label: "Câbles", count: count(cables) },
+    { id: "cables", label: "Cordons", count: count(cables) },
     { id: "adapters", label: "Adaptateurs", count: count(adapters) },
     { id: "modeles", label: "Modèles" },
   ];
@@ -105,40 +111,19 @@ function CatalogueContent() {
   } else if (tab === "equipment") {
     body = (
       <Loaded state={equipment}>
-        <EquipmentTab
-          items={equipment.items}
-          lookup={lookup}
-          selectedId={selectedId}
-          onSelect={select}
-          canWrite={canWrite}
-          onCreated={equipment.reload}
-        />
+        <EquipmentTab list={equipment} lookup={lookup} selectedId={selectedId} onSelect={select} canWrite={canWrite} />
       </Loaded>
     );
   } else if (tab === "cables") {
     body = (
       <Loaded state={cables}>
-        <CablesTab
-          items={cables.items}
-          lookup={lookup}
-          selectedId={selectedId}
-          onSelect={select}
-          canWrite={canWrite}
-          onCreated={cables.reload}
-        />
+        <CablesTab list={cables} lookup={lookup} selectedId={selectedId} onSelect={select} canWrite={canWrite} />
       </Loaded>
     );
   } else {
     body = (
       <Loaded state={adapters}>
-        <AdaptersTab
-          items={adapters.items}
-          lookup={lookup}
-          selectedId={selectedId}
-          onSelect={select}
-          canWrite={canWrite}
-          onCreated={adapters.reload}
-        />
+        <AdaptersTab list={adapters} lookup={lookup} selectedId={selectedId} onSelect={select} canWrite={canWrite} />
       </Loaded>
     );
   }

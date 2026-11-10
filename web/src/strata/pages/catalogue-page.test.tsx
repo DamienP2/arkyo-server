@@ -14,6 +14,7 @@ import { OWNER_PERMS, renderApp, resetApp, signedInApi, TECH_PERMS, type Api } f
 // ── Référentiels ────────────────────────────────────────────────────────────
 
 const VIDEO = { id: "f1", key: "VIDEO", label: "Vidéo", color: "#3b82f6", sortOrder: 1, isActive: true };
+const AUDIO = { id: "f2", key: "AUDIO", label: "Audio", color: "#22c55e", sortOrder: 2, isActive: true };
 const ENERGIE = { id: "f5", key: "ENERGIE", label: "Énergie", color: "#ef4444", sortOrder: 5, isActive: true };
 
 const connector = (id: string, name: string, iconId: string) => ({
@@ -72,7 +73,7 @@ const LOOKUP = {
   ],
   connectorTypes: [BNC, XLR, IEC],
   signals: [SDI, SECTEUR],
-  functions: [VIDEO, ENERGIE],
+  functions: [VIDEO, AUDIO, ENERGIE],
   phases: [
     { id: "p1", key: "TOURNAGE", label: "Tournage", isActive: true },
     { id: "p2", key: "MONTAGE", label: "Montage", isActive: true },
@@ -170,6 +171,30 @@ const CAMERA_ITEM = {
   connectors: [port({ label: "SDI OUT", direction: "OUT", quantity: 2 })],
 };
 
+const MIXER_ITEM = {
+  ...PERSONAL,
+  id: "e3",
+  name: "Rio3224-D2",
+  reference: "RIO3224",
+  brand: { id: "b3", name: "Yamaha", logoUrl: null },
+  brandId: "b3",
+  heightU: 3,
+  isRackable: true,
+  weight: 11,
+  powerW: 150,
+  hasDualPsu: true,
+  is2110: false,
+  imageUrl: null,
+  category: "Stagebox",
+  equipmentCategory: null,
+  type: null,
+  typeId: null,
+  functions: [{ id: "f2", label: "Audio", color: "#22c55e", sortOrder: 2, functionId: "f2" }],
+  functionIds: ["f2"],
+  phaseIds: [],
+  connectors: [port({ label: "MIC", connectorTypeId: "c2", signalName: "", quantity: 32 })],
+};
+
 const CABLE_ITEM = {
   ...PERSONAL,
   id: "k1",
@@ -241,7 +266,7 @@ function catalogueApi(iface: "strata" | "classique" = "strata", extra: Api = {},
     "GET /api/tenant/parametres/application": { body: { cable_safety_depth_mm: "120" } },
     "GET /api/tenant/parametres/dimensions": { body: [] },
     "GET /api/tenant/catalogue/connectors": { body: [BNC, XLR, IEC] },
-    "GET /api/tenant/catalogue/equipment": { body: { arkyo: [], personal: [ROUTER_ITEM, CAMERA_ITEM] } },
+    "GET /api/tenant/catalogue/equipment": { body: { arkyo: [], personal: [ROUTER_ITEM, CAMERA_ITEM, MIXER_ITEM] } },
     "GET /api/tenant/catalogue/cables": { body: { arkyo: [], personal: [CABLE_ITEM, XLR_CABLE] } },
     "GET /api/tenant/catalogue/adapters": { body: { arkyo: [], personal: [ADAPTER_ITEM] } },
     "GET /api/tenant/catalogue/equipment/e1": {
@@ -263,7 +288,21 @@ function row(list: HTMLElement, name: string) {
   return within(list).getByText(name).closest("button") as HTMLElement;
 }
 
+
 const detail = () => screen.getByRole("region", { name: "Fiche" });
+const rowNames = (list: HTMLElement) =>
+  within(list)
+    .getAllByRole("button")
+    .map((b) => b.querySelector("strong")?.textContent);
+
+/** Ouvre la fenêtre d'un filtre, y bascule des pastilles, puis l'applique. */
+async function chipFilter(facet: string, title: string, chips: string[]) {
+  fireEvent.click(screen.getByRole("button", { name: facet }));
+  const dialog = await screen.findByRole("dialog", { name: title });
+  for (const c of chips) fireEvent.click(within(dialog).getByRole("button", { name: c }));
+  fireEvent.click(within(dialog).getByRole("button", { name: /^Appliquer|^Fermer/ }));
+  await waitFor(() => expect(screen.queryByRole("dialog", { name: title })).toBeNull());
+}
 
 beforeAll(async () => {
   await Promise.all([
@@ -288,10 +327,7 @@ describe("catalogue Strata v2 : équipements", () => {
     const list = await catalogueList("Équipements");
 
     // Liste triée par nom ; la première fiche est montrée sans sélection.
-    const names = within(list)
-      .getAllByRole("button")
-      .map((b) => b.querySelector("strong")?.textContent);
-    expect(names).toEqual(["HDC-5500", "Videohub 40×40 12G"]);
+    expect(rowNames(list)).toEqual(["HDC-5500", "Rio3224-D2", "Videohub 40×40 12G"]);
     expect(within(detail()).getByRole("heading", { level: 2, name: "HDC-5500" })).toBeInTheDocument();
     // Ligne : marque, fonction, hauteur, consommation.
     expect(within(row(list, "Videohub 40×40 12G")).getByText("Blackmagic Design · Vidéo")).toBeInTheDocument();
@@ -300,7 +336,7 @@ describe("catalogue Strata v2 : équipements", () => {
 
     // Sélection : détail et URL.
     fireEvent.click(row(list, "Videohub 40×40 12G"));
-    await waitFor(() => expect(router.state.location.search).toBe("?id=e1"));
+    await waitFor(() => expect(router.state.location.search).toBe("?tab=equipment&id=e1"));
     expect(row(list, "Videohub 40×40 12G")).toHaveAttribute("aria-current", "true");
     const d = within(detail());
     expect(d.getByRole("heading", { level: 2, name: "Videohub 40×40 12G" })).toBeInTheDocument();
@@ -357,47 +393,193 @@ describe("catalogue Strata v2 : équipements", () => {
     fireEvent.change(search, { target: { value: "sony" } });
     await waitFor(() => expect(within(list).queryByText("Videohub 40×40 12G")).toBeNull());
     expect(within(list).getByText("HDC-5500")).toBeInTheDocument();
-    expect(screen.getByText("1 fiche sur 2")).toBeInTheDocument();
+    expect(screen.getByText("1 fiche sur 3")).toBeInTheDocument();
     fireEvent.change(search, { target: { value: "" } });
-    await waitFor(() => expect(within(list).getAllByRole("button")).toHaveLength(2));
+    await waitFor(() => expect(within(list).getAllByRole("button")).toHaveLength(3));
 
-    // Fabricant : le picker modal d'arkyo.
+    // Fabricant : choix multiple (`BrandMultiSelect` d'arkyo) dans une fenêtre de filtre.
     fireEvent.click(screen.getByRole("button", { name: "Fabricant" }));
-    const brandDialog = await screen.findByRole("dialog", { name: "Choisir une marque" });
-    fireEvent.click(within(brandDialog).getByRole("button", { name: /Sony/ }));
-    await waitFor(() => expect(within(list).queryByText("Videohub 40×40 12G")).toBeNull());
-    expect(screen.getByRole("button", { name: "Fabricant : Sony" })).toBeInTheDocument();
+    const brandDialog = await screen.findByRole("dialog", { name: "Filtrer par fabricant" });
+    fireEvent.click(within(brandDialog).getByRole("button", { name: /Sélectionner des marques/ }));
+    fireEvent.click(within(brandDialog).getByRole("button", { name: "Sony" }));
+    fireEvent.click(within(brandDialog).getByRole("button", { name: "Yamaha" }));
+    fireEvent.click(within(brandDialog).getByRole("button", { name: "Appliquer (2)" }));
+    await waitFor(() => expect(rowNames(list)).toEqual(["HDC-5500", "Rio3224-D2"]));
+    expect(screen.getByRole("button", { name: "Fabricant : Sony, Yamaha" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Retirer le filtre Fabricant" }));
-    await waitFor(() => expect(within(list).getAllByRole("button")).toHaveLength(2));
+    await waitFor(() => expect(within(list).getAllByRole("button")).toHaveLength(3));
 
-    // Type : le picker modal d'arkyo.
-    fireEvent.click(screen.getByRole("button", { name: "Type" }));
-    const typeDialog = await screen.findByRole("dialog");
-    fireEvent.click(within(typeDialog).getByRole("button", { name: /Grille SDI/ }));
-    await waitFor(() => expect(within(list).queryByText("HDC-5500")).toBeNull());
+    // Fonction : choix multiple.
+    await chipFilter("Fonction", "Filtrer par fonction", ["Audio"]);
+    await waitFor(() => expect(rowNames(list)).toEqual(["Rio3224-D2"]));
+    expect(screen.getByRole("button", { name: "Fonction : Audio" })).toBeInTheDocument();
+    await chipFilter("Fonction : Audio", "Filtrer par fonction", ["Vidéo"]);
+    await waitFor(() => expect(within(list).getAllByRole("button")).toHaveLength(3));
+    fireEvent.click(screen.getByRole("button", { name: "Retirer le filtre Fonction" }));
+
+    // Type : choix multiple.
+    await chipFilter("Type", "Filtrer par type d'équipement", ["Grille SDI"]);
+    await waitFor(() => expect(rowNames(list)).toEqual(["Videohub 40×40 12G"]));
+    await chipFilter("Type : Grille SDI", "Filtrer par type d'équipement", ["Caméra"]);
+    await waitFor(() => expect(rowNames(list)).toEqual(["HDC-5500", "Videohub 40×40 12G"]));
     fireEvent.click(screen.getByRole("button", { name: "Retirer le filtre Type" }));
-    await waitFor(() => expect(within(list).getAllByRole("button")).toHaveLength(2));
+    await waitFor(() => expect(within(list).getAllByRole("button")).toHaveLength(3));
 
-    // Phase : le picker modal d'arkyo (multi-sélection confirmée).
-    fireEvent.click(screen.getByRole("button", { name: "Phase" }));
-    const phaseDialog = await screen.findByRole("dialog");
-    fireEvent.click(within(phaseDialog).getByRole("button", { name: /Montage/ }));
-    fireEvent.click(within(phaseDialog).getByRole("button", { name: /Confirmer/ }));
-    await waitFor(() => expect(within(list).queryByText("Videohub 40×40 12G")).toBeNull());
+    // Phase.
+    await chipFilter("Phase", "Filtrer par phase", ["Montage"]);
+    await waitFor(() => expect(rowNames(list)).toEqual(["HDC-5500"]));
     fireEvent.click(screen.getByRole("button", { name: "Retirer le filtre Phase" }));
-    await waitFor(() => expect(within(list).getAllByRole("button")).toHaveLength(2));
+    await waitFor(() => expect(within(list).getAllByRole("button")).toHaveLength(3));
 
     // Options d'arkyo : ST 2110, format.
     fireEvent.click(screen.getByRole("button", { name: "ST 2110" }));
-    await waitFor(() => expect(within(list).queryByText("HDC-5500")).toBeNull());
+    await waitFor(() => expect(rowNames(list)).toEqual(["Videohub 40×40 12G"]));
     fireEvent.click(screen.getByRole("button", { name: "ST 2110" }));
     fireEvent.click(screen.getByRole("button", { name: "Pose libre" }));
-    await waitFor(() => expect(within(list).queryByText("Videohub 40×40 12G")).toBeNull());
+    await waitFor(() => expect(rowNames(list)).toEqual(["HDC-5500"]));
     fireEvent.click(screen.getByRole("button", { name: "Tous les formats" }));
-    await waitFor(() => expect(within(list).getAllByRole("button")).toHaveLength(2));
+    await waitFor(() => expect(within(list).getAllByRole("button")).toHaveLength(3));
 
-    // Aucun `<select>` : filtres par pickers modaux et boutons.
+    // Aucun `<select>` : filtres par fenêtres modales et boutons.
     expect(document.querySelector("main select")).toBeNull();
+  });
+
+  test("tri : clé et sens", async () => {
+    renderApp("/admin/catalogue", catalogueApi());
+    const list = await catalogueList("Équipements");
+    fireEvent.click(screen.getByRole("button", { name: "Tri : Nom" }));
+    fireEvent.click(screen.getByRole("menuitemradio", { name: "Puissance (W)" }));
+    await waitFor(() => expect(rowNames(list)).toEqual(["HDC-5500", "Videohub 40×40 12G", "Rio3224-D2"]));
+    fireEvent.click(screen.getByRole("button", { name: "Ordre croissant (A→Z)" }));
+    await waitFor(() => expect(rowNames(list)).toEqual(["Rio3224-D2", "Videohub 40×40 12G", "HDC-5500"]));
+    expect(screen.getByRole("button", { name: "Ordre décroissant (Z→A)" })).toBeInTheDocument();
+
+    // Hauteur : la pose libre (sans hauteur) reste en dernier, quel que soit le sens.
+    fireEvent.click(screen.getByRole("button", { name: "Tri : Puissance (W)" }));
+    fireEvent.click(screen.getByRole("menuitemradio", { name: "Hauteur (U)" }));
+    await waitFor(() => expect(rowNames(list)).toEqual(["Rio3224-D2", "Videohub 40×40 12G", "HDC-5500"]));
+    fireEvent.click(screen.getByRole("button", { name: "Ordre décroissant (Z→A)" }));
+    await waitFor(() => expect(rowNames(list)).toEqual(["Videohub 40×40 12G", "Rio3224-D2", "HDC-5500"]));
+  });
+
+  test("filtres et tri mémorisés par sorte, onglet mémorisé", async () => {
+    const { router } = renderApp("/admin/catalogue", catalogueApi());
+    let list = await catalogueList("Équipements");
+    fireEvent.click(screen.getByRole("button", { name: "ST 2110" }));
+    await waitFor(() => expect(rowNames(list)).toEqual(["Videohub 40×40 12G"]));
+    expect(JSON.parse(window.localStorage.getItem("strata-catalogue-filters:equipment")!)).toMatchObject({
+      is2110: true,
+    });
+
+    // Changement d'onglet : le filtre des équipements reste, celui des cordons est le sien.
+    fireEvent.click(screen.getByRole("tab", { name: /Cordons/ }));
+    await waitFor(() => expect(router.state.location.search).toBe("?tab=cables"));
+    await catalogueList("Cordons");
+    fireEvent.click(screen.getByRole("button", { name: "Prestation" }));
+    fireEvent.click(screen.getByRole("tab", { name: /Équipements/ }));
+    list = await catalogueList("Équipements");
+    expect(screen.getByRole("button", { name: "ST 2110" })).toHaveAttribute("aria-pressed", "true");
+    expect(rowNames(list)).toEqual(["Videohub 40×40 12G"]);
+
+    // Rechargement : filtres d'équipement relus ; sans `?tab=`, le dernier onglet ouvert.
+    fireEvent.click(screen.getByRole("tab", { name: /Cordons/ }));
+    await catalogueList("Cordons");
+    resetApp();
+    renderApp("/admin/catalogue", catalogueApi());
+    await catalogueList("Cordons");
+    expect(screen.getByRole("tab", { name: /Cordons/ })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("button", { name: "Prestation" })).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(screen.getByRole("tab", { name: /Équipements/ }));
+    list = await catalogueList("Équipements");
+    expect(rowNames(list)).toEqual(["Videohub 40×40 12G"]);
+
+    // Stockage illisible : valeurs par défaut, sans erreur.
+    resetApp();
+    window.localStorage.setItem("strata-catalogue-filters:equipment", "{pas du json");
+    renderApp("/admin/catalogue?tab=equipment", catalogueApi());
+    list = await catalogueList("Équipements");
+    expect(within(list).getAllByRole("button")).toHaveLength(3);
+  });
+
+  test("Réinitialiser les filtres : barre d'outils et état « aucun résultat »", async () => {
+    renderApp("/admin/catalogue", catalogueApi());
+    const list = await catalogueList("Équipements");
+    expect(screen.queryByRole("button", { name: "Réinitialiser les filtres" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "ST 2110" }));
+    await waitFor(() => expect(rowNames(list)).toEqual(["Videohub 40×40 12G"]));
+    fireEvent.click(screen.getByRole("button", { name: "Réinitialiser les filtres" }));
+    await waitFor(() => expect(within(list).getAllByRole("button")).toHaveLength(3));
+    expect(screen.getByRole("button", { name: "ST 2110" })).toHaveAttribute("aria-pressed", "false");
+
+    fireEvent.change(screen.getByRole("searchbox", { name: "Rechercher dans les équipements" }), {
+      target: { value: "introuvable" },
+    });
+    expect(await screen.findByText("Aucun équipement pour ces filtres")).toBeInTheDocument();
+    const resets = screen.getAllByRole("button", { name: "Réinitialiser les filtres" });
+    expect(resets).toHaveLength(2);
+    fireEvent.click(resets[1]);
+    const again = await catalogueList("Équipements");
+    expect(within(again).getAllByRole("button")).toHaveLength(3);
+  });
+
+  test("Dupliquer, Supprimer (409 compris) et suppression en lot", async () => {
+    const deleted: string[] = [];
+    let bulkBody: unknown = null;
+    const { router } = renderApp(
+      "/admin/catalogue?id=e1",
+      catalogueApi("strata", {
+        "DELETE /api/tenant/catalogue/equipment/e1": {
+          status: 409,
+          body: { error: "Équipement utilisé dans 2 projets — suppression impossible.", usageCount: 2 },
+        },
+        "DELETE /api/tenant/catalogue/equipment/e3": () => {
+          deleted.push("e3");
+          return { body: { success: true } };
+        },
+        "POST /api/tenant/catalogue/equipment/bulk-delete": (init) => {
+          bulkBody = JSON.parse(String(init?.body));
+          return { body: { deleted: 2, failed: [] } };
+        },
+        "POST /api/tenant/catalogue/equipment/e1/duplicate": { status: 201, body: { id: "e9" } },
+      }),
+    );
+    const list = await catalogueList("Équipements");
+
+    // Supprimer, refusé : la confirmation d'arkyo, puis le message 409 du serveur.
+    fireEvent.click(within(detail()).getByRole("button", { name: "Supprimer" }));
+    let confirm = await screen.findByRole("dialog", { name: "Supprimer l'équipement" });
+    expect(confirm).toHaveTextContent("Videohub 40×40 12G sera supprimé définitivement.");
+    fireEvent.click(within(confirm).getByRole("button", { name: "Supprimer" }));
+    expect(await screen.findByText("Équipement utilisé dans 2 projets — suppression impossible.")).toBeInTheDocument();
+    expect(within(list).getByText("Videohub 40×40 12G")).toBeInTheDocument();
+
+    // Supprimer, accepté : la fiche quitte la liste.
+    fireEvent.click(row(list, "Rio3224-D2"));
+    await waitFor(() => expect(within(detail()).getByRole("heading", { level: 2, name: "Rio3224-D2" })).toBeInTheDocument());
+    fireEvent.click(within(detail()).getByRole("button", { name: "Supprimer" }));
+    confirm = await screen.findByRole("dialog", { name: "Supprimer l'équipement" });
+    fireEvent.click(within(confirm).getByRole("button", { name: "Supprimer" }));
+    expect(await screen.findByText("Équipement supprimé.")).toBeInTheDocument();
+    expect(deleted).toEqual(["e3"]);
+    await waitFor(() => expect(within(list).queryByText("Rio3224-D2")).toBeNull());
+
+    // Suppression en lot : coches, confirmation, route d'arkyo.
+    fireEvent.click(screen.getByRole("checkbox", { name: "Sélectionner HDC-5500" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Sélectionner Videohub 40×40 12G" }));
+    const bar = screen.getByRole("toolbar", { name: "Sélection" });
+    expect(bar).toHaveTextContent("2 sélectionnés");
+    fireEvent.click(within(bar).getByRole("button", { name: "Supprimer la sélection" }));
+    confirm = await screen.findByRole("dialog", { name: "Supprimer 2 éléments ?" });
+    expect(confirm).toHaveTextContent("Cette action est irréversible.");
+    fireEvent.click(within(confirm).getByRole("button", { name: "Supprimer" }));
+    expect(await screen.findByText("2 éléments supprimés.")).toBeInTheDocument();
+    expect(bulkBody).toEqual({ ids: ["e2", "e1"] });
+    await waitFor(() => expect(screen.queryByRole("toolbar", { name: "Sélection" })).toBeNull());
+
+    // Dupliquer : la copie s'ouvre dans l'éditeur.
+    fireEvent.click(row(list, "Videohub 40×40 12G"));
+    fireEvent.click(within(detail()).getByRole("button", { name: "Dupliquer" }));
+    await waitFor(() => expect(router.state.location.pathname).toBe("/admin/catalogue/equipment/e9"));
   });
 
   test("Modifier → /admin/catalogue/equipment/:id", async () => {
@@ -419,14 +601,37 @@ describe("catalogue Strata v2 : équipements", () => {
     fireEvent.click(add);
     expect(await screen.findByRole("dialog", { name: "Nouvel équipement" })).toBeInTheDocument();
 
-    // Câbles : l'assistant de cordon d'arkyo.
+    // Cordons : l'assistant de cordon d'arkyo.
     fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
     await waitFor(() => expect(screen.queryByRole("dialog", { name: "Nouvel équipement" })).toBeNull());
-    fireEvent.click(screen.getByRole("tab", { name: /Câbles/ }));
+    fireEvent.click(screen.getByRole("tab", { name: /Cordons/ }));
     await waitFor(() => expect(router.state.location.search).toBe("?tab=cables"));
-    await catalogueList("Câbles");
-    fireEvent.click(screen.getByRole("button", { name: "Nouveau câble" }));
+    await catalogueList("Cordons");
+    fireEvent.click(screen.getByRole("button", { name: "Nouveau cordon" }));
     expect(await screen.findByRole("dialog", { name: "Nouveau cordon" })).toBeInTheDocument();
+  });
+
+  test("documents : liens http(s) et mailto seulement", async () => {
+    const item = {
+      ...ROUTER_ITEM,
+      documents: [
+        { id: "d1", title: "Script", url: "javascript:alert(1)" },
+        { id: "d2", title: "Contact", url: "mailto:support@example.com" },
+        { id: "d3", title: "Notice", url: "http://example.com/notice.pdf" },
+      ],
+    };
+    renderApp(
+      "/admin/catalogue?id=e1",
+      catalogueApi("strata", { "GET /api/tenant/catalogue/equipment": { body: { arkyo: [], personal: [item] } } }),
+    );
+    await catalogueList("Équipements");
+    const d = within(detail());
+    fireEvent.click(d.getByRole("button", { name: /Avancé/ }));
+    expect(d.queryByRole("link", { name: "Script" })).toBeNull();
+    expect(d.getByText("Script (javascript:alert(1))")).toBeInTheDocument();
+    expect(d.getByRole("link", { name: "Contact" })).toHaveAttribute("href", "mailto:support@example.com");
+    expect(d.getByRole("link", { name: "Notice" })).toHaveAttribute("href", "http://example.com/notice.pdf");
+    expect(document.querySelector('a[href^="javascript"]')).toBeNull();
   });
 
   test("Classique : /admin/catalogue reste la page d'arkyo", async () => {
@@ -470,10 +675,10 @@ describe("catalogue Strata v2 : équipements", () => {
   });
 });
 
-describe("catalogue Strata v2 : câbles, adaptateurs, modèles", () => {
-  test("câbles : liste + détail (dessin, modèle, Avancé), filtres", async () => {
+describe("catalogue Strata v2 : cordons, adaptateurs, modèles", () => {
+  test("cordons : liste + détail (dessin, modèle, Avancé), filtres", async () => {
     renderApp("/admin/catalogue?tab=cordons", catalogueApi());
-    const list = await catalogueList("Câbles");
+    const list = await catalogueList("Cordons");
     expect(within(row(list, "BNC M ↔ BNC M 12G")).getByText("BNC M / BNC M")).toBeInTheDocument();
     fireEvent.click(row(list, "BNC M ↔ BNC M 12G"));
     const d = within(detail());
@@ -483,6 +688,8 @@ describe("catalogue Strata v2 : câbles, adaptateurs, modèles", () => {
     expect(d.getByText("5 m · 10 m")).toBeInTheDocument();
     expect(d.getByText("0,5 à 100 m")).toBeInTheDocument();
     expect(d.getByRole("link", { name: "Modifier" })).toHaveAttribute("href", "/admin/catalogue/cables/k1");
+    expect(d.getByRole("button", { name: "Dupliquer" })).toBeInTheDocument();
+    expect(d.getByRole("button", { name: "Supprimer" })).toBeInTheDocument();
 
     // Avancé : le modèle de câble.
     fireEvent.click(d.getByRole("button", { name: /Avancé/ }));
@@ -495,13 +702,18 @@ describe("catalogue Strata v2 : câbles, adaptateurs, modèles", () => {
     fireEvent.click(screen.getByRole("button", { name: "Prestation" }));
     await waitFor(() => expect(within(list).queryByText("XLR3 M ↔ XLR3 F")).toBeNull());
     fireEvent.click(screen.getByRole("button", { name: "Prestation" }));
-    // Connecteur gauche : le picker modal d'arkyo.
-    fireEvent.click(screen.getByRole("button", { name: "Connecteur gauche" }));
-    const dialog = await screen.findByRole("dialog");
-    fireEvent.click(within(dialog).getByRole("button", { name: /XLR3/ }));
-    fireEvent.click(within(dialog).getByRole("button", { name: /Confirmer/ }));
-    await waitFor(() => expect(within(list).queryByText("BNC M ↔ BNC M 12G")).toBeNull());
-    expect(within(list).getByText("XLR3 M ↔ XLR3 F")).toBeInTheDocument();
+    // Connecteur gauche : choix multiple dans une fenêtre de filtre.
+    await chipFilter("Connecteur gauche", "Filtrer par connecteur gauche", ["XLR3"]);
+    await waitFor(() => expect(rowNames(list)).toEqual(["XLR3 M ↔ XLR3 F"]));
+    await chipFilter("Connecteur gauche : XLR3", "Filtrer par connecteur gauche", ["BNC"]);
+    await waitFor(() => expect(within(list).getAllByRole("button")).toHaveLength(2));
+
+    // Tri : sens inversé.
+    fireEvent.click(screen.getByRole("button", { name: "Ordre croissant (A→Z)" }));
+    await waitFor(() => expect(rowNames(list)).toEqual(["XLR3 M ↔ XLR3 F", "BNC M ↔ BNC M 12G"]));
+
+    // Sélection multiple aussi sur les cordons.
+    expect(screen.getByRole("checkbox", { name: "Sélectionner XLR3 M ↔ XLR3 F" })).toBeInTheDocument();
   });
 
   test("adaptateurs : liste + détail", async () => {
@@ -516,6 +728,7 @@ describe("catalogue Strata v2 : câbles, adaptateurs, modèles", () => {
     expect(essentials.getByText("XLR3 F")).toBeInTheDocument();
     expect(essentials.getByText("BNC M ×2")).toBeInTheDocument();
     expect(d.getByRole("link", { name: "Modifier" })).toHaveAttribute("href", "/admin/catalogue/adapters/a1");
+    expect(d.getByRole("button", { name: "Dupliquer" })).toBeInTheDocument();
     fireEvent.click(d.getByRole("button", { name: /Avancé/ }));
     expect(d.getByText("Passif")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Nouvel adaptateur" }).className).toMatch(/border-dashed/);

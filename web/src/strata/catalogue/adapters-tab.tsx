@@ -4,16 +4,19 @@
  * Catalogue › Adaptateurs (Strata v2) : liste filtrable et fiche en lecture
  * (dessin entrées → sorties, essentiel, notes dans « Avancé »).
  *
- * Filtres d'arkyo (`AdaptersListPanel`) : recherche (nom, référence,
- * fonction), fonction, connecteur en entrée, connecteur en sortie, par les
- * pickers modaux d'arkyo. « Nouvel adaptateur » ouvre l'assistant existant
- * (`NewAdapterWizard`).
+ * Fonctions du panneau d'arkyo (`AdaptersListPanel`), toutes présentes :
+ *   - recherche (nom, référence, fonction) ;
+ *   - filtres à choix multiples : fonction, connecteur en entrée, connecteur
+ *     en sortie (pastilles `Chip` d'arkyo), dans des fenêtres modales aux
+ *     mots d'un filtre ; « Réinitialiser les filtres » ; filtres et tri
+ *     mémorisés (`strata-catalogue-filters:adapters`) ;
+ *   - tri : nom, référence, fonction, croissant ou décroissant ;
+ *   - sélection multiple et suppression en lot ; Dupliquer et Supprimer
+ *     dans la fiche ; « Nouvel adaptateur » ouvre l'assistant existant.
  */
 
-import { memo, useMemo, useState } from "react";
+import { memo, useMemo, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { ConnectorMultiPickerModal } from "@/components/catalogue/connector-multi-picker-modal";
-import { FunctionPickerModal } from "@/components/catalogue/function-picker-modal";
 import { NewAdapterWizard } from "@/components/adapters/new-adapter-wizard";
 import { Cable, Plus, Search } from "@/components/ui/icons";
 import { EmptyState, EmptyStateAction } from "@/components/ui/empty-state";
@@ -22,28 +25,65 @@ import { connectorTypeIndex, drawingGender, type CatalogueLookup, type LookupCon
 import { AdapterDrawing, type AdapterEndDrawing } from "../drawings/adapter-drawing";
 import { genderLetter } from "../drawings/equipment-face";
 import { Kv } from "../manage/manage-ui";
+import { useCatalogueActions, useListSelection } from "./catalogue-actions";
+import { sortBy, toggleIn, useStoredFilters, type SortDir } from "./catalogue-filters";
 import {
+  ChipChoices,
   ColorMark,
   countLabel,
+  DetailActions,
   DetailBody,
   DetailHead,
   DrawingWell,
-  EditLink,
   FacetButton,
+  FilterDialog,
   ListDetail,
   ListRow,
   NewButton,
   PagedList,
+  ResetFiltersButton,
   RowTitle,
   SearchField,
+  SelectionBar,
+  SortControl,
   Toolbar,
+  type RowCheck,
 } from "./catalogue-ui";
-import type { CatalogueAdapter } from "./use-catalogue-items";
+import type { CatalogueAdapter, CatalogueItems } from "./use-catalogue-items";
 
 type Picker = "function" | "in" | "out" | null;
 type AdapterEnd = CatalogueAdapter["inputs"][number];
+type SortKey = "name" | "reference" | "function";
 
-const byName = (a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name, "fr");
+const SORTS: { id: SortKey; label: string }[] = [
+  { id: "name", label: "Nom" },
+  { id: "reference", label: "Référence" },
+  { id: "function", label: "Fonction" },
+];
+
+const SORT_VALUE: Record<SortKey, (it: CatalogueAdapter) => string | null | undefined> = {
+  name: (it) => it.name,
+  reference: (it) => it.reference,
+  function: (it) => it.function?.label,
+};
+
+const DEFAULTS = {
+  functions: [] as string[],
+  inputs: [] as string[],
+  outputs: [] as string[],
+  sort: { key: "name" as string, dir: "asc" as string },
+};
+type Filters = typeof DEFAULTS;
+
+function valid(f: Filters): Filters {
+  return {
+    ...f,
+    sort: {
+      key: SORTS.some((o) => o.id === f.sort.key) ? f.sort.key : "name",
+      dir: f.sort.dir === "desc" ? "desc" : "asc",
+    },
+  };
+}
 
 /** Nombre de connecteurs d'un côté (quantités comprises, 1 par défaut). */
 function countEnds(ends: readonly AdapterEnd[]): number {
@@ -61,28 +101,39 @@ function summary(item: CatalogueAdapter): string {
     .join(" · ");
 }
 
+/** Connecteurs présents d'un côté des adaptateurs (comme arkyo). */
+function connectorsOf(
+  items: readonly CatalogueAdapter[],
+  types: ReadonlyMap<string, LookupConnectorType>,
+  side: "inputs" | "outputs",
+): { id: string; label: string }[] {
+  const ids = new Set<string>();
+  for (const it of items) for (const e of it[side] ?? []) if (e.connectorTypeId) ids.add(e.connectorTypeId);
+  return [...ids]
+    .map((id) => ({ id, label: types.get(id)?.name ?? "—" }))
+    .sort((a, b) => a.label.localeCompare(b.label, "fr"));
+}
+
 export function AdaptersTab({
-  items,
+  list,
   lookup,
   selectedId,
   onSelect,
   canWrite,
-  onCreated,
 }: {
-  items: readonly CatalogueAdapter[];
+  list: CatalogueItems<CatalogueAdapter>;
   lookup: CatalogueLookup | null;
   selectedId: string | null;
   onSelect: (id: string) => void;
   canWrite: boolean;
-  onCreated: () => void;
 }) {
+  const items = list.items;
   const router = useRouter();
   const [search, setSearch] = useState("");
-  const [functionId, setFunctionId] = useState<string | null>(null);
-  const [inputs, setInputs] = useState<string[]>([]);
-  const [outputs, setOutputs] = useState<string[]>([]);
+  const [f, setF] = useStoredFilters("adapters", DEFAULTS, valid);
   const [picker, setPicker] = useState<Picker>(null);
   const [wizardOpen, setWizardOpen] = useState(false);
+  const actions = useCatalogueActions("adapters", { reload: list.refresh, removeLocal: list.removeLocal });
 
   const types = useMemo(() => connectorTypeIndex(lookup), [lookup]);
   const functions = useMemo(() => {
@@ -90,31 +141,35 @@ export function AdaptersTab({
     for (const it of items) if (it.function && !seen.has(it.function.id)) seen.set(it.function.id, it.function);
     return [...seen.values()].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
   }, [items]);
-  const connectors = useMemo(() => {
-    const ids = new Set<string>();
-    for (const it of items) for (const e of [...(it.inputs ?? []), ...(it.outputs ?? [])]) ids.add(e.connectorTypeId);
-    return (lookup?.connectorTypes ?? []).filter((t) => ids.has(t.id)).map((t) => ({ id: t.id, name: t.name, iconId: t.iconId }));
-  }, [items, lookup]);
+  const inConnectors = useMemo(() => connectorsOf(items, types, "inputs"), [items, types]);
+  const outConnectors = useMemo(() => connectorsOf(items, types, "outputs"), [items, types]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    const ins = new Set(inputs);
-    const outs = new Set(outputs);
-    return items
-      .filter((it) => {
-        if (q && ![it.name, it.reference ?? "", it.function?.label ?? ""].join(" ").toLowerCase().includes(q)) return false;
-        if (functionId && (it.function?.id ?? it.functionId) !== functionId) return false;
-        if (ins.size && !(it.inputs ?? []).some((p) => ins.has(p.connectorTypeId))) return false;
-        if (outs.size && !(it.outputs ?? []).some((p) => outs.has(p.connectorTypeId))) return false;
-        return true;
-      })
-      .sort(byName);
-  }, [items, search, functionId, inputs, outputs]);
+    const out = items.filter((it) => {
+      if (q && ![it.name, it.reference ?? "", it.function?.label ?? ""].join(" ").toLowerCase().includes(q)) return false;
+      if (f.functions.length && !f.functions.includes(it.function?.id ?? it.functionId ?? "")) return false;
+      if (f.inputs.length && !(it.inputs ?? []).some((p) => f.inputs.includes(p.connectorTypeId))) return false;
+      if (f.outputs.length && !(it.outputs ?? []).some((p) => f.outputs.includes(p.connectorTypeId))) return false;
+      return true;
+    });
+    return sortBy(out, SORT_VALUE[f.sort.key as SortKey], f.sort.dir as SortDir);
+  }, [items, search, f]);
 
-  const filterKey = [search, functionId, inputs.join(","), outputs.join(",")].join("|");
+  const filterCount = (f.functions.length ? 1 : 0) + (f.inputs.length ? 1 : 0) + (f.outputs.length ? 1 : 0);
+  const reset = () => {
+    setSearch("");
+    setF((p) => ({ ...DEFAULTS, sort: p.sort }));
+  };
+  const filterKey = `${search}|${JSON.stringify(f)}`;
   const selected = items.find((it) => it.id === selectedId) ?? filtered[0] ?? null;
+  const { selection, bulkDelete, total } = useListSelection(filtered, canWrite, actions);
   const openWizard = () => setWizardOpen(true);
-  const names = (ids: string[]) => (ids.length ? ids.map((id) => types.get(id)?.name ?? "?").join(", ") : null);
+  const close = (o: boolean) => {
+    if (!o) setPicker(null);
+  };
+  const names = (ids: string[], opts: { id: string; label: string }[]) =>
+    ids.length ? ids.map((id) => opts.find((o) => o.id === id)?.label ?? "?").join(", ") : null;
 
   const toolbar = (
     <>
@@ -131,29 +186,42 @@ export function AdaptersTab({
         />
         <FacetButton
           label="Fonction"
-          value={functions.find((f) => f.id === functionId)?.label ?? null}
+          value={names(f.functions, functions)}
           onOpen={() => setPicker("function")}
-          onClear={() => setFunctionId(null)}
+          onClear={() => setF((p) => ({ ...p, functions: [] }))}
         />
         <FacetButton
           label="Connecteur en entrée"
-          value={names(inputs)}
+          value={names(f.inputs, inConnectors)}
           onOpen={() => setPicker("in")}
-          onClear={() => setInputs([])}
+          onClear={() => setF((p) => ({ ...p, inputs: [] }))}
         />
         <FacetButton
           label="Connecteur en sortie"
-          value={names(outputs)}
+          value={names(f.outputs, outConnectors)}
           onOpen={() => setPicker("out")}
-          onClear={() => setOutputs([])}
+          onClear={() => setF((p) => ({ ...p, outputs: [] }))}
         />
+        <SortControl
+          options={SORTS}
+          value={{ key: f.sort.key as SortKey, dir: f.sort.dir as SortDir }}
+          onChange={(sort) => setF((p) => ({ ...p, sort }))}
+        />
+        {(filterCount > 0 || search) && <ResetFiltersButton onClick={reset} />}
       </Toolbar>
+      <SelectionBar
+        count={selection.selected.size}
+        total={total}
+        onSelectAll={selection.selectAll}
+        onClear={selection.clear}
+        onDelete={() => void bulkDelete()}
+      />
     </>
   );
 
-  let list;
+  let listNode: ReactNode;
   if (items.length === 0) {
-    list = (
+    listNode = (
       <EmptyState
         icon={<Cable strokeWidth={1.5} />}
         title="Aucun adaptateur"
@@ -169,21 +237,31 @@ export function AdaptersTab({
       />
     );
   } else if (filtered.length === 0) {
-    list = (
+    listNode = (
       <EmptyState
         icon={<Search strokeWidth={1.5} />}
         title="Aucun adaptateur pour ces filtres"
-        description="Essayez d'élargir votre recherche ou de retirer des filtres."
+        description="Essayez d'élargir votre recherche ou de réinitialiser les filtres."
+        action={<EmptyStateAction onClick={reset}>Réinitialiser les filtres</EmptyStateAction>}
         className="py-16"
       />
     );
   } else {
-    list = (
+    listNode = (
       <PagedList
         label="Adaptateurs"
         items={filtered}
         resetKey={filterKey}
-        renderItem={(it) => <AdapterRow key={it.id} item={it} selected={it.id === selected?.id} onSelect={onSelect} />}
+        renderItem={(it) => (
+          <AdapterRow
+            key={it.id}
+            item={it}
+            selected={it.id === selected?.id}
+            onSelect={onSelect}
+            checked={canWrite ? selection.isSelected(it.id) : null}
+            onCheck={selection.onCheckboxClick}
+          />
+        )}
       />
     );
   }
@@ -192,44 +270,75 @@ export function AdaptersTab({
     <>
       <ListDetail
         toolbar={toolbar}
-        list={list}
+        list={listNode}
         detail={
           selected ? (
-            <AdapterDetail key={selected.id} item={selected} types={types} canWrite={canWrite} />
+            <AdapterDetail
+              key={selected.id}
+              item={selected}
+              types={types}
+              actions={
+                canWrite ? (
+                  <DetailActions
+                    href={`/admin/catalogue/adapters/${selected.id}`}
+                    onDuplicate={() => void actions.duplicate(selected)}
+                    onDelete={() => void actions.remove(selected)}
+                  />
+                ) : null
+              }
+            />
           ) : (
             <EmptyState icon={<Cable strokeWidth={1.5} />} title="Aucune fiche sélectionnée" className="py-16" />
           )
         }
       />
 
-      <FunctionPickerModal
+      <FilterDialog
         open={picker === "function"}
-        onOpenChange={(o) => !o && setPicker(null)}
-        functions={functions.map((f) => ({ id: f.id, label: f.label, color: f.color }))}
-        selectedId={functionId}
-        onSelect={setFunctionId}
-      />
-      <ConnectorMultiPickerModal
+        onOpenChange={close}
+        title="Filtrer par fonction"
+        count={f.functions.length}
+        onClear={() => setF((p) => ({ ...p, functions: [] }))}
+      >
+        <ChipChoices
+          options={functions}
+          selected={f.functions}
+          onToggle={(id) => setF((p) => ({ ...p, functions: toggleIn(p.functions, id) }))}
+        />
+      </FilterDialog>
+      <FilterDialog
         open={picker === "in"}
-        onOpenChange={(o) => !o && setPicker(null)}
-        connectors={connectors}
-        selectedIds={inputs}
-        onChange={setInputs}
-      />
-      <ConnectorMultiPickerModal
+        onOpenChange={close}
+        title="Filtrer par connecteur en entrée"
+        count={f.inputs.length}
+        onClear={() => setF((p) => ({ ...p, inputs: [] }))}
+      >
+        <ChipChoices
+          options={inConnectors}
+          selected={f.inputs}
+          onToggle={(id) => setF((p) => ({ ...p, inputs: toggleIn(p.inputs, id) }))}
+        />
+      </FilterDialog>
+      <FilterDialog
         open={picker === "out"}
-        onOpenChange={(o) => !o && setPicker(null)}
-        connectors={connectors}
-        selectedIds={outputs}
-        onChange={setOutputs}
-      />
+        onOpenChange={close}
+        title="Filtrer par connecteur en sortie"
+        count={f.outputs.length}
+        onClear={() => setF((p) => ({ ...p, outputs: [] }))}
+      >
+        <ChipChoices
+          options={outConnectors}
+          selected={f.outputs}
+          onToggle={(id) => setF((p) => ({ ...p, outputs: toggleIn(p.outputs, id) }))}
+        />
+      </FilterDialog>
 
       <NewAdapterWizard
         open={wizardOpen}
         onOpenChange={setWizardOpen}
         onCreated={(id, mode) => {
           if (mode === "complete") router.push(`/admin/catalogue/adapters/${id}`);
-          else onCreated();
+          else list.refresh();
         }}
         onSkipWizard={() => {
           setWizardOpen(false);
@@ -244,13 +353,22 @@ const AdapterRow = memo(function AdapterRow({
   item,
   selected,
   onSelect,
+  checked,
+  onCheck,
 }: {
   item: CatalogueAdapter;
   selected: boolean;
   onSelect: (id: string) => void;
+  checked: boolean | null;
+  onCheck: RowCheck["onClick"];
 }) {
   return (
-    <ListRow id={item.id} selected={selected} onSelect={onSelect}>
+    <ListRow
+      id={item.id}
+      selected={selected}
+      onSelect={onSelect}
+      check={checked === null ? undefined : { checked, label: `Sélectionner ${item.name}`, onClick: onCheck }}
+    >
       <ColorMark color={item.function?.color} />
       <RowTitle name={item.name} meta={summary(item)} />
       {item.reference ? (
@@ -263,11 +381,11 @@ const AdapterRow = memo(function AdapterRow({
 function AdapterDetail({
   item,
   types,
-  canWrite,
+  actions,
 }: {
   item: CatalogueAdapter;
   types: ReadonlyMap<string, LookupConnectorType>;
-  canWrite: boolean;
+  actions?: ReactNode;
 }) {
   const toDrawing = (e: AdapterEnd): AdapterEndDrawing => {
     const t = types.get(e.connectorTypeId);
@@ -292,7 +410,7 @@ function AdapterDetail({
         eyebrow={item.function?.label ? `Adaptateur · ${item.function.label}` : "Adaptateur"}
         title={item.name}
         subtitle={item.reference}
-        actions={canWrite ? <EditLink href={`/admin/catalogue/adapters/${item.id}`} /> : null}
+        actions={actions}
       />
       <DetailBody>
         <DrawingWell>

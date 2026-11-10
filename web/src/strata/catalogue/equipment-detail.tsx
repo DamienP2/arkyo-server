@@ -35,7 +35,6 @@ import {
   DetailHead,
   DetailSection,
   DrawingWell,
-  EditLink,
   FaceWell,
   FamilyBar,
   listOrDash,
@@ -90,16 +89,22 @@ function customFieldValue(f: Record<string, unknown>): string {
   return str(v) || "—";
 }
 
+/** Lien d'un document : http(s) et mailto seulement ; toute autre adresse reste du texte. */
+export function safeDocumentHref(url: string): string | null {
+  return /^(https?:\/\/|mailto:)/i.test(url.trim()) ? url.trim() : null;
+}
+
 const mm = (n: number | null | undefined) => (typeof n === "number" && n > 0 ? `${fmtNumber(n)} mm` : "—");
 
 export function EquipmentDetail({
   item,
   lookup,
-  canWrite,
+  actions,
 }: {
   item: CatalogueEquipment;
   lookup: CatalogueLookup | null;
-  canWrite: boolean;
+  /** Modifier, Dupliquer, Supprimer (écriture seulement). */
+  actions?: ReactNode;
 }) {
   const connectors = useMemo(() => parseConnectors(item.connectors), [item.connectors]);
   const connectorTypes = useMemo(() => drawingConnectorTypes(lookup), [lookup]);
@@ -131,7 +136,7 @@ export function EquipmentDetail({
         eyebrow={[fns[0]?.label, item.type?.name].filter(Boolean).join(" · ") || "Équipement"}
         title={item.name}
         subtitle={[brand, item.reference].filter(Boolean).join(" · ") || null}
-        actions={canWrite ? <EditLink href={`/admin/catalogue/equipment/${item.id}`} /> : null}
+        actions={actions}
       />
       <DetailBody>
         <DetailSection
@@ -304,17 +309,24 @@ function EquipmentAdvanced({ item, lookup }: { item: CatalogueEquipment; lookup:
     rows.push([
       "Documents",
       <span className="flex flex-col gap-0.5">
-        {documents.map((d, i) => (
-          <a
-            key={`${d.url}-${i}`}
-            href={d.url}
-            target="_blank"
-            rel="noreferrer"
-            className="text-[var(--accent-strong)] underline-offset-2 hover:underline"
-          >
-            {d.title}
-          </a>
-        ))}
+        {documents.map((d, i) => {
+          const href = safeDocumentHref(d.url);
+          return href ? (
+            <a
+              key={`${d.url}-${i}`}
+              href={href}
+              target="_blank"
+              rel="noreferrer noopener"
+              className="text-[var(--accent-strong)] underline-offset-2 hover:underline"
+            >
+              {d.title}
+            </a>
+          ) : (
+            <span key={`${d.url}-${i}`} className="break-all">
+              {d.title === d.url ? d.url : `${d.title} (${d.url})`}
+            </span>
+          );
+        })}
       </span>,
     ]);
   }

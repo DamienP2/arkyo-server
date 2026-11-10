@@ -241,7 +241,7 @@ describe("topbar v2", () => {
     const tabs = await screen.findByRole("tablist", { name: "Catalogue" }, { timeout: 15000 });
     expect(within(tabs).getAllByRole("tab").map((t) => t.textContent?.replace(/\d+$/, ""))).toEqual([
       "Équipements",
-      "Câbles",
+      "Cordons",
       "Adaptateurs",
       "Modèles",
     ]);
