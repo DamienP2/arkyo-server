@@ -221,11 +221,19 @@ export function PagedList<T>({
   );
 }
 
-/** Coche d'une ligne (sélection multiple d'arkyo : Maj pour une plage). */
-export type RowCheck = {
+/** Gestes de la sélection multiple d'arkyo (`useRowSelection`) : clic (Maj pour une plage), glisser sur les coches. */
+export type RowCheckHandlers = {
+  onClick: (id: string, ev: { shiftKey: boolean; metaKey: boolean; ctrlKey: boolean }) => void;
+  /** Appui sur une coche : début du glisser. */
+  onDragStart: (id: string) => void;
+  /** Ligne traversée pendant le glisser : la plage s'étend. */
+  onDragEnter: (id: string) => void;
+};
+
+/** Coche d'une ligne. */
+export type RowCheck = RowCheckHandlers & {
   checked: boolean;
   label: string;
-  onClick: (id: string, ev: { shiftKey: boolean; metaKey: boolean; ctrlKey: boolean }) => void;
 };
 
 /**
@@ -246,7 +254,10 @@ export function ListRow({
   children: ReactNode;
 }) {
   return (
-    <li className={cn("flex min-w-0 items-center", selected ? "bg-[var(--accent-soft)]" : "hover:bg-[var(--muted)]")}>
+    <li
+      onPointerEnter={check ? () => check.onDragEnter(id) : undefined}
+      className={cn("flex min-w-0 items-center", selected ? "bg-[var(--accent-soft)]" : "hover:bg-[var(--muted)]")}
+    >
       {check && (
         <input
           type="checkbox"
@@ -254,6 +265,10 @@ export function ListRow({
           readOnly
           aria-label={check.label}
           onClick={(e) => check.onClick(id, e)}
+          onPointerDown={(e) => {
+            e.stopPropagation();
+            check.onDragStart(id);
+          }}
           className="ml-3.5 h-3.5 w-3.5 shrink-0 cursor-pointer accent-[var(--accent)]"
         />
       )}

@@ -8,7 +8,9 @@
  *     {rackId}/canvas-data`), quand le canevas du rack, qui le charge
  *     d'ordinaire, n'est pas monté (vue Connectique).
  *
- * Une seule lecture par contenant, partagée par tous les abonnés. Le suivi
+ * Une seule lecture par contenant, partagée par tous les abonnés ; les câbles
+ * ne sont lus que si un abonné au moins les demande (Gérer ne lit que le
+ * `canvas-data` : option `{ connections: false }`). Le suivi
  * passe par le flux applicatif déjà ouvert (`/api/events`, singleton
  * `subscribeAppEvents`) : un évènement qui porte le `rackId` d'un contenant
  * suivi (câble, slot, adaptateur…) relance ses lectures. Aucun flux
@@ -37,6 +39,8 @@ const useRackLiveStore = create<{ byRack: Record<string, RackLive> }>(() => ({ b
 
 type Sub = {
   refs: number;
+  /** Abonnés qui ont besoin des câbles. */
+  connRefs: number;
   /** Abonnés qui ont besoin du `canvas-data` (projet de la lecture). */
   canvasRefs: Map<string, number>;
   timer: ReturnType<typeof setTimeout> | null;
@@ -89,24 +93,27 @@ function loadCanvas(rackId: string, projectId: string) {
 function reload(rackId: string) {
   const sub = subs.get(rackId);
   if (!sub) return;
-  loadConnections(rackId);
+  if (sub.connRefs > 0) loadConnections(rackId);
   for (const projectId of sub.canvasRefs.keys()) loadCanvas(rackId, projectId);
 }
 
-function acquire(rackId: string, projectId: string | null, wantCanvas: boolean): () => void {
+function acquire(rackId: string, projectId: string | null, wantCanvas: boolean, wantConnections: boolean): () => void {
   let sub = subs.get(rackId);
   if (sub?.teardown) {
     clearTimeout(sub.teardown);
     sub.teardown = null;
   }
   if (!sub) {
-    sub = { refs: 0, canvasRefs: new Map(), timer: null, teardown: null };
+    sub = { refs: 0, connRefs: 0, canvasRefs: new Map(), timer: null, teardown: null };
     subs.set(rackId, sub);
     patch(rackId, {});
-    loadConnections(rackId);
     unsubscribeApp ??= subscribeAppEvents(onAppEvent);
   }
   sub.refs += 1;
+  if (wantConnections) {
+    sub.connRefs += 1;
+    if (sub.connRefs === 1) loadConnections(rackId);
+  }
   const canvasKey = wantCanvas && projectId ? projectId : null;
   if (canvasKey) {
     const n = sub.canvasRefs.get(canvasKey) ?? 0;
@@ -115,6 +122,7 @@ function acquire(rackId: string, projectId: string | null, wantCanvas: boolean):
   }
   const owned = sub;
   return () => {
+    if (wantConnections) owned.connRefs -= 1;
     if (canvasKey) {
       const n = (owned.canvasRefs.get(canvasKey) ?? 1) - 1;
       if (n > 0) owned.canvasRefs.set(canvasKey, n);
@@ -144,16 +152,21 @@ function acquire(rackId: string, projectId: string | null, wantCanvas: boolean):
 }
 
 /**
- * Câbles (et `canvas-data` si `projectId` est fourni) de contenants, par
- * contenant, tenus à jour. Liste vide : rien n'est lu.
+ * Câbles (sauf `{ connections: false }`) et `canvas-data` (si `projectId` est
+ * fourni) de contenants, par contenant, tenus à jour. Liste vide : rien n'est
+ * lu.
  */
-export function useRacksLive(rackIds: readonly string[], projectId: string | null = null): Record<string, RackLive> {
+export function useRacksLive(
+  rackIds: readonly string[],
+  projectId: string | null = null,
+  { connections = true }: { connections?: boolean } = {},
+): Record<string, RackLive> {
   const key = rackIds.join(",");
   useEffect(() => {
     if (!key) return;
-    const releases = key.split(",").map((id) => acquire(id, projectId, projectId != null));
+    const releases = key.split(",").map((id) => acquire(id, projectId, projectId != null, connections));
     return () => releases.forEach((r) => r());
-  }, [key, projectId]);
+  }, [key, projectId, connections]);
   const byRack = useRackLiveStore((s) => s.byRack);
   return useMemo(() => {
     const out: Record<string, RackLive> = {};

@@ -47,7 +47,7 @@ import {
   SelectionBar,
   SortControl,
   Toolbar,
-  type RowCheck,
+  type RowCheckHandlers,
 } from "./catalogue-ui";
 import type { CatalogueAdapter, CatalogueItems } from "./use-catalogue-items";
 
@@ -163,7 +163,7 @@ export function AdaptersTab({
   };
   const filterKey = `${search}|${JSON.stringify(f)}`;
   const selected = items.find((it) => it.id === selectedId) ?? filtered[0] ?? null;
-  const { selection, bulkDelete, total } = useListSelection(filtered, canWrite, actions);
+  const { selection, checks, bulkDelete, total } = useListSelection(filtered, canWrite, actions);
   const openWizard = () => setWizardOpen(true);
   const close = (o: boolean) => {
     if (!o) setPicker(null);
@@ -259,7 +259,7 @@ export function AdaptersTab({
             selected={it.id === selected?.id}
             onSelect={onSelect}
             checked={canWrite ? selection.isSelected(it.id) : null}
-            onCheck={selection.onCheckboxClick}
+            onCheck={checks}
           />
         )}
       />
@@ -360,14 +360,14 @@ const AdapterRow = memo(function AdapterRow({
   selected: boolean;
   onSelect: (id: string) => void;
   checked: boolean | null;
-  onCheck: RowCheck["onClick"];
+  onCheck: RowCheckHandlers;
 }) {
   return (
     <ListRow
       id={item.id}
       selected={selected}
       onSelect={onSelect}
-      check={checked === null ? undefined : { checked, label: `Sélectionner ${item.name}`, onClick: onCheck }}
+      check={checked === null ? undefined : { ...onCheck, checked, label: `Sélectionner ${item.name}` }}
     >
       <ColorMark color={item.function?.color} />
       <RowTitle name={item.name} meta={summary(item)} />

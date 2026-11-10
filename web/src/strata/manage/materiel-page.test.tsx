@@ -81,6 +81,19 @@ describe("Gérer › Matériel", () => {
     expect(await within(side).findByRole("heading", { name: "Équipements" }, FIRST_LOAD)).toBeInTheDocument();
   });
 
+  test("⌘K « Ajouter du matériel » : même parcours que « Ajouter du catalogue »", async () => {
+    // Outil de l'Inventaire refermé auparavant : la palette doit le rouvrir.
+    window.localStorage.setItem("inventaire-active-tool:p1", "null");
+    const { router } = renderApp("/project/p1?space=gerer&page=fiche", manageApi("strata"));
+    fireEvent.click(await screen.findByRole("button", { name: "Rechercher ou agir (⌘K)" }, FIRST_LOAD));
+    fireEvent.click(await screen.findByText("Ajouter du matériel", {}, FIRST_LOAD));
+    await waitFor(() => expect(here(router)).toBe(normUrl("/project/p1?page=materiel&tab=inventaire")));
+    expect(window.localStorage.getItem("inventaire-active-tool:p1")).toBe('"equipment"');
+    expect(window.localStorage.getItem("project-editor-tab")).toBe('"inventaire"');
+    const side = await screen.findByRole("complementary", { name: "Panneau latéral" }, FIRST_LOAD);
+    expect(await within(side).findByRole("heading", { name: "Équipements" }, FIRST_LOAD)).toBeInTheDocument();
+  });
+
   test("équipement à placer : « Placer dans un rack » ; libre : pas de rack", async () => {
     renderApp("/project/p1?space=gerer&page=materiel&sel=i2", manageApi("strata"));
     const detail = await screen.findByRole("complementary", { name: "Détail" }, FIRST_LOAD);

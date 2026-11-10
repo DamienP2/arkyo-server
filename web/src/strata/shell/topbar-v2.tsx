@@ -38,14 +38,8 @@ import {
   type StrataSection,
 } from "./nav-model";
 import { CommandPalette } from "@/strata/palette/command-palette";
+import { openStrataPalette } from "@/strata/palette/palette-event";
 import { TOPBAR_ICON_BTN, TOPBAR_TAB, TOPBAR_TAB_OFF, TOPBAR_TAB_ON } from "./seg-tabs";
-
-/** Évènement `window` qui ouvre la palette ⌘K (écouté par la palette). */
-export const STRATA_PALETTE_EVENT = "strata:palette";
-
-export function openStrataPalette() {
-  window.dispatchEvent(new CustomEvent(STRATA_PALETTE_EVENT));
-}
 
 /** "demo studio" → "Demo Studio", comme le nom du site de la topbar Classique. */
 function toTitleCase(input: string): string {

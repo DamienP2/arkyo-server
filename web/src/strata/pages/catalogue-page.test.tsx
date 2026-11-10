@@ -759,3 +759,95 @@ describe("catalogue Strata v2 : cordons, adaptateurs, modèles", () => {
     expect(within(nav).getByRole("link", { name: "Dossiers" })).toHaveAttribute("aria-current", "page");
   });
 });
+
+describe("catalogue Strata v2 : suppressions, onglet, sélection", () => {
+  const listReads = (spy: { mock: { calls: unknown[][] } }, kind: string) =>
+    spy.mock.calls.filter(
+      ([input, init]) =>
+        String(input).split("?")[0] === `/api/tenant/catalogue/${kind}` &&
+        ((init as RequestInit | undefined)?.method ?? "GET") === "GET",
+    ).length;
+
+  test("suppression groupée en échec partiel : toast d'information, liste relue", async () => {
+    const { fetchSpy } = renderApp(
+      "/admin/catalogue",
+      catalogueApi("strata", {
+        "POST /api/tenant/catalogue/equipment/bulk-delete": {
+          body: { deleted: 1, failed: [{ id: "e1", reason: "Équipement utilisé" }] },
+        },
+      }),
+    );
+    await catalogueList("Équipements");
+    const before = listReads(fetchSpy, "equipment");
+    fireEvent.click(screen.getByRole("checkbox", { name: "Sélectionner HDC-5500" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Sélectionner Videohub 40×40 12G" }));
+    fireEvent.click(within(screen.getByRole("toolbar", { name: "Sélection" })).getByRole("button", { name: "Supprimer la sélection" }));
+    const confirm = await screen.findByRole("dialog", { name: "Supprimer 2 éléments ?" });
+    fireEvent.click(within(confirm).getByRole("button", { name: "Supprimer" }));
+    // Équipements : sans les raisons (comme arkyo, qui ne les cite que pour les cordons).
+    expect(await screen.findByText("1 supprimé, 1 échec.")).toBeInTheDocument();
+    await waitFor(() => expect(listReads(fetchSpy, "equipment")).toBe(before + 1));
+    await waitFor(() => expect(screen.queryByRole("toolbar", { name: "Sélection" })).toBeNull());
+  });
+
+  test("?tab= prioritaire sur l'onglet mémorisé", async () => {
+    window.localStorage.setItem("strata-catalogue-tab", "cables");
+    renderApp("/admin/catalogue?tab=adaptateurs", catalogueApi());
+    await catalogueList("Adaptateurs");
+    expect(screen.getByRole("tab", { name: /Adaptateurs/ })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("tab", { name: /Cordons/ })).toHaveAttribute("aria-selected", "false");
+    // L'onglet de l'URL devient le dernier ouvert.
+    await waitFor(() => expect(window.localStorage.getItem("strata-catalogue-tab")).toBe("adapters"));
+  });
+
+  test("cordons : toasts de suppression et de suppression groupée (raisons citées)", async () => {
+    let bulk = 0;
+    renderApp(
+      "/admin/catalogue?tab=cordons&id=k1",
+      catalogueApi("strata", {
+        "DELETE /api/tenant/catalogue/cables/k1": { body: { success: true } },
+        "POST /api/tenant/catalogue/cables/bulk-delete": () =>
+          ++bulk === 1
+            ? { body: { deleted: 0, failed: [{ id: "k2", reason: "Cordon utilisé" }] } }
+            : { body: { deleted: 1, failed: [] } },
+      }),
+    );
+    const list = await catalogueList("Cordons");
+    fireEvent.click(within(detail()).getByRole("button", { name: "Supprimer" }));
+    let confirm = await screen.findByRole("dialog", { name: "Supprimer le cordon" });
+    fireEvent.click(within(confirm).getByRole("button", { name: "Supprimer" }));
+    expect(await screen.findByText("Cordon supprimé.")).toBeInTheDocument();
+    await waitFor(() => expect(within(list).queryByText("BNC M ↔ BNC M 12G")).toBeNull());
+
+    // En lot, échec : la raison du serveur est citée.
+    fireEvent.click(screen.getByRole("checkbox", { name: "Sélectionner XLR3 M ↔ XLR3 F" }));
+    fireEvent.click(within(screen.getByRole("toolbar", { name: "Sélection" })).getByRole("button", { name: "Supprimer la sélection" }));
+    confirm = await screen.findByRole("dialog", { name: "Supprimer 1 cordon ?" });
+    fireEvent.click(within(confirm).getByRole("button", { name: "Supprimer" }));
+    expect(await screen.findByText("0 supprimé, 1 échec (Cordon utilisé).")).toBeInTheDocument();
+
+    // En lot, réussi.
+    fireEvent.click(screen.getByRole("checkbox", { name: "Sélectionner XLR3 M ↔ XLR3 F" }));
+    fireEvent.click(within(screen.getByRole("toolbar", { name: "Sélection" })).getByRole("button", { name: "Supprimer la sélection" }));
+    confirm = await screen.findByRole("dialog", { name: "Supprimer 1 cordon ?" });
+    fireEvent.click(within(confirm).getByRole("button", { name: "Supprimer" }));
+    expect(await screen.findByText("1 cordon supprimé.")).toBeInTheDocument();
+  });
+
+  test("sélection par glisser sur les coches (useRowSelection d'arkyo)", async () => {
+    renderApp("/admin/catalogue", catalogueApi());
+    const list = await catalogueList("Équipements");
+    const first = screen.getByRole("checkbox", { name: "Sélectionner HDC-5500" });
+    // Appui sur une coche, puis glisser sur les lignes suivantes.
+    fireEvent.pointerDown(first);
+    fireEvent.pointerEnter(row(list, "Rio3224-D2").closest("li")!);
+    fireEvent.pointerEnter(row(list, "Videohub 40×40 12G").closest("li")!);
+    fireEvent.pointerUp(window);
+    // Le clic de fin de glisser ne rebascule pas la coche de départ.
+    fireEvent.click(first);
+    const bar = screen.getByRole("toolbar", { name: "Sélection" });
+    expect(bar).toHaveTextContent("3 sélectionnés");
+    for (const name of ["HDC-5500", "Rio3224-D2", "Videohub 40×40 12G"])
+      expect(screen.getByRole("checkbox", { name: `Sélectionner ${name}` })).toBeChecked();
+  });
+});

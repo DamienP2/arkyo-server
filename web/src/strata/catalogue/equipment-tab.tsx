@@ -55,7 +55,7 @@ import {
   SortControl,
   ToggleChip,
   Toolbar,
-  type RowCheck,
+  type RowCheckHandlers,
 } from "./catalogue-ui";
 import { EquipmentDetail, phaseIdsOf } from "./equipment-detail";
 import type { CatalogueEquipment, CatalogueItems } from "./use-catalogue-items";
@@ -206,7 +206,7 @@ export function EquipmentTab({
   };
   const filterKey = `${search}|${JSON.stringify(f)}`;
   const selected = items.find((it) => it.id === selectedId) ?? filtered[0] ?? null;
-  const { selection, bulkDelete, total } = useListSelection(filtered, canWrite, actions);
+  const { selection, checks, bulkDelete, total } = useListSelection(filtered, canWrite, actions);
 
   // Dessins des lignes : référentiels calculés une fois.
   const connectorTypes = useMemo(() => drawingConnectorTypes(lookup), [lookup]);
@@ -321,7 +321,7 @@ export function EquipmentTab({
             selected={it.id === selected?.id}
             onSelect={onSelect}
             checked={canWrite ? selection.isSelected(it.id) : null}
-            onCheck={selection.onCheckboxClick}
+            onCheck={checks}
             connectorTypes={connectorTypes}
             signals={signals}
           />
@@ -449,7 +449,7 @@ const EquipmentRow = memo(function EquipmentRow({
   onSelect: (id: string) => void;
   /** `null` : pas de coche (lecture seule). */
   checked: boolean | null;
-  onCheck: RowCheck["onClick"];
+  onCheck: RowCheckHandlers;
   connectorTypes: readonly DrawingConnectorType[];
   signals: readonly DrawingSignal[];
 }) {
@@ -462,7 +462,7 @@ const EquipmentRow = memo(function EquipmentRow({
       id={item.id}
       selected={selected}
       onSelect={onSelect}
-      check={checked === null ? undefined : { checked, label: `Sélectionner ${item.name}`, onClick: onCheck }}
+      check={checked === null ? undefined : { ...onCheck, checked, label: `Sélectionner ${item.name}` }}
     >
       <div aria-hidden className="w-[120px] shrink-0">
         <FaceWell className="p-1">

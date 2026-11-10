@@ -13,8 +13,8 @@
  * d'ensemble par défaut), objet sélectionné par `?sel=`.
  */
 
-import type { MouseEvent, ReactNode } from "react";
-import { useSearchParams } from "next/navigation";
+import { useEffect, useRef, type MouseEvent, type ReactNode } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import type { ProjectEditorData } from "@/app/(fullscreen)/project/[id]/_components/project-editor";
 import {
   Box as BoxIcon,
@@ -31,7 +31,9 @@ import { cn } from "@/lib/utils";
 import { AdvancedAlwaysToggle } from "../advanced/advanced-section";
 import { SHELL_TOP, STRATA_TOPBAR_H } from "../shell/canvas-shell";
 import { useInterface } from "../interface-context";
+import { useAddEquipmentRequest } from "../shell/project-requests";
 import { spaceOf } from "../shell/space-switch";
+import { projectTabHref, rememberEditorTab } from "../shell/tab-nav";
 import { CablesPage } from "./cables-page";
 import { FichePage } from "./fiche-page";
 import { SECTION_LABEL } from "./manage-ui";
@@ -154,6 +156,27 @@ function ManageNavColumn({ data, nav }: { data: ManageState; nav: ManageNav }) {
   );
 }
 
+/**
+ * « Ajouter du matériel » de la palette ⌘K (`useAddEquipmentRequest`) : le
+ * parcours de « Ajouter du catalogue » de Gérer › Matériel (où la palette
+ * mène d'abord) : outil Équipements, puis l'Inventaire. La palette a déjà
+ * passé la garde des saisies : la navigation est directe.
+ */
+function useAddEquipmentFromPalette(projectId: string, page: ManagePage, onOpenCatalogue: () => void) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const latest = useRef({ router, searchParams, onOpenCatalogue });
+  latest.current = { router, searchParams, onOpenCatalogue };
+  const requested = useAddEquipmentRequest((s) => s.projectId === projectId);
+  useEffect(() => {
+    if (!requested || page !== "materiel" || !useAddEquipmentRequest.getState().take(projectId)) return;
+    const { router: r, searchParams: q, onOpenCatalogue: open } = latest.current;
+    open();
+    rememberEditorTab("inventaire");
+    r.replace(projectTabHref(projectId, q, "inventaire"), { scroll: false });
+  }, [requested, page, projectId]);
+}
+
 export function ManageShell({
   project,
   topbar,
@@ -172,6 +195,7 @@ export function ManageShell({
   const cables = useProjectCables(project.header.id, project.inventaire.racks);
   const data = useManageData(project, cables);
   const nav = useManageNav(project.header.id);
+  useAddEquipmentFromPalette(project.header.id, nav.page, onOpenCatalogue);
 
   let page: ReactNode;
   switch (nav.page) {

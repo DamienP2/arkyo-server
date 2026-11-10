@@ -31,6 +31,9 @@
  * donc, par des routes existantes, les régies (`GET /api/rigs`, leurs baies et
  * leurs emplacements), les baies hors régie (`GET /api/racks?unassigned=true`,
  * modèles de contenants) et les noms des projets (`GET /api/tenant/projects`).
+ * Un composant de châssis modulaire n'a pas d'emplacement : la liste vide dit
+ * « Aucun emplacement connu », jamais « Non utilisé » (le serveur peut encore
+ * refuser la suppression).
  *
  * Hors Strata (`enabled` faux), rend `children` tel quel : aucun élément
  * ajouté au DOM.
@@ -457,7 +460,7 @@ function UsedIn({ equipmentId }: { equipmentId: string }) {
     <Box
       title="Utilisé dans"
       aside={
-        total !== null ? (
+        total ? (
           <span className="text-[12px] text-[var(--muted-foreground)] tabular-nums">
             {`${total} exemplaire${total > 1 ? "s" : ""}`}
           </span>
@@ -469,7 +472,14 @@ function UsedIn({ equipmentId }: { equipmentId: string }) {
       ) : state.kind === "error" ? (
         <p className="m-0 text-[12.5px] text-[var(--muted-foreground)]">{state.message}</p>
       ) : state.usage.length === 0 ? (
-        <EmptyState icon={<Package strokeWidth={1.5} />} title="Non utilisé" className="gap-2 py-4" />
+        // Rien de trouvé ne veut pas dire « non utilisé » : un composant monté dans un
+        // châssis modulaire n'a pas d'emplacement, et le serveur compte pourtant cet usage.
+        <EmptyState
+          icon={<Package strokeWidth={1.5} />}
+          title="Aucun emplacement connu"
+          description="Les composants montés dans un châssis modulaire ne sont pas listés."
+          className="gap-2 py-4"
+        />
       ) : (
         <ul aria-label="Utilisé dans" className="m-0 flex list-none flex-col gap-1.5 p-0 text-[12.5px]">
           {state.usage.map((u) => (

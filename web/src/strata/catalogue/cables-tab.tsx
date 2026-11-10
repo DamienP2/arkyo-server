@@ -61,7 +61,7 @@ import {
   SortControl,
   ToggleChip,
   Toolbar,
-  type RowCheck,
+  type RowCheckHandlers,
 } from "./catalogue-ui";
 import type { CatalogueCable, CatalogueItems } from "./use-catalogue-items";
 
@@ -211,7 +211,7 @@ export function CablesTab({
   };
   const filterKey = `${search}|${JSON.stringify(f)}`;
   const selected = items.find((it) => it.id === selectedId) ?? filtered[0] ?? null;
-  const { selection, bulkDelete, total } = useListSelection(filtered, canWrite, actions);
+  const { selection, checks, bulkDelete, total } = useListSelection(filtered, canWrite, actions);
   const openWizard = () => setWizardOpen(true);
   const close = (o: boolean) => {
     if (!o) setPicker(null);
@@ -322,7 +322,7 @@ export function CablesTab({
             selected={it.id === selected?.id}
             onSelect={onSelect}
             checked={canWrite ? selection.isSelected(it.id) : null}
-            onCheck={selection.onCheckboxClick}
+            onCheck={checks}
             types={types}
           />
         )}
@@ -440,7 +440,7 @@ const CableRow = memo(function CableRow({
   selected: boolean;
   onSelect: (id: string) => void;
   checked: boolean | null;
-  onCheck: RowCheck["onClick"];
+  onCheck: RowCheckHandlers;
   types: ReadonlyMap<string, LookupConnectorType>;
 }) {
   return (
@@ -448,7 +448,7 @@ const CableRow = memo(function CableRow({
       id={item.id}
       selected={selected}
       onSelect={onSelect}
-      check={checked === null ? undefined : { checked, label: `Sélectionner ${item.name}`, onClick: onCheck }}
+      check={checked === null ? undefined : { ...onCheck, checked, label: `Sélectionner ${item.name}` }}
     >
       <ColorMark color={item.function?.color} />
       <RowTitle name={item.name} meta={item.reference} />

@@ -50,4 +50,29 @@ describe("useRacksLive", () => {
     b.unmount();
     await waitFor(() => expect(es.size).toBe(0));
   });
+
+  test("connexions non demandées (Gérer) : seul canvas-data est lu, puis les câbles dès qu'un abonné les veut", async () => {
+    const spy = mockApi({
+      "GET /api/racks/r1/connections": { body: CONNECTIONS },
+      "GET /api/tenant/projects/p1/racks/r1/canvas-data": { body: RACK },
+    });
+    const a = renderHook(() => useRacksLive(["r1"], "p1", { connections: false }));
+    await waitFor(() => expect(a.result.current.r1.canvas?.rack.id).toBe("r1"));
+    expect(calls(spy, "/api/racks/r1/connections")).toBe(0);
+
+    // Un évènement du contenant : canvas-data relu, toujours pas les câbles.
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    act(() => emitAppEvent({ type: "update", entity: "rackSlot", action: "updated", id: "s1", rackId: "r1" }));
+    act(() => void vi.advanceTimersByTime(200));
+    vi.useRealTimers();
+    await waitFor(() => expect(calls(spy, "/api/tenant/projects/p1/racks/r1/canvas-data")).toBe(2));
+    expect(calls(spy, "/api/racks/r1/connections")).toBe(0);
+
+    // Un abonné qui veut les câbles (détail de Matériel) : ils sont lus.
+    const b = renderHook(() => useRacksLive(["r1"], "p1"));
+    await waitFor(() => expect(b.result.current.r1.connections).toHaveLength(CONNECTIONS.length));
+    expect(calls(spy, "/api/racks/r1/connections")).toBe(1);
+    a.unmount();
+    b.unmount();
+  });
 });

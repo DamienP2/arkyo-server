@@ -9,7 +9,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { MemoryRouter, useNavigate } from "react-router";
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { EditorShell, type EditorShellSlots } from "@/components/editor-shell/editor-shell";
 import { WorkspaceProvider } from "@/components/editor-shell/workspace-context";
 import { useWorkspaceActions } from "@/components/editor-shell/hooks/use-workspace";
@@ -18,10 +18,15 @@ import type { WorkspaceId } from "@/components/editor-shell/tool-registry";
 import type { ValidationReport } from "@/lib/services/rack-validation";
 import { InterfaceProvider, type UiInterface } from "@/strata/interface-context";
 import { useStrataDrawer } from "@/strata/shell/canvas-shell";
+import { useValidationRequest } from "@/strata/shell/project-requests";
+import { EDITOR_TAB_KEY } from "@/strata/shell/tab-nav";
 
 afterEach(() => {
   useTopbarActions.getState().setValidationReport(null);
   useTopbarActions.getState().setOnSelectValidationIssue(undefined);
+  useTopbarActions.getState().setOnValidateRack(undefined);
+  useValidationRequest.setState({ projectId: null });
+  window.localStorage.clear();
   delete document.documentElement.dataset.interface;
 });
 
@@ -269,6 +274,43 @@ describe("StrataCanvasShell", () => {
     expect(shortcut).toHaveBeenCalledWith("z");
   });
 
+  test("tiroir ouvert puis Gérer : il se ferme (plus d'écouteur Échap sans tiroir), et revient fermé", () => {
+    function Spaces() {
+      const navigate = useNavigate();
+      return (
+        <>
+          <button type="button" onClick={() => navigate("/project/p1?tab=synoptique&space=gerer")}>
+            Gérer
+          </button>
+          <button type="button" onClick={() => navigate("/project/p1?tab=synoptique")}>
+            Concevoir
+          </button>
+        </>
+      );
+    }
+    render(<Shell iface="strata" {...SLOTS} globalTopbar={<Spaces />} />);
+    fireEvent.click(screen.getByRole("button", { name: "Ouvrir l'inspecteur" }));
+    expect(zone("drawer")).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Gérer" }));
+    expect(zone("manage")).not.toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Concevoir" }));
+    expect(zone("drawer")).not.toBeVisible();
+    expect(screen.getByRole("button", { name: "Ouvrir l'inspecteur" })).toBeInTheDocument();
+  });
+
+  test("onglet de Concevoir ouvert par un lien (garde comprise) : retenu comme arkyo", () => {
+    render(
+      <MemoryRouter initialEntries={["/project/p1?tab=rack"]}>
+        <InterfaceProvider value="strata">
+          <WorkspaceProvider workspace="design">
+            <EditorShell {...SLOTS} />
+          </WorkspaceProvider>
+        </InterfaceProvider>
+      </MemoryRouter>,
+    );
+    expect(window.localStorage.getItem(EDITOR_TAB_KEY)).toBe(JSON.stringify("rack"));
+  });
+
   test("Échap ferme d'abord « Options de la vue », puis le tiroir", () => {
     render(<Shell iface="strata" {...SLOTS} />);
     fireEvent.click(screen.getByRole("button", { name: "Ouvrir l'inspecteur" }));
@@ -331,6 +373,34 @@ describe("bandeau de validation", () => {
     expect(onSelect).toHaveBeenCalledWith(REPORT.issues[0]);
     fireEvent.click(within(banner).getByRole("button", { name: "Masquer les contrôles" }));
     expect(screen.queryByRole("region", { name: "Contrôles" })).toBeNull();
+  });
+
+  test("Valider (palette) : la liste des contrôles s'ouvre dès que le rapport est publié", () => {
+    useValidationRequest.getState().request("p1");
+    render(<Shell iface="strata" workspace="synoptic" {...SLOTS} />);
+    expect(screen.queryByRole("region", { name: "Contrôles" })).toBeNull();
+    act(() => useTopbarActions.getState().setValidationReport(REPORT));
+    expect(screen.getByRole("region", { name: "Contrôles" })).toBeInTheDocument();
+    // Demande servie une fois.
+    expect(useValidationRequest.getState().projectId).toBeNull();
+  });
+
+  test("Valider (palette) sur la vue Générale : l'action « Valider » d'arkyo répond", () => {
+    const onValidate = vi.fn();
+    useTopbarActions.getState().setOnValidateRack(onValidate);
+    window.localStorage.setItem("project-p1-synoptique-rack", "__general__");
+    useValidationRequest.getState().request("p1");
+    render(<Shell iface="strata" workspace="synoptic" {...SLOTS} />);
+    expect(onValidate).toHaveBeenCalledTimes(1);
+    expect(useValidationRequest.getState().projectId).toBeNull();
+  });
+
+  test("Valider demandé pour un autre projet : rien", () => {
+    useValidationRequest.getState().request("p2");
+    useTopbarActions.getState().setValidationReport(REPORT);
+    render(<Shell iface="strata" workspace="synoptic" {...SLOTS} />);
+    expect(screen.queryByRole("region", { name: "Contrôles" })).toBeNull();
+    expect(useValidationRequest.getState().projectId).toBe("p2");
   });
 
   test("rapport sans problème : « Conforme »", () => {

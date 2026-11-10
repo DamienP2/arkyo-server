@@ -11,15 +11,27 @@
  * ceux du synoptique).
  *
  * Rien hors du synoptique, ni tant qu'aucun rapport n'est publié.
+ *
+ * « Valider » de la palette ⌘K (`useValidationRequest`) : la liste s'ouvre
+ * dès que le synoptique du projet publie son rapport. Sur la vue Générale,
+ * qui n'en publie pas (arkyo valide par lieu), c'est l'action « Valider »
+ * d'arkyo (`onValidateRack`) qui répond, avec son volet.
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
+import {
+  GENERAL_VIEW_ID,
+  parseLocationViewId,
+} from "@/app/(fullscreen)/project/[id]/synoptique/_components/synoptique-rack-selector";
 import { ShieldCheck, X } from "@/components/ui/icons";
 import { useWorkspace } from "@/components/editor-shell/hooks/use-workspace";
 import { useTopbarActions } from "@/components/editor-shell/topbar-actions-context";
 import { ValidationPanelContent } from "@/components/synoptique/components/validation-panel";
 import type { IssueSeverity } from "@/lib/services/rack-validation";
 import { cn } from "@/lib/utils";
+import { useValidationRequest } from "./project-requests";
+import { projectIdOf } from "./tab-nav";
 
 const plural = (n: number, one: string, many: string) => `${n} ${n > 1 ? many : one}`;
 
@@ -37,11 +49,34 @@ function Dot({ tone }: { tone: keyof typeof DOT }) {
 const SMALL_BTN =
   "inline-flex h-7 items-center rounded-md border border-[var(--border)] px-2.5 text-[12px] font-medium text-[var(--foreground)] transition-colors outline-none hover:bg-[var(--muted)] focus-visible:ring-2 focus-visible:ring-[var(--ring)]";
 
+/** Vue du synoptique retenue par l'onglet : un lieu (`loc:<id>`), sinon la Générale (comme `loadStoredRackId`). */
+function storedView(projectId: string): string {
+  try {
+    const v = window.localStorage.getItem(`project-${projectId}-synoptique-rack`);
+    return parseLocationViewId(v) ? v! : GENERAL_VIEW_ID;
+  } catch {
+    return GENERAL_VIEW_ID;
+  }
+}
+
 export function ValidationBanner() {
   const workspace = useWorkspace((s) => s.workspace);
   const report = useTopbarActions((s) => s.validationReport);
   const onSelect = useTopbarActions((s) => s.onSelectValidationIssue);
+  const onValidate = useTopbarActions((s) => s.onValidateRack);
   const [listOpen, setListOpen] = useState(false);
+  const projectId = projectIdOf(usePathname());
+  const requested = useValidationRequest((s) => !!projectId && s.projectId === projectId);
+
+  // Demande de la palette : servie une fois le synoptique prêt.
+  useEffect(() => {
+    if (!requested || !projectId || workspace !== "synoptic") return;
+    if (report) {
+      if (useValidationRequest.getState().take(projectId)) setListOpen(true);
+    } else if (onValidate && storedView(projectId) === GENERAL_VIEW_ID) {
+      if (useValidationRequest.getState().take(projectId)) onValidate();
+    }
+  }, [requested, projectId, workspace, report, onValidate]);
 
   if (workspace !== "synoptic" || !report) return null;
   const { error, warning } = report.counts;

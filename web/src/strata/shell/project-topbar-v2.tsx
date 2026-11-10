@@ -36,7 +36,7 @@ import { StrataSaveBadge, useStrataSaveStatus } from "./save-status";
 import { TOPBAR_ICON_BTN } from "./seg-tabs";
 import { SpaceSwitch } from "./space-switch";
 import { useGoToProjectTab } from "./tab-nav";
-import { openStrataPalette } from "./topbar-v2";
+import { openStrataPalette } from "../palette/palette-event";
 
 /** Onglets d'arkyo rangés par espace (spec v2 §7). */
 export const VIEW_GROUPS: { label: string; tabs: ProjectTabId[] }[] = [

@@ -50,6 +50,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { UNSAFE_LocationContext } from "react-router";
+import { usePathname, useSearchParams } from "next/navigation";
 import type { EditorShellSlots } from "@/components/editor-shell/editor-shell";
 import { useWorkspace } from "@/components/editor-shell/hooks/use-workspace";
 import { SHELL_LEFT_SIDE_PANEL_W, SHELL_SLIDEOVER_W, SHELL_TOPBAR_CTX_H } from "@/components/synoptique/lib/constants";
@@ -58,6 +59,7 @@ import { cn } from "@/lib/utils";
 import type { UiInterface } from "../interface-context";
 import { ModeSwitch, useConcevoirMode } from "./mode-switch";
 import { spaceOf, useProjectSpace } from "./space-switch";
+import { isProjectTabId, projectIdOf, rememberEditorTab } from "./tab-nav";
 import { ValidationBanner } from "./validation-banner";
 
 /** Hauteur de la topbar Strata (`--topbar-height` de `[data-interface="strata"]`). */
@@ -349,7 +351,22 @@ export function StrataCanvasShell(slots: EditorShellSlots) {
   const slideOverOpen = useWorkspace((s) => s.slideOver);
   const mode = slots.strata?.mode ?? "canvas";
   const hasDrawer = !!slots.rightPanel || !!slots.strata?.drawerTop;
-  const drawerOpen = hasDrawer && drawer.open;
+  const drawerOpen = hasDrawer && drawer.open && space !== "gerer";
+  const tabParam = useSearchParams()?.get("tab") ?? null;
+  const inProject = projectIdOf(usePathname()) !== null;
+
+  // Gérer : le tiroir n'a rien à montrer ; il se ferme (et son écouteur
+  // d'Échap avec lui), et Concevoir le retrouve fermé.
+  useEffect(() => {
+    if (space === "gerer") drawer.setOpen(false);
+  }, [space, drawer]);
+
+  // Onglet de Concevoir atteint par un lien (garde des saisies comprise, qui
+  // navigue sans `handleTabChange`) : retenu pour la prochaine ouverture du
+  // projet, comme arkyo le fait à chaque changement d'onglet.
+  useEffect(() => {
+    if (inProject && space !== "gerer" && isProjectTabId(tabParam)) rememberEditorTab(tabParam);
+  }, [inProject, space, tabParam]);
 
   // Échap ferme le tiroir (hors saisie, dialogues et menus, qui la gardent).
   useEffect(() => {

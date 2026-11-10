@@ -14,6 +14,7 @@ import { useRowSelection } from "@/components/catalogue/use-row-selection";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { useToast } from "@/components/ui/toast";
 import { api, ApiError, getApiErrorMessage } from "@/lib/api-client";
+import type { RowCheckHandlers } from "./catalogue-ui";
 import type { CatalogueKind } from "./use-catalogue-items";
 
 const s = (n: number) => (n > 1 ? "s" : "");
@@ -161,7 +162,8 @@ export function useCatalogueActions(
 
 /**
  * Sélection multiple d'une liste filtrée (`useRowSelection` d'arkyo : Maj
- * pour une plage, Échap pour vider) et sa suppression en lot. Sans droit
+ * pour une plage, glisser sur les coches, Échap pour vider) et sa
+ * suppression en lot. Sans droit
  * d'écriture, rien n'est sélectionnable.
  */
 export function useListSelection(
@@ -171,8 +173,14 @@ export function useListSelection(
 ) {
   const ids = useMemo(() => (canWrite ? filtered.map((it) => it.id) : []), [filtered, canWrite]);
   const selection = useRowSelection(ids);
+  const { onCheckboxClick, onDragStart, onDragEnter } = selection;
+  // Gestes des coches (clic, glisser), stables : les lignes mémoïsées ne sont pas redessinées.
+  const checks = useMemo<RowCheckHandlers>(
+    () => ({ onClick: onCheckboxClick, onDragStart, onDragEnter }),
+    [onCheckboxClick, onDragStart, onDragEnter],
+  );
   const bulkDelete = async () => {
     if (await actions.bulkRemove(Array.from(selection.selected))) selection.clear();
   };
-  return { selection, bulkDelete, total: ids.length };
+  return { selection, checks, bulkDelete, total: ids.length };
 }

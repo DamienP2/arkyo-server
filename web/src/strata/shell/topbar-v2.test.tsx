@@ -12,7 +12,7 @@ import { afterEach, beforeAll, describe, expect, test, vi } from "vitest";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { OWNER_PERMS, renderApp, resetApp, signedInApi, TECH_PERMS, type Api } from "@/tests/app-harness";
 import { isItemActive, sectionOf, STRATA_NAV } from "@/strata/shell/nav-model";
-import { STRATA_PALETTE_EVENT } from "@/strata/shell/topbar-v2";
+import { STRATA_PALETTE_EVENT } from "@/strata/palette/palette-event";
 
 const CATALOGUE_API: Api = {
   "GET /api/tenant/catalogue/lookup": {

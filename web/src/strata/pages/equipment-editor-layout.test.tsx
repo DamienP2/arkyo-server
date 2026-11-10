@@ -262,10 +262,13 @@ describe("éditeur d'équipement pleine page", () => {
     expect(within(aside()).getByText("1 exemplaire")).toBeInTheDocument();
   });
 
-  test("aperçu : fiche utilisée nulle part, « Non utilisé »", async () => {
+  test("aperçu : aucun emplacement trouvé, « Aucun emplacement connu », sans « 0 exemplaire »", async () => {
     await openEditor("/admin/catalogue/equipment/e1", editorApi("strata", { "GET /api/rigs": { body: [] } }));
-    expect(await within(aside()).findByText("Non utilisé")).toBeInTheDocument();
-    expect(within(aside()).getByText("0 exemplaire")).toBeInTheDocument();
+    // Un composant de châssis modulaire n'a pas d'emplacement : « Non utilisé » serait faux (le serveur refuse la suppression).
+    expect(await within(aside()).findByText("Aucun emplacement connu")).toBeInTheDocument();
+    expect(within(aside()).getByText("Les composants montés dans un châssis modulaire ne sont pas listés.")).toBeInTheDocument();
+    expect(within(aside()).queryByText("Non utilisé")).toBeNull();
+    expect(within(aside()).queryByText(/0 exemplaire/)).toBeNull();
     expect(within(aside()).queryByRole("list", { name: "Utilisé dans" })).toBeNull();
   });
 

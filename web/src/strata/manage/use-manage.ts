@@ -39,6 +39,8 @@ export type ManageState = ManageData & {
   loading: boolean;
 };
 
+const NO_CONNECTIONS = { connections: false };
+
 type Inventories = { byRack: Record<string, InventoryDto[]>; failed: Record<string, boolean> };
 
 /** Inventaire des contenants rackables, relu quand l'inventaire d'un contenant change. */
@@ -85,8 +87,8 @@ export function useManageData(
   const projectId = project.header.id;
   const racks = project.inventaire.racks;
   const rackableIds = useMemo(() => racks.filter(isRackableContainer).map((r) => r.id), [racks]);
-  // `canvas-data` des rackables (positions en U).
-  const live = useRacksLive(rackableIds, projectId);
+  // `canvas-data` des rackables (positions en U) ; leurs câbles ne servent pas ici.
+  const live = useRacksLive(rackableIds, projectId, NO_CONNECTIONS);
   const inventories = useInventories(projectId, rackableIds);
   const recorded = useProjectValidation(projectId);
   const locations = project.inventaire.locations;
@@ -140,6 +142,21 @@ export type ManageNav = {
   goToTarget: (target: TodoTarget) => void;
 };
 
+/** Requête d'une page de Gérer (objet `sel` facultatif), les autres paramètres de l'URL conservés. */
+export function manageQuery(
+  current: { toString(): string } | null | undefined,
+  next: ManagePage,
+  nextSel?: string | null,
+): string {
+  const q = new URLSearchParams(current?.toString() ?? "");
+  q.set("space", "gerer");
+  if (next === "overview") q.delete("page");
+  else q.set("page", next);
+  if (nextSel) q.set("sel", nextSel);
+  else q.delete("sel");
+  return q.toString();
+}
+
 export function useManageNav(projectId: string): ManageNav {
   // Routeur gardé : une saisie non enregistrée (mode tableau des câbles) est signalée avant de partir.
   const router = useGuardedRouter();
@@ -150,15 +167,7 @@ export function useManageNav(projectId: string): ManageNav {
   const sel = searchParams?.get("sel") ?? null;
 
   const query = useCallback(
-    (next: ManagePage, nextSel: string | null | undefined) => {
-      const q = new URLSearchParams(searchParams?.toString() ?? "");
-      q.set("space", "gerer");
-      if (next === "overview") q.delete("page");
-      else q.set("page", next);
-      if (nextSel) q.set("sel", nextSel);
-      else q.delete("sel");
-      return q.toString();
-    },
+    (next: ManagePage, nextSel: string | null | undefined) => manageQuery(searchParams, next, nextSel),
     [searchParams],
   );
   // Chemin complet : le garde des saisies non enregistrées résout un `href` depuis la racine du site.
