@@ -10,7 +10,7 @@ describe("safeDocumentHref", () => {
   });
 
   test("toute autre adresse reste du texte", () => {
-    for (const url of ["javascript:alert(1)", " JavaScript:alert(1)", "data:text/html,x", "//evil.example", "/\\evil.example", "ftp://x", "notice.pdf", "", null, undefined])
+    for (const url of ["javascript:alert(1)", " JavaScript:alert(1)", "data:text/html,x", "//evil.example", "/\\evil.example", "/\t/evil.example", "/\n/evil.example", "/\r/evil.example", "java\tscript:alert(1)", "ftp://x", "notice.pdf", "", null, undefined])
       expect(safeDocumentHref(url), String(url)).toBeNull();
   });
 });
