@@ -18,6 +18,7 @@ import type { WorkspaceId } from "@/components/editor-shell/tool-registry";
 import type { ValidationReport } from "@/lib/services/rack-validation";
 import { InterfaceProvider, type UiInterface } from "@/strata/interface-context";
 import { useStrataDrawer } from "@/strata/shell/canvas-shell";
+import { useValidationRecordStore } from "@/strata/manage/validation-record";
 import { useValidationRequest } from "@/strata/shell/project-requests";
 import { EDITOR_TAB_KEY } from "@/strata/shell/tab-nav";
 
@@ -26,6 +27,7 @@ afterEach(() => {
   useTopbarActions.getState().setOnSelectValidationIssue(undefined);
   useTopbarActions.getState().setOnValidateRack(undefined);
   useValidationRequest.setState({ projectId: null });
+  useValidationRecordStore.setState({ byProject: {} });
   window.localStorage.clear();
   delete document.documentElement.dataset.interface;
 });
@@ -354,10 +356,19 @@ const REPORT: ValidationReport = {
   counts: { error: 2, warning: 1, info: 0 },
 };
 
+/**
+ * Publication d'un rapport par le synoptique du projet `projectId`, comme en
+ * vrai : store global d'arkyo, et note du projet (`ValidationRecorder`).
+ */
+function publish(report: ValidationReport, projectId = "p1") {
+  useTopbarActions.getState().setValidationReport(report);
+  useValidationRecordStore.getState().record({ projectId, viewId: null, report });
+}
+
 describe("bandeau de validation", () => {
   test("bandeau : compteurs du validationReport, clic → liste, clic ligne → onSelectValidationIssue", () => {
     const onSelect = vi.fn();
-    useTopbarActions.getState().setValidationReport(REPORT);
+    publish(REPORT);
     useTopbarActions.getState().setOnSelectValidationIssue(onSelect);
     render(<Shell iface="strata" workspace="synoptic" {...SLOTS} />);
     const banner = screen.getByRole("region", { name: "Validation" });
@@ -379,7 +390,7 @@ describe("bandeau de validation", () => {
     useValidationRequest.getState().request("p1");
     render(<Shell iface="strata" workspace="synoptic" {...SLOTS} />);
     expect(screen.queryByRole("region", { name: "Contrôles" })).toBeNull();
-    act(() => useTopbarActions.getState().setValidationReport(REPORT));
+    act(() => publish(REPORT));
     expect(screen.getByRole("region", { name: "Contrôles" })).toBeInTheDocument();
     // Demande servie une fois.
     expect(useValidationRequest.getState().projectId).toBeNull();
@@ -397,14 +408,28 @@ describe("bandeau de validation", () => {
 
   test("Valider demandé pour un autre projet : rien", () => {
     useValidationRequest.getState().request("p2");
-    useTopbarActions.getState().setValidationReport(REPORT);
+    publish(REPORT);
     render(<Shell iface="strata" workspace="synoptic" {...SLOTS} />);
     expect(screen.queryByRole("region", { name: "Contrôles" })).toBeNull();
     expect(useValidationRequest.getState().projectId).toBe("p2");
   });
 
+  test("rapport d'un autre projet resté dans le store d'arkyo : pas de bandeau ni de liste", () => {
+    // Le projet p2 a publié (store global), puis l'éditeur du projet p1 s'ouvre.
+    publish(REPORT, "p2");
+    useValidationRequest.getState().request("p1");
+    render(<Shell iface="strata" workspace="synoptic" {...SLOTS} />);
+    expect(screen.queryByRole("region", { name: "Validation" })).toBeNull();
+    expect(screen.queryByRole("region", { name: "Contrôles" })).toBeNull();
+    // La demande de la palette attend le rapport de p1.
+    expect(useValidationRequest.getState().projectId).toBe("p1");
+    act(() => publish({ issues: [], counts: { error: 0, warning: 0, info: 0 } }));
+    expect(screen.getByRole("region", { name: "Validation" })).toHaveTextContent("Conforme");
+    expect(screen.getByRole("region", { name: "Contrôles" })).toBeInTheDocument();
+  });
+
   test("rapport sans problème : « Conforme »", () => {
-    useTopbarActions.getState().setValidationReport({ issues: [], counts: { error: 0, warning: 0, info: 0 } });
+    publish({ issues: [], counts: { error: 0, warning: 0, info: 0 } });
     render(<Shell iface="strata" workspace="synoptic" {...SLOTS} />);
     expect(screen.getByRole("region", { name: "Validation" })).toHaveTextContent("Conforme");
   });
@@ -413,7 +438,7 @@ describe("bandeau de validation", () => {
     const { unmount } = render(<Shell iface="strata" workspace="synoptic" {...SLOTS} />);
     expect(screen.queryByRole("region", { name: "Validation" })).toBeNull();
     unmount();
-    useTopbarActions.getState().setValidationReport(REPORT);
+    publish(REPORT);
     render(<Shell iface="strata" workspace="design" {...SLOTS} />);
     expect(screen.queryByRole("region", { name: "Validation" })).toBeNull();
   });

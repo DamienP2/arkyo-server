@@ -15,6 +15,7 @@ import type { ConnectorEntry } from "@/app/(app)/admin/equipment/[id]/_editor/ty
 import { WF_OPTIONS } from "@/app/(app)/admin/equipment/[id]/_editor/types";
 import { cn } from "@/lib/utils";
 import { AdvancedSection } from "../advanced/advanced-section";
+import { safeDocumentHref } from "../safe-href";
 import {
   drawingConnectorTypes,
   drawingSignals,
@@ -87,11 +88,6 @@ function customFieldValue(f: Record<string, unknown>): string {
     return unit ? `${fmtNumber(v)} ${unit}` : fmtNumber(v);
   }
   return str(v) || "—";
-}
-
-/** Lien d'un document : http(s) et mailto seulement ; toute autre adresse reste du texte. */
-export function safeDocumentHref(url: string): string | null {
-  return /^(https?:\/\/|mailto:)/i.test(url.trim()) ? url.trim() : null;
 }
 
 const mm = (n: number | null | undefined) => (typeof n === "number" && n > 0 ? `${fmtNumber(n)} mm` : "—");

@@ -232,12 +232,29 @@ describe("Gérer › Câbles, mode tableau", () => {
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(cell(grid, 0, 5)).toHaveTextContent("Repris");
 
-    // Bouton vers Concevoir : retenu aussi.
+    // Bouton vers Concevoir : retenu aussi ; annulé, l'onglet retenu ne change pas.
+    const storedTab = window.localStorage.getItem("project-editor-tab");
     fireEvent.click(screen.getByRole("button", { name: "Ouvrir le synoptique" }));
     dialog = await screen.findByRole("dialog", { name: "Modifications non enregistrées" });
     expect(here()).toBe(normUrl("/project/p1?space=gerer&page=cables"));
     fireEvent.click(within(dialog).getByRole("button", { name: "Annuler" }));
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(window.localStorage.getItem("project-editor-tab")).toBe(storedTab);
+
+    // Lien « Racks » de la navigation : rien n'est demandé au tiroir tant que la garde n'est pas passée.
+    fireEvent.click(within(screen.getByRole("navigation", { name: "Gérer" })).getByRole("link", { name: /Racks/ }));
+    dialog = await screen.findByRole("dialog", { name: "Modifications non enregistrées" });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Annuler" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(window.localStorage.getItem("project-editor-tab")).toBe(storedTab);
+
+    // « Fermer l'édition » : retenu aussi, la saisie reste.
+    fireEvent.click(screen.getByRole("button", { name: "Fermer l'édition" }));
+    dialog = await screen.findByRole("dialog", { name: "Modifications non enregistrées" });
+    expect(here()).toBe(normUrl("/project/p1?space=gerer&page=cables"));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Annuler" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(cell(grid, 0, 5)).toHaveTextContent("Repris");
 
     // Quitter sans enregistrer : la navigation a lieu.
     fireEvent.click(fiche());

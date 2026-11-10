@@ -35,7 +35,7 @@ import { CommandPalette } from "../palette/command-palette";
 import { StrataSaveBadge, useStrataSaveStatus } from "./save-status";
 import { TOPBAR_ICON_BTN } from "./seg-tabs";
 import { SpaceSwitch } from "./space-switch";
-import { useGoToProjectTab } from "./tab-nav";
+import { useGoToProjectTab, useGuardedRun } from "./tab-nav";
 import { openStrataPalette } from "../palette/palette-event";
 
 /** Onglets d'arkyo rangés par espace (spec v2 §7). */
@@ -259,6 +259,8 @@ export function ProjectTopbarV2({
   statusMeta,
 }: ProjectTopbarV2Props) {
   const saveStatus = useStrataSaveStatus();
+  // « Fermer l'édition » par la garde : une saisie en cours (mode tableau des câbles) est signalée.
+  const guarded = useGuardedRun();
 
   return (
     <header className="flex h-full items-center gap-3.5 bg-[var(--surface)] px-3.5 text-[13px] text-[var(--muted-foreground)]">
@@ -307,7 +309,7 @@ export function ProjectTopbarV2({
         <PresenceAvatars className="mr-1" />
         <button
           type="button"
-          onClick={onClose}
+          onClick={() => guarded(onClose)}
           title="Fermer l'édition"
           aria-label="Fermer l'édition"
           className={cn(TOPBAR_ICON_BTN, "ml-1")}

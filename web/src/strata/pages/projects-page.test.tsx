@@ -211,7 +211,7 @@ describe("page Projets (Strata v2)", () => {
     );
     expect(within(detail).getByRole("link", { name: /Ouvrir dans Gérer/ })).toHaveAttribute(
       "href",
-      "/project/pA?space=gerer&page=ensemble",
+      "/project/pA?space=gerer",
     );
     expect(within(detail).getByText("Lyon")).toBeInTheDocument();
     expect(within(detail).getByText("Flight case")).toBeInTheDocument();

@@ -10,7 +10,10 @@
  * `onSelectValidationIssue` (la sélection et le cerclage sur le canevas sont
  * ceux du synoptique).
  *
- * Rien hors du synoptique, ni tant qu'aucun rapport n'est publié.
+ * Rien hors du synoptique, ni tant qu'aucun rapport n'est publié pour CE
+ * projet : le store d'arkyo est global et garde le rapport d'un projet quitté ;
+ * seul compte celui que `ValidationRecorder` (tiroir du synoptique) a noté
+ * pour le projet de l'URL (`useProjectValidation`).
  *
  * « Valider » de la palette ⌘K (`useValidationRequest`) : la liste s'ouvre
  * dès que le synoptique du projet publie son rapport. Sur la vue Générale,
@@ -30,6 +33,7 @@ import { useTopbarActions } from "@/components/editor-shell/topbar-actions-conte
 import { ValidationPanelContent } from "@/components/synoptique/components/validation-panel";
 import type { IssueSeverity } from "@/lib/services/rack-validation";
 import { cn } from "@/lib/utils";
+import { useProjectValidation } from "../manage/validation-record";
 import { useValidationRequest } from "./project-requests";
 import { projectIdOf } from "./tab-nav";
 
@@ -61,11 +65,14 @@ function storedView(projectId: string): string {
 
 export function ValidationBanner() {
   const workspace = useWorkspace((s) => s.workspace);
-  const report = useTopbarActions((s) => s.validationReport);
+  const published = useTopbarActions((s) => s.validationReport);
   const onSelect = useTopbarActions((s) => s.onSelectValidationIssue);
   const onValidate = useTopbarActions((s) => s.onValidateRack);
   const [listOpen, setListOpen] = useState(false);
   const projectId = projectIdOf(usePathname());
+  const recorded = useProjectValidation(projectId ?? "");
+  // Le rapport publié, s'il est bien celui de ce projet.
+  const report = published && recorded?.report === published ? published : null;
   const requested = useValidationRequest((s) => !!projectId && s.projectId === projectId);
 
   // Demande de la palette : servie une fois le synoptique prêt.

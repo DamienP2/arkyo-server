@@ -8,15 +8,36 @@
  */
 
 import { useCallback } from "react";
-import { useParams, useSearchParams } from "next/navigation";
-import { useGuardedRouter } from "@/lib/unsaved-changes";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useUnsavedChangesContext } from "@/lib/unsaved-changes";
 import type { ProjectTabId } from "@/app/(fullscreen)/project/[id]/_editor/tab-bar";
 import { SPACE_PARAM } from "./space-switch";
 
 /** Projet de l'URL (`/project/:id…`), `null` hors de l'éditeur projet. */
 export function projectIdOf(pathname: string | null | undefined): string | null {
   const m = /^\/project\/([^/?#]+)/.exec(pathname ?? "");
-  return m ? decodeURIComponent(m[1]) : null;
+  if (!m) return null;
+  try {
+    return decodeURIComponent(m[1]);
+  } catch {
+    // Séquence `%` invalide : le segment tel quel.
+    return m[1];
+  }
+}
+
+/**
+ * Exécute une navigation par la garde des saisies non enregistrées (comme
+ * `useGuardedRouter`) : tout ce que fait `run` (stockage local compris) n'a
+ * lieu qu'une fois la garde passée, jamais si l'utilisateur annule.
+ */
+export function useGuardedRun(): (run: () => void) => void {
+  const unsaved = useUnsavedChangesContext();
+  return useCallback(
+    (run: () => void) => {
+      if (!unsaved || unsaved.requestNavigation({ kind: "router", run })) run();
+    },
+    [unsaved],
+  );
 }
 
 /** Clé de stockage de l'onglet de l'éditeur (`project-editor.tsx`). */
@@ -62,16 +83,19 @@ export function projectTabHref(
 }
 
 export function useGoToProjectTab(): (id: ProjectTabId) => void {
-  // Routeur gardé : sans saisie en cours, il navigue comme `useRouter`.
-  const router = useGuardedRouter();
+  // Par la garde : sans saisie en cours, la navigation est immédiate ; annulée,
+  // ni l'URL ni l'onglet retenu ne changent.
+  const guarded = useGuardedRun();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const params = useParams<{ id: string }>();
   const projectId = params?.id;
   return useCallback(
-    (id: ProjectTabId) => {
-      rememberEditorTab(id);
-      router.replace(projectTabHref(projectId ?? "", searchParams, id), { scroll: false });
-    },
-    [router, searchParams, projectId],
+    (id: ProjectTabId) =>
+      guarded(() => {
+        rememberEditorTab(id);
+        router.replace(projectTabHref(projectId ?? "", searchParams, id), { scroll: false });
+      }),
+    [guarded, router, searchParams, projectId],
   );
 }

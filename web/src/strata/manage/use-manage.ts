@@ -16,7 +16,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import type { ProjectEditorData } from "@/app/(fullscreen)/project/[id]/_components/project-editor";
 import type { ProjectTabId } from "@/app/(fullscreen)/project/[id]/_editor/tab-bar";
 import { parseLocationViewId } from "@/app/(fullscreen)/project/[id]/synoptique/_components/synoptique-rack-selector";
@@ -27,7 +27,7 @@ import type { RackCanvasData } from "@/app/(fullscreen)/project/[id]/rack/rack-t
 import { useRacksLive } from "../bottom/use-rack-live";
 import { useRackFocusStore } from "../editor/rack-focus";
 import { spaceQuery } from "../shell/space-switch";
-import { useGoToProjectTab } from "../shell/tab-nav";
+import { projectTabHref, rememberEditorTab, useGoToProjectTab, useGuardedRun } from "../shell/tab-nav";
 import type { InventoryDto } from "./placement";
 import type { ProjectCables } from "./use-project-cables";
 import { useProjectValidation } from "./validation-record";
@@ -181,12 +181,17 @@ export function useManageNav(projectId: string): ManageNav {
     [router, projectId, query],
   );
   const select = useCallback((nextSel: string | null) => go(page, nextSel), [go, page]);
+  const guarded = useGuardedRun();
+  const plainRouter = useRouter();
   const goToRack = useCallback(
-    (rackId: string | null) => {
-      if (rackId) useRackFocusStore.getState().request({ projectId, rackId });
-      goToTab("rack");
-    },
-    [goToTab, projectId],
+    (rackId: string | null) =>
+      // Le contenant n'est demandé au tiroir du mode Racks qu'une fois la garde passée.
+      guarded(() => {
+        if (rackId) useRackFocusStore.getState().request({ projectId, rackId });
+        rememberEditorTab("rack");
+        plainRouter.replace(projectTabHref(projectId, searchParams, "rack"), { scroll: false });
+      }),
+    [guarded, plainRouter, projectId, searchParams],
   );
   const goToConcevoir = useCallback(
     () => router.replace(`/project/${projectId}?${spaceQuery(searchParams, "concevoir")}`, { scroll: false }),

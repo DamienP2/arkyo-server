@@ -13,7 +13,7 @@ import { useTopbarActions } from "@/components/editor-shell/topbar-actions-conte
 import type { ValidationReport } from "@/lib/services/rack-validation";
 import { useRackFocusStore } from "../editor/rack-focus";
 import { useValidationRecordStore } from "./validation-record";
-import { CAISSE, LIBRE, manageApi, normUrl } from "./manage-fixtures";
+import { BAIE, CAISSE, editor, LIBRE, manageApi, normUrl } from "./manage-fixtures";
 
 const FIRST_LOAD = { timeout: 15000 };
 
@@ -277,5 +277,34 @@ describe("Gérer › Fiche", () => {
 
     fireEvent.click(screen.getByRole("tab", { name: /Journal/ }));
     expect(await within(screen.getByRole("tabpanel")).findByText("0 entrée")).toBeInTheDocument();
+  });
+});
+
+describe("Gérer › Fiche, documents", () => {
+  test("lien d'un document : adresses sûres seulement, sinon le nom en texte", async () => {
+    const doc = (id: string, name: string, url: string) => ({
+      id,
+      name,
+      url,
+      mimeType: "application/pdf",
+      sizeBytes: 1024,
+      uploadedAt: "2026-11-01T10:00:00.000Z",
+    });
+    renderApp(
+      "/project/p1?space=gerer&page=fiche",
+      manageApi("strata", undefined, {
+        "GET /api/tenant/projects/p1/editor": {
+          body: editor([BAIE, LIBRE, CAISSE], {
+            documents: [doc("d1", "Plan.pdf", "/uploads/d1.pdf"), doc("d2", "Piège", "javascript:alert(1)"), doc("d3", "Notice", "https://example.com/n.pdf")],
+          }),
+        },
+      }),
+    );
+    fireEvent.click(await screen.findByRole("tab", { name: /Documents/ }, FIRST_LOAD));
+    const panel = screen.getByRole("tabpanel");
+    expect(within(panel).getByRole("link", { name: "Plan.pdf" })).toHaveAttribute("href", "/uploads/d1.pdf");
+    expect(within(panel).getByRole("link", { name: "Notice" })).toHaveAttribute("href", "https://example.com/n.pdf");
+    expect(within(panel).queryByRole("link", { name: "Piège" })).toBeNull();
+    expect(within(panel).getByText("Piège")).toBeInTheDocument();
   });
 });

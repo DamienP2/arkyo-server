@@ -22,6 +22,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingState } from "@/components/ui/loading-state";
 import { api } from "@/lib/api-client";
 import { INTERVENTION_LABEL, RIG_LABEL, fmtDay, plural } from "./format";
+import { safeDocumentHref } from "../safe-href";
 import { Box, Kv, PageHead, Pill, SMALL_BTN, TabPanel, Tabs, useTabIds } from "./manage-ui";
 import { missingFicheFields } from "./todo-model";
 import type { ManageState } from "./use-manage";
@@ -132,14 +133,19 @@ export function FichePage({ data, onEditCharacteristics }: { data: ManageState; 
                     className="flex items-center gap-2.5 border-b border-[var(--border)] px-3.5 py-2.5 text-[12.5px] last:border-b-0"
                   >
                     <FileText aria-hidden className="h-4 w-4 shrink-0 text-[var(--text-tertiary)]" />
-                    <a
-                      href={d.url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="min-w-0 flex-1 truncate font-medium text-[var(--foreground)] underline-offset-2 hover:underline focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:outline-none"
-                    >
-                      {d.name}
-                    </a>
+                    {safeDocumentHref(d.url) ? (
+                      <a
+                        href={safeDocumentHref(d.url)!}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="min-w-0 flex-1 truncate font-medium text-[var(--foreground)] underline-offset-2 hover:underline focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:outline-none"
+                      >
+                        {d.name}
+                      </a>
+                    ) : (
+                      // Adresse non sûre (`javascript:`…) : le nom seul, sans lien.
+                      <span className="min-w-0 flex-1 truncate font-medium text-[var(--foreground)]">{d.name}</span>
+                    )}
                     <span className="shrink-0 text-[var(--muted-foreground)]">
                       {[size(d.sizeBytes), fmtDay(d.uploadedAt)].filter(Boolean).join(" · ")}
                     </span>

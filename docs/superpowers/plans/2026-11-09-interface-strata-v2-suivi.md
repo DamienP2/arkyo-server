@@ -22,6 +22,9 @@ Ce fichier liste ce que la v2 de l'interface Strata laisse en suspens : question
 - **Équipe d'un projet.** La page Projets montre le créateur du projet : arkyo n'a pas d'équipe par projet.
 - **« Ajouter du matériel » de la palette.** Depuis Concevoir, la palette passe par Gérer › Matériel, qui ouvre aussitôt l'outil Équipements de l'Inventaire (seul Gérer tient le rappel de l'éditeur, `onOpenCatalogue`) : on voit Gérer un instant.
 - **« Valider » de la palette.** Sur la vue Générale du synoptique, qui ne publie pas de rapport (arkyo valide par lieu), c'est l'action « Validation synoptique » d'arkyo qui répond, avec son volet.
+- **« Valider » sur la vue Générale.** La palette appelle alors l'action « Validation synoptique » d'arkyo (`onValidateRack`), qui est une bascule : si son volet est déjà ouvert, « Valider » le referme.
+- **Palette absente de l'éditeur de panel.** L'éditeur plein écran `/panels/:id` est une page d'arkyo sans coquille Strata : la monter demanderait une accroche hors de la liste fermée. La palette est sur toutes les pages à topbar Strata (site et projet).
+- **Lectures en double.** La palette relit `/editor` et les routes des câbles (`synoptic/general`, `synoptic/location/{id}`, contenants sans lieu) à chaque ouverture dans un projet, même quand Gérer les tient déjà ; et, dans Gérer, le `canvas-data` d'un contenant rackable sans lieu est lu deux fois (par `useRacksLive` et par `loadProjectCables`).
 - **Historique dans le projet.** Les navigations de la palette dans un projet remplacent l'entrée d'historique (comme la navigation de Gérer) ; celles qui sortent du projet en ajoutent une.
 
 ## Rulings (décisions prises en cours de route)

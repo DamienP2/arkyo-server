@@ -25,7 +25,6 @@ import { LoadingState } from "@/components/ui/loading-state";
 import { NewProjectDialog } from "@/components/projects/new-project-dialog";
 import { useTenantPermissionsOptional } from "@/components/tenant-permissions-context";
 import { api } from "@/lib/api-client";
-import { useUnsavedChangesContext } from "@/lib/unsaved-changes";
 import { cn } from "@/lib/utils";
 import { navFilter, STRATA_NAV, type StrataNavItem } from "@/strata/shell/nav-model";
 import { STRATA_PALETTE_EVENT } from "./palette-event";
@@ -37,7 +36,7 @@ import {
   type Lazy,
   type PaletteItem,
 } from "./palette-sources";
-import { projectIdOf } from "@/strata/shell/tab-nav";
+import { projectIdOf, useGuardedRun } from "@/strata/shell/tab-nav";
 import { projectLoaders, registerProjectSources, type ProjectPaletteNav } from "./project-sources";
 
 type ProjectRow = { id: string; name: string; clientName?: string | null };
@@ -68,7 +67,7 @@ export function CommandPalette() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const unsaved = useUnsavedChangesContext();
+  const guarded = useGuardedRun();
   const perms = useTenantPermissionsOptional();
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
@@ -88,14 +87,12 @@ export function CommandPalette() {
    * Navigation des actions, par la garde des saisies non enregistrées (comme
    * `useGuardedRouter`) ; `before` ne s'exécute qu'une fois la garde passée.
    */
-  const navigate = (href: string, opts: { replace?: boolean; before?: () => void } = {}) => {
-    const run = () => {
+  const navigate = (href: string, opts: { replace?: boolean; before?: () => void } = {}) =>
+    guarded(() => {
       opts.before?.();
       if (opts.replace) router.replace(href, { scroll: false });
       else router.push(href);
-    };
-    if (!unsaved || unsaved.requestNavigation({ kind: "router", run })) run();
-  };
+    });
   const nav = useRef({ navigate, canSee, searchParams });
   nav.current = { navigate, canSee, searchParams };
 

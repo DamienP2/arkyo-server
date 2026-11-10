@@ -19,7 +19,7 @@ Damien juge l'interface Strata v1 « très complexe et illisible… il y en a pa
   - **Concevoir** : le synoptique (et les racks) en plein écran. Barre d'outils flottante, tiroir de l'objet sélectionné, bandeau de validation.
   - **Gérer** : des pages liste + détail (Vue d'ensemble, Fiche, Matériel, Câbles, Réseau, Livraison, Dossier).
 - **Champs rares** regroupés dans des sections « Avancé » repliées (mémorisées par type d'écran), dans les écrans que l'interface Strata dessine elle-même.
-- **Palette ⌘K** partout : objets et actions.
+- **Palette ⌘K** sur toutes les pages qui ont une topbar Strata (site et projet) : objets et actions. L'éditeur de panel plein écran (`/panels/:id`), page d'arkyo sans coquille Strata, ne l'a pas.
 - Aucune fonction perdue par rapport à Classique (table du §7).
 
 ### Non-objectifs
@@ -90,6 +90,8 @@ Une colonne de navigation fine, puis une liste filtrable, puis le détail (modè
 - **Administration** : les pages existantes (Utilisateurs, Paramètres, Espace, Système avec Sauvegardes), dans la coquille Strata. Leur navigation de section est le menu « Administration ▾ » de la topbar et les onglets de page existants, sans rail de plus (Ruling 2).
 
 ### 4.4 Palette ⌘K
+Montée dans la topbar du site et dans la topbar projet : elle est sur toutes les pages qui en ont une. L'éditeur de panel plein écran (`/panels/:id`) n'a aucune coquille Strata où la monter sans nouvelle accroche dans un fichier copié : il n'a pas de palette.
+
 Projets, équipements et câbles du projet ouvert, fiches du catalogue, utilisateurs, et actions (Nouveau projet, Ajouter du matériel, Valider, aller à Concevoir / Gérer, Modifier une fiche). Navigation au clavier.
 
 Livré (tâche 9) : les sources du projet ouvert viennent en tête (Matériel, Câbles, Projet). Une fiche du catalogue ouvre le catalogue Strata sur `?tab=<sorte>&id=<id>` ; « Modifier » (bouton de la ligne ou ⌘Entrée) ouvre son éditeur. Les sources Catalogue et Utilisateurs suivent les permissions de leurs pages (`catalog:admin`, `members:admin`). Les navigations passent par la garde des saisies non enregistrées. « Valider » mène au synoptique de Concevoir et ouvre la liste des contrôles dès que le rapport est publié ; « Ajouter du matériel » mène à Gérer › Matériel, qui ouvre l'outil Équipements de l'Inventaire comme « Ajouter du catalogue ».
@@ -148,7 +150,7 @@ Table réalignée sur ce qui a été livré (tâche 9). Elle remplace la table �
 | Éditeurs du catalogue | Équipement : éditeur pleine page ; cordons et adaptateurs : pages d'arkyo dans la coquille Strata (Ruling 11) |
 | Paramètres, Utilisateurs, Espace, Système (dont Sauvegardes, Interface) | Administration (menu Administration ▾ et onglets des pages, Ruling 2) |
 | Profil, notifications, langue, thème, présence | Topbar |
-| Recherche et actions | Palette ⌘K, sur toutes les pages Strata (projet ouvert compris) |
+| Recherche et actions | Palette ⌘K, sur les pages à topbar Strata (site et projet ouvert) ; pas sur l'éditeur de panel plein écran |
 
 ## 8. Vérification
 - **Classique** : tous les tests existants passent sans modification.

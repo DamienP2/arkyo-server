@@ -13,7 +13,7 @@
  *   recherche, tri.
  * - Détail du projet sélectionné : résumé, compteurs, alertes connues,
  *   « Ouvrir dans Concevoir » (`?tab=synoptique`), « Ouvrir dans Gérer »
- *   (`?space=gerer&page=ensemble`), suppression (`projects:admin`, comme la
+ *   (`?space=gerer`), suppression (`projects:admin`, comme la
  *   liste Classique). Sans sélection : captations à venir.
  *
  * Données : `GET /api/projects` et `?stats=tasks` (celles du tableau de bord
@@ -769,7 +769,7 @@ function ProjectDetail({
           <OpenLink href={`/project/${p.id}?tab=synoptique`} icon={<Workflow className="h-3.5 w-3.5" />}>
             Ouvrir dans Concevoir
           </OpenLink>
-          <OpenLink href={`/project/${p.id}?space=gerer&page=ensemble`} icon={<LayoutList className="h-3.5 w-3.5" />}>
+          <OpenLink href={`/project/${p.id}?space=gerer`} icon={<LayoutList className="h-3.5 w-3.5" />}>
             Ouvrir dans Gérer
           </OpenLink>
         </div>
