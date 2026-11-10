@@ -10,7 +10,7 @@ Documents : `README.md`, `docs/INSTALL.md`, `docs/ARCHITECTURE.md`, `UI_PATTERNS
 >
 > - **Classique** : recodage fidèle d'arkyo. Toutes les règles de ce fichier s'y appliquent sans changement. Une différence de disposition avec arkyo reste un défaut.
 > - **Strata** : refonte de la présentation, **pas des fonctions**. Elle vit dans `web/src/strata/`, en code neuf (pas de copie d'arkyo). Elle loge les pages et les éditeurs copiés d'arkyo sans les réécrire. Un fichier copié n'est modifié que par un point d'accroche minimal, commenté `// arkyo-server: interface Strata`, sans aucun effet en Classique.
-> - Aucune fonction ne doit manquer dans l'une ou l'autre. La table « Où vit chaque fonction » de `docs/superpowers/specs/2026-11-07-interface-strata-design.md` fait foi et se met à jour à chaque phase.
+> - Aucune fonction ne doit manquer dans l'une ou l'autre. La table « Où vit chaque fonction » du §7 de `docs/superpowers/specs/2026-11-09-interface-strata-v2-design.md` fait foi et se met à jour à chaque phase.
 > - L'API reste celle d'arkyo. Seul le réglage d'interface s'y ajoute.
 >
 > La phase qui porte une page la rend dans les deux interfaces. En Strata, elle y ajoute au besoin sa présentation.
