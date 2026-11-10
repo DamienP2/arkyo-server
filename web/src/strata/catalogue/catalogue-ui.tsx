@@ -563,7 +563,7 @@ export function DetailActions({
   );
 }
 
-/** Puits sombre des dessins de face (comme le panneau « Faces et schéma »). */
+/** Puits sombre des dessins de face (comme le bandeau des faces de l'éditeur). */
 export function FaceWell({ children, className }: { children: ReactNode; className?: string }) {
   return (
     <div className={cn("rounded border border-[var(--border)] bg-[var(--strata-face-well)] p-2.5", className)}>{children}</div>

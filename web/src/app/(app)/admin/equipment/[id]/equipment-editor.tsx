@@ -48,7 +48,7 @@ import {
 import { EquipmentIcon } from "@/components/ui/equipment-icon";
 import { DistributionTab } from "./_editor/distribution-tab";
 import { useInterface } from "@/strata/interface-context"; // arkyo-server: interface Strata
-import { FacesPanel, StrataConnectivityLayout } from "@/strata/faces-panel"; // arkyo-server: interface Strata
+import { EquipmentEditorLayout } from "@/strata/pages/equipment-editor-layout"; // arkyo-server: interface Strata
 
 /**
  * Contexte tenant — quand fourni, l'éditeur passe en "mode tenant" :
@@ -767,6 +767,8 @@ export function EquipmentEditor({
   // arkyo-server: « Récupérer la version Arkyo » retiré (catalogue unique).
 
   return (
+    // arkyo-server: interface Strata (éditeur pleine page : barre d'actions, bandeau des faces, aperçu, autour du contenu ; Classique : rendu tel quel)
+    <EquipmentEditorLayout enabled={isStrata} equipmentId={equipment?.id ?? null} form={form} lookup={{ brands, connectorTypes, signals, functions }} autosave={{ status: saveStatus, lastSavedAt, forceSave }} history={{ canUndo, canRedo, undo, redo }} create={{ onSave: handleSave, saving }} readOnly={isSupervisorArkyo}>
     <div className="flex h-full flex-col">
       {/* ── Header ──
           Trois variantes :
@@ -777,7 +779,8 @@ export function EquipmentEditor({
             badge auto-save + Fermer/Enregistrer.
           - Supervisor : icône colorée + nom + ActivePill + Undo/Redo +
             badge auto-save + Fermer/Annuler/Enregistrer. */}
-      {isTenantMode ? (
+      {/* arkyo-server: interface Strata (en-tête remplacé par la barre d'actions de la mise en page) */}
+      {isStrata ? null : isTenantMode ? (
         <header className="flex h-14 shrink-0 items-center justify-between gap-4 border-b border-[var(--border)]/60 px-6">
           <nav
             aria-label="Fil d'Ariane"
@@ -1009,8 +1012,6 @@ export function EquipmentEditor({
 
         {/* Connectique — full height layout */}
         {activeTab === "connectivity" && (
-          // arkyo-server: interface Strata (panneau « Faces et schéma » au-dessus, la liste des ports garde la hauteur ; Classique : rendu tel quel)
-          <StrataConnectivityLayout enabled={isStrata} panel={<FacesPanel form={form} lookup={{ brands, connectorTypes, signals, functions }} />}>
           <div className="h-full w-full">
             <ConnectivityTab
               form={form}
@@ -1033,7 +1034,6 @@ export function EquipmentEditor({
               isReadOnly={false}
             />
           </div>
-          </StrataConnectivityLayout> // arkyo-server: interface Strata
         )}
 
         {/* SMPTE 2110 — visible uniquement si form.is2110 */}
@@ -1060,6 +1060,7 @@ export function EquipmentEditor({
 
       {/* arkyo-server: dialog de signalement d'erreur Arkyo retiré (catalogue unique) */}
     </div>
+    </EquipmentEditorLayout> // arkyo-server: interface Strata
   );
 }
 

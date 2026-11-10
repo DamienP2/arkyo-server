@@ -116,7 +116,7 @@ Le site choisit son interface dans Administration › Système. **Classique** es
 | `_editor/project-global-topbar.tsx` | en Strata, `StrataProjectTopbar` avec les mêmes props |
 | `components/layout/topbar.tsx` | exports des menus internes (notifications, langue, profil, rôle) |
 | `admin/systeme/systeme-page.tsx` | section « Interface » |
-| `admin/equipment/[id]/equipment-editor.tsx` | panneau « Faces et schéma » au-dessus de la Connectique |
+| `admin/equipment/[id]/equipment-editor.tsx` | en Strata, `EquipmentEditorLayout` (éditeur pleine page : barre d'actions, bandeau des faces, aperçu) autour du contenu, en-tête d'arkyo remplacé par la barre |
 | `project-editor.tsx` (`getEditorSlots`) | bibliothèque en dock gauche, face de l'équipement dans l'inspecteur (rack et inventaire), dock bas, vue Connectique ; état d'enregistrement transmis à la topbar Strata |
 | `app/globals.css` | bloc `[data-interface="strata"]` et variables `--strata-face-*` (clair et sombre) |
 | `admin/catalogue/_components/{equipment,cables,adapters}-list-panel.tsx` | grilles dessinées en vue grille |

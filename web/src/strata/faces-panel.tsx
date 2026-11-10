@@ -1,31 +1,26 @@
 /**
- * Panneau « Faces et schéma » de la fiche équipement (onglet Connectique,
- * interface Strata ; spec §6.3, maquette `viewFiche`, onglet connectique) :
- * faces avant et arrière à l'échelle et schéma de principe, dessinés depuis le
- * formulaire en cours de saisie (`form.connectorEntries`), donc mis à jour à
- * chaque modification de la connectique.
+ * Bandeau des faces de l'éditeur d'équipement pleine page (interface Strata
+ * v2, spec v2 §4.3, maquette `.ed-faces`) : faces avant et arrière à
+ * l'échelle, côte à côte, dessinées depuis le formulaire en cours de saisie
+ * (`form.connectorEntries`), donc mises à jour à chaque modification de la
+ * connectique.
  *
- * Le survol d'une entrée sur une face la surligne dans le schéma, et
- * inversement. La liste des ports reste celle de l'onglet Connectique
- * existant, juste en dessous. Le panneau se replie (mémorisé dans le
- * navigateur) et son contenu est plafonné à 32 % de la hauteur de la fenêtre
- * (défilement propre ; à partir de `xl`, faces à gauche et schéma à droite) :
- * `StrataConnectivityLayout` le pose au-dessus de
- * l'onglet Connectique, dont la liste des ports garde le reste de la hauteur.
+ * Le schéma de principe vit dans la colonne d'aperçu de la mise en page
+ * (`pages/equipment-editor-layout.tsx`) ; le survol d'une entrée est partagé
+ * par `hoverEntry` / `onEntryHover`. Le bandeau se replie (mémorisé dans le
+ * navigateur).
  */
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState } from "react";
 import type { FormData } from "@/app/(app)/admin/equipment/[id]/_editor/types";
 import { ChevronDown } from "@/components/ui/icons";
 import { cn } from "@/lib/utils";
-import { BlockDiagram } from "./drawings/block-diagram";
 import { EquipmentFace } from "./drawings/equipment-face";
-import { FACE_WIDTH_MM, type FaceSide } from "./drawings/face-layout";
+import { FACE_WIDTH_MM, portCount, type FaceSide } from "./drawings/face-layout";
 import {
   drawingConnectorTypes,
   drawingSignals,
   fmtNumber,
-  portFamilies,
   totalPorts,
   type CatalogueLookup,
 } from "./catalogue-model";
@@ -52,26 +47,45 @@ function writeOpen(open: boolean) {
 }
 
 const FACES: { side: FaceSide; label: string }[] = [
-  { side: "FRONT", label: "Avant" },
-  { side: "REAR", label: "Arrière" },
+  { side: "FRONT", label: "Face avant" },
+  { side: "REAR", label: "Face arrière" },
 ];
 
-export function FacesPanel({ form, lookup }: { form: FormData; lookup: FacesLookup }) {
+const plural = (n: number, word: string) => `${n} ${word}${n > 1 ? "s" : ""}`;
+
+/** Nom dessiné sur les faces et le schéma : celui du formulaire, sinon « Nouvel équipement ». */
+export function drawnName(form: Pick<FormData, "name">): string {
+  return form.name.trim() || "Nouvel équipement";
+}
+
+export function FacesPanel({
+  form,
+  lookup,
+  hoverEntry: hoverProp,
+  onEntryHover,
+}: {
+  form: FormData;
+  lookup: FacesLookup;
+  /** Survol partagé avec le schéma de principe (sinon, état propre au bandeau). */
+  hoverEntry?: number | null;
+  onEntryHover?: (entry: number | null) => void;
+}) {
   const [open, setOpen] = useState(readOpen);
-  const [hoverEntry, setHoverEntry] = useState<number | null>(null);
+  const [ownHover, setOwnHover] = useState<number | null>(null);
+  const hoverEntry = hoverProp !== undefined ? hoverProp : ownHover;
+  const setHover = onEntryHover ?? setOwnHover;
 
   const connectors = form.connectorEntries;
   // L'éditeur passe un nouvel objet `lookup` à chaque rendu : mémo sur ses listes.
   const { connectorTypes: types, signals: sigs, functions: fns } = lookup;
   const connectorTypes = useMemo(() => drawingConnectorTypes({ connectorTypes: types }), [types]);
   const signals = useMemo(() => drawingSignals({ signals: sigs, functions: fns }), [sigs, fns]);
-  const families = portFamilies(connectors, lookup);
   const ports = totalPorts(connectors);
-  const name = form.name.trim() || "Sans nom";
+  const name = drawnName(form);
   const brand = lookup.brands?.find((b) => b.id === form.brandId)?.name ?? null;
   const dims = [form.dimLmm, form.dimWmm, form.dimHmm].filter((d): d is number => typeof d === "number" && d > 0);
   const summary = [
-    `${ports} port${ports > 1 ? "s" : ""}`,
+    plural(ports, "port"),
     form.isRackable ? `${fmtNumber(form.heightU)} U · ${fmtNumber(FACE_WIDTH_MM)} mm` : "pose libre",
   ].join(" · ");
 
@@ -83,117 +97,54 @@ export function FacesPanel({ form, lookup }: { form: FormData; lookup: FacesLook
   };
 
   return (
-    <section
-      aria-label="Faces et schéma"
-      className="rounded-lg border border-[var(--border)] bg-[var(--surface)]"
-    >
+    <section aria-label="Faces" className="rounded-[10px] border border-[var(--border)] bg-[var(--card)]">
       <header className={cn("flex items-center gap-2.5 px-3.5 py-2.5", open && "border-b border-[var(--border)]")}>
-        <h3 className="text-[12.5px] font-semibold text-[var(--foreground)]">Faces et schéma</h3>
+        <h2 className="m-0 text-[13px] font-bold text-[var(--foreground)]">Faces</h2>
         <span className="flex-1 truncate text-xs text-[var(--text-tertiary)] tabular-nums">{summary}</span>
         <button
           type="button"
           onClick={toggle}
           aria-expanded={open}
-          aria-label={`${open ? "Replier" : "Déplier"} le panneau Faces et schéma`}
+          aria-label={`${open ? "Replier" : "Déplier"} le bandeau des faces`}
           className="rounded-md p-1 text-[var(--muted-foreground)] transition-colors hover:bg-[var(--secondary)] hover:text-[var(--foreground)]"
         >
           <ChevronDown className={cn("h-4 w-4 transition-transform", !open && "-rotate-90")} />
         </button>
       </header>
       {open && (
-        <div
-          data-faces-body=""
-          className="grid max-h-[32vh] items-start gap-4 overflow-y-auto p-3.5 xl:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]"
-        >
-          <div className="grid min-w-0 gap-3">
-            {FACES.map(({ side, label }) => {
-              const empty = !connectors.some((c) => c.face === side);
-              return (
-                <div key={side} className="grid min-w-0 content-start gap-1.5">
-                  <span className="text-[11px] font-bold tracking-[0.08em] text-[var(--text-tertiary)] uppercase">
-                    {empty ? `${label} · sans connectique` : label}
-                  </span>
-                  <div className="rounded border border-[var(--border)] bg-[var(--strata-face-well)] p-2.5">
-                    <EquipmentFace
-                      equipment={{
-                        name,
-                        brand,
-                        heightU: form.heightU,
-                        isRackable: form.isRackable,
-                        dims: dims.length ? dims : null,
-                        connectors,
-                      }}
-                      face={side}
-                      connectorTypes={connectorTypes}
-                      signals={signals}
-                      hoverEntry={hoverEntry}
-                      onEntryHover={setHoverEntry}
-                    />
-                  </div>
+        <div data-faces-body="" className="grid items-start gap-3 p-3.5 lg:grid-cols-2">
+          {FACES.map(({ side, label }) => {
+            const n = connectors.filter((c) => c.face === side).reduce((a, c) => a + portCount(c), 0);
+            return (
+              <div
+                key={side}
+                className="grid min-w-0 content-start gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--strata-face-well)] px-3 pt-2 pb-3"
+              >
+                {/* Puits sombre dans les deux thèmes : encre des dessins de face. */}
+                <div className="flex justify-between gap-2 text-[11px] font-bold tracking-[0.06em] text-[var(--strata-face-ink-2)] uppercase">
+                  <span>{label}</span>
+                  <span className="tabular-nums">{n ? plural(n, "port") : "sans connectique"}</span>
                 </div>
-              );
-            })}
-          </div>
-          <div className="grid min-w-0 content-start gap-1.5">
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-              <span className="flex-1 text-[11px] font-bold tracking-[0.08em] text-[var(--text-tertiary)] uppercase">
-                Schéma de principe
-              </span>
-              {families.length > 0 && (
-                <ul
-                  aria-label="Familles de signal"
-                  className="flex flex-wrap gap-3 text-[11.5px] text-[var(--muted-foreground)] tabular-nums"
-                >
-                  {families.map((f) => (
-                    <li key={f.key} className="inline-flex items-center gap-1.5">
-                      <span aria-hidden className="h-1.5 w-1.5 shrink-0" style={{ background: f.color }} />
-                      {`${f.label} ${f.count}`}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-            <div>
-              <BlockDiagram
-                connectors={connectors}
-                connectorTypes={connectorTypes}
-                signals={signals}
-                name={name}
-                brand={brand}
-                is2110={form.is2110}
-                hoverEntry={hoverEntry}
-                onEntryHover={setHoverEntry}
-              />
-            </div>
-          </div>
+                <EquipmentFace
+                  equipment={{
+                    name,
+                    brand,
+                    heightU: form.heightU,
+                    isRackable: form.isRackable,
+                    dims: dims.length ? dims : null,
+                    connectors,
+                  }}
+                  face={side}
+                  connectorTypes={connectorTypes}
+                  signals={signals}
+                  hoverEntry={hoverEntry}
+                  onEntryHover={setHover}
+                />
+              </div>
+            );
+          })}
         </div>
       )}
     </section>
-  );
-}
-
-/**
- * Disposition de l'onglet Connectique en Strata : le panneau (hauteur propre,
- * plafonnée) puis l'onglet existant, qui prend le reste de la hauteur et garde
- * son unique zone de défilement (liste des ports, glisser-déposer). Hors
- * Strata, rend l'onglet tel quel (aucun élément ajouté au DOM).
- */
-export function StrataConnectivityLayout({
-  enabled,
-  panel,
-  children,
-}: {
-  enabled: boolean;
-  panel: ReactNode;
-  children: ReactNode;
-}) {
-  if (!enabled) return <>{children}</>;
-  return (
-    <div data-strata-connectivity="" className="flex h-full min-h-0 flex-col gap-4">
-      <div className="shrink-0">{panel}</div>
-      <div data-strata-connectivity-tab="" className="min-h-0 flex-1">
-        {children}
-      </div>
-    </div>
   );
 }
