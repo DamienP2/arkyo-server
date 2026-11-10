@@ -25,23 +25,28 @@
  * saisie (`inert`, comme l'opacité d'arkyo).
  *
  * « Utilisé dans » : aucune route ne donne l'usage d'une fiche (le 409 de la
- * suppression n'en donne que le total). On lit les régies (`GET /api/rigs`,
- * leurs baies et leurs emplacements, fantômes d'inventaire compris) et les
- * noms des projets (`GET /api/tenant/projects`), routes existantes.
+ * suppression n'en donne que le total). La garde du serveur compte toutes les
+ * lignes `RackInventoryItem` et `RackSlot` de la fiche ; chaque exemplaire
+ * d'inventaire a son emplacement (fantôme tant qu'il n'est pas placé). On lit
+ * donc, par des routes existantes, les régies (`GET /api/rigs`, leurs baies et
+ * leurs emplacements), les baies hors régie (`GET /api/racks?unassigned=true`,
+ * modèles de contenants) et les noms des projets (`GET /api/tenant/projects`).
  *
  * Hors Strata (`enabled` faux), rend `children` tel quel : aucun élément
  * ajouté au DOM.
  */
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { FormData } from "@/app/(app)/admin/equipment/[id]/_editor/types";
 import { EditorStatusBadge } from "@/components/catalogue/editor-status-badge";
 import type { AutosaveStatus } from "@/components/catalogue/use-editor-autosave";
 import { useTenantPermissions } from "@/components/tenant-permissions-context";
-import { ArrowLeft, Copy, Folder, Loader2, Redo2, Save, Trash2, Undo2 } from "@/components/ui/icons";
+import { EmptyState } from "@/components/ui/empty-state";
+import { ArrowLeft, Copy, Folder, Loader2, Package, Redo2, Save, Trash2, Undo2 } from "@/components/ui/icons";
 import { LoadingState } from "@/components/ui/loading-state";
+import { useToast } from "@/components/ui/toast";
 import { api, getApiErrorMessage } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
 import {
@@ -56,7 +61,7 @@ import { useCatalogueActions } from "../catalogue/catalogue-actions";
 import { ColorMark, DrawingWell, FamilyBar } from "../catalogue/catalogue-ui";
 import { BlockDiagram } from "../drawings/block-diagram";
 import { drawnName, FacesPanel } from "../faces-panel";
-import { Box, Kv, Pill, SMALL_BTN } from "../manage/manage-ui";
+import { Box, Kv, Pill, PRIMARY_SMALL_BTN, SMALL_BTN } from "../manage/manage-ui";
 
 export type EquipmentEditorLayoutProps = {
   /** Interface Strata : sinon, `children` est rendu tel quel. */
@@ -95,6 +100,7 @@ function StrataEquipmentEditor({
   children,
 }: EquipmentEditorLayoutProps) {
   const router = useRouter();
+  const toast = useToast();
   const { has } = useTenantPermissions();
   const readOnly = consultation || !has("catalog", "write");
   const isEdit = equipmentId !== null;
@@ -108,10 +114,20 @@ function StrataEquipmentEditor({
     removeLocal: () => router.push(CATALOGUE),
   });
 
+  const settled = useSettledStatus(autosave.status);
   const duplicate = async () => {
     if (!equipmentId) return;
-    // La copie part de la fiche enregistrée : on enregistre d'abord la saisie en attente.
-    if (autosave.status === "dirty") await autosave.forceSave();
+    // La copie part de la fiche enregistrée : saisie en attente, enregistrement
+    // en cours ou en échec, on enregistre d'abord (forceSave) et on attend
+    // l'issue ; un échec annule la duplication.
+    if (autosave.status === "dirty" || autosave.status === "saving" || autosave.status === "error") {
+      await autosave.forceSave();
+      const outcome = await settled();
+      if (outcome === "error" || outcome === "timeout") {
+        toast.error("Échec de l'enregistrement : la fiche n'a pas été dupliquée.");
+        return;
+      }
+    }
     await actions.duplicate({ id: equipmentId });
   };
 
@@ -160,7 +176,14 @@ function StrataEquipmentEditor({
               </button>
             )}
             <span className="inline-flex items-center gap-1">
-              <button type="button" onClick={history.undo} disabled={!history.canUndo} title="⌘Z" className={SMALL_BTN}>
+              <button
+                type="button"
+                onClick={history.undo}
+                disabled={!history.canUndo}
+                aria-label="Annuler la dernière modification"
+                title="Annuler la dernière modification (⌘Z)"
+                className={SMALL_BTN}
+              >
                 <Undo2 className="h-3.5 w-3.5" />
                 Annuler
               </button>
@@ -193,7 +216,7 @@ function StrataEquipmentEditor({
               type="button"
               onClick={() => void create.onSave()}
               disabled={create.saving || !form.name.trim()}
-              className="inline-flex h-7 shrink-0 items-center gap-1.5 rounded-md bg-[var(--accent)] px-3 text-[12px] font-semibold text-[var(--accent-foreground)] transition-opacity outline-none hover:opacity-90 focus-visible:ring-2 focus-visible:ring-[var(--ring)] disabled:cursor-not-allowed disabled:opacity-50"
+              className={PRIMARY_SMALL_BTN}
             >
               {create.saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
               Enregistrer
@@ -227,6 +250,45 @@ function StrataEquipmentEditor({
         </div>
       </div>
     </div>
+  );
+}
+
+/** Délai au-delà duquel un enregistrement qui ne se termine pas compte comme un échec. */
+const SAVE_WAIT_MS = 15000;
+
+/**
+ * Attente de l'issue de l'autosave : la promesse se résout au premier état
+ * stable (ni `dirty` ni `saving`) rendu après l'appel, ou à `"timeout"`
+ * (enregistrement désactivé, par exemple sans nom). `forceSave` d'arkyo avale
+ * ses erreurs : l'issue se lit dans l'état.
+ */
+function useSettledStatus(status: AutosaveStatus) {
+  const statusRef = useRef(status);
+  const waiters = useRef<((s: AutosaveStatus | "timeout") => void)[]>([]);
+  useEffect(() => {
+    statusRef.current = status;
+    if (status === "dirty" || status === "saving") return;
+    const pending = waiters.current;
+    waiters.current = [];
+    for (const resolve of pending) resolve(status);
+  }, [status]);
+  useEffect(() => () => waiters.current.splice(0).forEach((resolve) => resolve("timeout")), []);
+  return useCallback(
+    () =>
+      new Promise<AutosaveStatus | "timeout">((resolve) => {
+        const s = statusRef.current;
+        if (s !== "dirty" && s !== "saving") return resolve(s);
+        let done = false;
+        const finish = (v: AutosaveStatus | "timeout") => {
+          if (done) return;
+          done = true;
+          clearTimeout(timer);
+          resolve(v);
+        };
+        const timer = setTimeout(() => finish("timeout"), SAVE_WAIT_MS);
+        waiters.current.push(finish);
+      }),
+    [],
   );
 }
 
@@ -316,18 +378,30 @@ type Rig = {
   projectId?: string | null;
   rigRacks?: { rack?: { slots?: RigSlot[] } | null }[];
 };
+type LooseRack = { id: string; slots?: RigSlot[] };
 
 export type Usage = { key: string; name: string; template: boolean; count: number };
 
+/** Mention d'un groupe de modèles (rien pour un projet). */
+function usageKind(u: Usage): string | null {
+  if (!u.template) return null;
+  return u.key === "contenants" ? null : "Modèle de régie";
+}
+
+/** Groupe des baies rattachées à aucune régie. */
+const CONTAINERS = "Modèles de contenants";
+
 /**
- * Exemplaires de la fiche `id` par projet (régies du projet) et par modèle de
- * régie (régie hors projet) : emplacements de leurs baies, fantômes
+ * Exemplaires de la fiche `id` par projet (régies du projet), par modèle de
+ * régie (régie hors projet) et, pour les baies rattachées à aucune régie, dans
+ * « Modèles de contenants » : emplacements de leurs baies, fantômes
  * d'inventaire compris, chaque emplacement compté une fois par groupe.
  */
 export function usageOf(
   id: string,
   rigs: readonly Rig[],
   projects: readonly { id: string; name: string }[],
+  looseRacks: readonly LooseRack[] = [],
 ): Usage[] {
   const projectName = new Map(projects.map((p) => [p.id, p.name]));
   const groups = new Map<string, { name: string; template: boolean; slots: Set<string> }>();
@@ -341,6 +415,10 @@ export function usageOf(
     const g = groups.get(key) ?? { name, template: !rig.projectId, slots: new Set<string>() };
     for (const s of slots) g.slots.add(s.id);
     groups.set(key, g);
+  }
+  const loose = looseRacks.flatMap((r) => r.slots ?? []).filter((s) => s.catalogEquipmentId === id);
+  if (loose.length) {
+    groups.set("contenants", { name: CONTAINERS, template: true, slots: new Set(loose.map((s) => s.id)) });
   }
   return [...groups.entries()]
     .map(([key, g]) => ({ key, name: g.name, template: g.template, count: g.slots.size }))
@@ -357,10 +435,14 @@ function UsedIn({ equipmentId }: { equipmentId: string }) {
     Promise.all([
       api.get<Rig[]>("/api/rigs"),
       api.get<{ projects?: { id: string; name: string }[] }>("/api/tenant/projects"),
+      api.get<LooseRack[]>("/api/racks?unassigned=true"),
     ])
-      .then(([rigs, projects]) => {
+      .then(([rigs, projects, loose]) => {
         if (cancelled) return;
-        setState({ kind: "ready", usage: usageOf(equipmentId, rigs ?? [], projects?.projects ?? []) });
+        setState({
+          kind: "ready",
+          usage: usageOf(equipmentId, rigs ?? [], projects?.projects ?? [], loose ?? []),
+        });
       })
       .catch((e) => {
         if (!cancelled) setState({ kind: "error", message: getApiErrorMessage(e, "Lecture impossible.") });
@@ -387,14 +469,14 @@ function UsedIn({ equipmentId }: { equipmentId: string }) {
       ) : state.kind === "error" ? (
         <p className="m-0 text-[12.5px] text-[var(--muted-foreground)]">{state.message}</p>
       ) : state.usage.length === 0 ? (
-        <p className="m-0 text-[12.5px] text-[var(--muted-foreground)]">Aucun projet.</p>
+        <EmptyState icon={<Package strokeWidth={1.5} />} title="Non utilisé" className="gap-2 py-4" />
       ) : (
         <ul aria-label="Utilisé dans" className="m-0 flex list-none flex-col gap-1.5 p-0 text-[12.5px]">
           {state.usage.map((u) => (
             <li key={u.key} className="flex items-center gap-2">
               <Folder aria-hidden className="h-3.5 w-3.5 shrink-0 text-[var(--muted-foreground)]" />
               <span className="min-w-0 flex-1 truncate text-[var(--foreground)]">{u.name}</span>
-              {u.template && <span className="text-[11.5px] text-[var(--muted-foreground)]">Modèle de régie</span>}
+              {usageKind(u) && <span className="text-[11.5px] text-[var(--muted-foreground)]">{usageKind(u)}</span>}
               <span className="font-mono text-[11.5px] text-[var(--muted-foreground)] tabular-nums">{u.count}</span>
             </li>
           ))}

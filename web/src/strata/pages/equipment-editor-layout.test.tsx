@@ -153,6 +153,7 @@ function editorApi(iface: "strata" | "classique", extra: Api = {}): Api {
     }),
     "GET /api/rigs": { body: RIGS },
     "GET /api/tenant/projects": { body: PROJECTS },
+    "GET /api/racks?unassigned=true": { body: [] },
     ...extra,
   };
 }
@@ -163,6 +164,7 @@ async function openEditor(url = "/admin/catalogue/equipment/e1", api: Api = edit
   return app;
 }
 
+const UNDO = "Annuler la dernière modification";
 const bar = () => screen.getByRole("toolbar", { name: "Barre d'actions" });
 const aside = () => screen.getByRole("complementary", { name: "Aperçu" });
 const strip = () => screen.getByRole("region", { name: "Faces" });
@@ -231,12 +233,48 @@ describe("éditeur d'équipement pleine page", () => {
     expect(within(aside()).getByText("3 exemplaires")).toBeInTheDocument();
   });
 
+  test("aperçu : une baie hors régie compte dans « Modèles de contenants »", async () => {
+    await openEditor(
+      "/admin/catalogue/equipment/e1",
+      editorApi("strata", {
+        "GET /api/rigs": { body: [] },
+        "GET /api/racks?unassigned=true": {
+          body: [
+            {
+              id: "r9",
+              name: "Contenant 12U",
+              rigs: [],
+              slots: [
+                { id: "s9", rackId: "r9", catalogEquipmentId: "e1", startU: 2 },
+                { id: "s10", rackId: "r9", catalogEquipmentId: "x9", startU: 5 },
+              ],
+            },
+          ],
+        },
+      }),
+    );
+    const used = await within(aside()).findByRole("list", { name: "Utilisé dans" });
+    expect(
+      within(used)
+        .getAllByRole("listitem")
+        .map((li) => li.textContent),
+    ).toEqual(["Modèles de contenants1"]);
+    expect(within(aside()).getByText("1 exemplaire")).toBeInTheDocument();
+  });
+
+  test("aperçu : fiche utilisée nulle part, « Non utilisé »", async () => {
+    await openEditor("/admin/catalogue/equipment/e1", editorApi("strata", { "GET /api/rigs": { body: [] } }));
+    expect(await within(aside()).findByText("Non utilisé")).toBeInTheDocument();
+    expect(within(aside()).getByText("0 exemplaire")).toBeInTheDocument();
+    expect(within(aside()).queryByRole("list", { name: "Utilisé dans" })).toBeNull();
+  });
+
   test("barre : état d'enregistrement de useEditorAutosave, Annuler/Rétablir, ⌘S → forceSave", async () => {
     const { fetchSpy } = await openEditor();
     const b = within(bar());
     expect(b.getByRole("link", { name: "Catalogue" })).toHaveAttribute("href", "/admin/catalogue?tab=equipment&id=e1");
     expect(b.getByRole("heading", { name: "HDC-5500" })).toBeInTheDocument();
-    expect(b.getByRole("button", { name: "Annuler" })).toBeDisabled();
+    expect(b.getByRole("button", { name: UNDO })).toBeDisabled();
     expect(b.getByRole("button", { name: "Rétablir" })).toBeDisabled();
     // L'en-tête d'arkyo est remplacé par la barre (pas de « Fermer » en double).
     expect(screen.queryByRole("button", { name: "Fermer" })).toBeNull();
@@ -257,8 +295,8 @@ describe("éditeur d'équipement pleine page", () => {
 
     // Annuler / Rétablir : l'historique d'arkyo.
     act(() => name.blur());
-    await waitFor(() => expect(b.getByRole("button", { name: "Annuler" })).toBeEnabled());
-    fireEvent.click(b.getByRole("button", { name: "Annuler" }));
+    await waitFor(() => expect(b.getByRole("button", { name: UNDO })).toBeEnabled());
+    fireEvent.click(b.getByRole("button", { name: UNDO }));
     await waitFor(() => expect(name.value).toBe("HDC-5500"));
     expect(b.getByRole("button", { name: "Rétablir" })).toBeEnabled();
     fireEvent.click(b.getByRole("button", { name: "Rétablir" }));
@@ -281,6 +319,55 @@ describe("éditeur d'équipement pleine page", () => {
     await waitFor(() => expect(router.state.location.pathname).toBe("/admin/catalogue/equipment/e2"));
     expect(posted).toEqual(["e1"]);
     expect(await screen.findByText("Équipement dupliqué.")).toBeInTheDocument();
+  });
+
+  test("barre : Dupliquer enregistre d'abord la saisie en attente", async () => {
+    const calls: string[] = [];
+    const { router } = await openEditor(
+      "/admin/catalogue/equipment/e1",
+      editorApi("strata", {
+        "PATCH /api/tenant/catalogue/equipment/e1": (init) => {
+          calls.push(`PATCH ${JSON.parse(String(init?.body)).name}`);
+          return { body: { ...ITEM, ...JSON.parse(String(init?.body)) } };
+        },
+        "POST /api/tenant/catalogue/equipment/e1/duplicate": () => {
+          calls.push("POST duplicate");
+          return { status: 201, body: { id: "e2" } };
+        },
+        "GET /api/tenant/catalogue/equipment/e2": { body: { ...DETAIL, item: { ...ITEM, id: "e2" } } },
+      }),
+    );
+    const name = screen.getByPlaceholderText("BRC-X400") as HTMLInputElement;
+    act(() => name.focus());
+    fireEvent.change(name, { target: { value: "HDC-5500 B" } });
+    await waitFor(() => expect(within(bar()).getByRole("status")).toHaveTextContent("Modifications non enregistrées"));
+
+    fireEvent.click(within(bar()).getByRole("button", { name: "Dupliquer" }));
+    await waitFor(() => expect(router.state.location.pathname).toBe("/admin/catalogue/equipment/e2"));
+    expect(calls).toEqual(["PATCH HDC-5500 B", "POST duplicate"]);
+  });
+
+  test("barre : Dupliquer renonce si l'enregistrement échoue", async () => {
+    const posted: string[] = [];
+    const { router } = await openEditor(
+      "/admin/catalogue/equipment/e1",
+      editorApi("strata", {
+        "PATCH /api/tenant/catalogue/equipment/e1": { status: 500, body: { error: "Erreur serveur" } },
+        "POST /api/tenant/catalogue/equipment/e1/duplicate": () => {
+          posted.push("e1");
+          return { status: 201, body: { id: "e2" } };
+        },
+      }),
+    );
+    const name = screen.getByPlaceholderText("BRC-X400") as HTMLInputElement;
+    act(() => name.focus());
+    fireEvent.change(name, { target: { value: "HDC-5500 B" } });
+    await waitFor(() => expect(within(bar()).getByRole("status")).toHaveTextContent("Modifications non enregistrées"));
+
+    fireEvent.click(within(bar()).getByRole("button", { name: "Dupliquer" }));
+    expect(await screen.findByText("Échec de l'enregistrement : la fiche n'a pas été dupliquée.")).toBeInTheDocument();
+    expect(posted).toEqual([]);
+    expect(router.state.location.pathname).toBe("/admin/catalogue/equipment/e1");
   });
 
   test("barre : Supprimer confirme, refuse un équipement utilisé (409) puis revient au catalogue", async () => {
@@ -362,49 +449,71 @@ function baseForm(): FormData {
   return { ...initialForm(null), name: "HDC-5500", connectorEntries: [ITEM.connectors[0] as FormData["connectorEntries"][number]] };
 }
 
+const noop = () => {};
+
+/** La mise en page seule, avec ses fournisseurs (thème, confirmation, permissions). */
+function renderLayout(perms: typeof OWNER_PERMS | typeof TECH_PERMS) {
+  mockApi({ ...editorApi("strata"), "GET /api/tenant/me/permissions": { body: perms } });
+  const router = createMemoryRouter(
+    [
+      {
+        path: "*",
+        element: (
+          <ThemeProvider>
+            <TenantPermissionsProvider initialPermissions={perms as TenantPermissions}>
+              <EquipmentEditorLayout
+                enabled
+                equipmentId="e1"
+                form={baseForm()}
+                lookup={{ connectorTypes: [], signals: [], functions: [], brands: [] }}
+                autosave={{ status: "idle", lastSavedAt: null, forceSave: async () => {} }}
+                history={{ canUndo: true, canRedo: true, undo: noop, redo: noop }}
+                create={{ onSave: noop, saving: false }}
+                readOnly={false}
+              >
+                <div>formulaire</div>
+              </EquipmentEditorLayout>
+            </TenantPermissionsProvider>
+          </ThemeProvider>
+        ),
+      },
+    ],
+    { initialEntries: ["/admin/catalogue/equipment/e1"] },
+  );
+  return render(<RouterProvider router={router} />);
+}
+
 describe("EquipmentEditorLayout", () => {
   afterEach(resetApp);
 
   test("lecture seule : barre sans édition", async () => {
-    mockApi({ ...editorApi("strata"), "GET /api/tenant/me/permissions": { body: TECH_PERMS } });
-    const noop = () => {};
-    const router = createMemoryRouter(
-      [
-        {
-          path: "*",
-          element: (
-            <ThemeProvider>
-              <TenantPermissionsProvider initialPermissions={TECH_PERMS as TenantPermissions}>
-                <EquipmentEditorLayout
-                  enabled
-                  equipmentId="e1"
-                  form={baseForm()}
-                  lookup={{ connectorTypes: [], signals: [], functions: [], brands: [] }}
-                  autosave={{ status: "idle", lastSavedAt: null, forceSave: async () => {} }}
-                  history={{ canUndo: true, canRedo: true, undo: noop, redo: noop }}
-                  create={{ onSave: noop, saving: false }}
-                  readOnly={false}
-                >
-                  <div>formulaire</div>
-                </EquipmentEditorLayout>
-              </TenantPermissionsProvider>
-            </ThemeProvider>
-          ),
-        },
-      ],
-      { initialEntries: ["/admin/catalogue/equipment/e1"] },
-    );
-    render(<RouterProvider router={router} />);
+    renderLayout(TECH_PERMS);
 
     const b = within(await screen.findByRole("toolbar", { name: "Barre d'actions" }));
     expect(b.getByRole("link", { name: "Catalogue" })).toBeInTheDocument();
     expect(b.getByText("Lecture seule")).toBeInTheDocument();
-    for (const name of ["Annuler", "Rétablir", "Dupliquer", "Supprimer", "Enregistrer"]) {
+    for (const name of [UNDO, "Annuler", "Rétablir", "Dupliquer", "Supprimer", "Enregistrer"]) {
       expect(b.queryByRole("button", { name })).toBeNull();
     }
     // Comme le mode consultation d'arkyo : le formulaire ne reçoit plus la saisie.
     expect(formColumn().querySelector("[inert]")).not.toBeNull();
     // Le dessin reste consultable.
     expect(within(strip()).getByRole("img", { name: "Face arrière HDC-5500" })).toBeInTheDocument();
+  });
+
+  test("survol d'un port des faces : repris dans le schéma de l'aperçu", async () => {
+    renderLayout(OWNER_PERMS);
+    const rear = await within(await screen.findByRole("region", { name: "Faces" })).findByRole("img", {
+      name: "Face arrière HDC-5500",
+    });
+    const schema = within(aside()).getByRole("img", { name: "Schéma de principe HDC-5500" });
+    expect(schema.querySelector('[data-entry="0"]')).not.toHaveAttribute("data-hover");
+    fireEvent.mouseEnter(rear.querySelector('[data-entry="0"]')!);
+    expect(schema.querySelector('[data-entry="0"]')).toHaveAttribute("data-hover");
+    fireEvent.mouseLeave(rear.querySelector('[data-entry="0"]')!);
+    expect(schema.querySelector('[data-entry="0"]')).not.toHaveAttribute("data-hover");
+    // Et dans l'autre sens.
+    fireEvent.mouseEnter(schema.querySelector('[data-entry="0"]')!);
+    expect(rear.querySelector('[data-entry="0"]')).toHaveAttribute("data-hover");
   });
 });

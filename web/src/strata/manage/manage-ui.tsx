@@ -17,6 +17,10 @@ export const SECTION_LABEL = "text-[10.5px] font-bold tracking-[0.08em] text-[va
 export const SMALL_BTN =
   "inline-flex h-7 shrink-0 items-center gap-1.5 rounded-md border border-[var(--border)] bg-[var(--card)] px-2.5 text-[12px] font-medium text-[var(--foreground)] transition-colors outline-none hover:bg-[var(--muted)] focus-visible:ring-2 focus-visible:ring-[var(--ring)] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-[var(--card)]";
 
+/** Bouton principal de taille réduite (maquette `.btn.small.primary`) : l'action d'enregistrement. */
+export const PRIMARY_SMALL_BTN =
+  "inline-flex h-7 shrink-0 items-center gap-1.5 rounded-md bg-[var(--accent)] px-3 text-[12px] font-semibold text-[var(--accent-foreground)] transition-opacity outline-none hover:opacity-90 focus-visible:ring-2 focus-visible:ring-[var(--ring)] disabled:cursor-not-allowed disabled:opacity-50";
+
 /** Bouton « Ajouter » : toujours en pointillés (règle d'arkyo), jamais plein. */
 export const ADD_BTN =
   "inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md border-2 border-dashed border-[var(--border-strong)] px-3 text-[12.5px] font-medium text-[var(--foreground)] transition-colors outline-none hover:border-[var(--accent)] hover:bg-[var(--accent-soft)] focus-visible:ring-2 focus-visible:ring-[var(--ring)]";
