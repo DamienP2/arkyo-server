@@ -1,6 +1,6 @@
 /**
- * Modèle d'un contenant pour l'inspecteur, le dock bas et la vue Connectique
- * (interface Strata, spec §6.2, lot 3) : données de `canvas-data`, slots à
+ * Modèle d'un contenant pour les tiroirs de Concevoir et le détail de Gérer
+ * (interface Strata v2) : données de `canvas-data`, slots à
  * jour et câbles (`GET /api/racks/{rackId}/connections`).
  *
  * Index de port : un câble désigne un port par son index « à plat » dans la
@@ -171,25 +171,6 @@ export function cableAt(
   return null;
 }
 
-/** Câbles d'un slot sur une face, avec la clé du port de ce slot. */
-export function slotCablesOnFace(
-  slot: Slot,
-  face: "FRONT" | "REAR",
-  connections: readonly RackConnectionRow[] | null,
-): { cable: RackConnectionRow; side: Side; key: string }[] {
-  const entries = slotConnectors(slot);
-  const out: { cable: RackConnectionRow; side: Side; key: string }[] = [];
-  for (const c of connections ?? []) {
-    for (const side of ["from", "to"] as const) {
-      const key = portOnSlot(c, side, slot);
-      if (!key) continue;
-      const e = entries[Number(key.split(":")[0])];
-      if (e?.face === face) out.push({ cable: c, side, key });
-    }
-  }
-  return out;
-}
-
 /**
  * Nom d'une extrémité de câble (`"CAM 1 · SDI 2"`). Un slot absent des slots
  * connus (autre contenant du lieu, élément supprimé) est nommé sans port.
@@ -211,15 +192,6 @@ export function endName(c: RackConnectionRow, side: Side, slotsById: ReadonlyMap
 /** Index des slots (premier niveau et étagères) par id. */
 export function slotsIndex(slots: readonly Slot[]): Map<string, Slot> {
   return new Map(flattenSlots(slots).map((s) => [s.id, s]));
-}
-
-/** Ordre naturel des repères (`V-0102` avant `V-0110`), sans numéro en dernier. */
-const collator = new Intl.Collator("fr", { numeric: true, sensitivity: "base" });
-export function byCableLabel(a: RackConnectionRow, b: RackConnectionRow): number {
-  const la = a.label?.trim();
-  const lb = b.label?.trim();
-  if (!la || !lb) return la ? -1 : lb ? 1 : 0;
-  return collator.compare(la, lb);
 }
 
 /** Référentiels du catalogue tels que `canvas-data` les fournit (familles = fonctions). */

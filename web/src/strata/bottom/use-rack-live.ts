@@ -1,12 +1,12 @@
 "use client";
 
 /**
- * Données vivantes d'un contenant pour l'inspecteur, le dock bas et la vue
- * Connectique (interface Strata) :
+ * Données vivantes d'un contenant pour les tiroirs de Concevoir et les pages
+ * de Gérer (interface Strata v2) :
  *   - ses câbles (`GET /api/racks/{rackId}/connections`) ;
  *   - au besoin son `canvas-data` (`GET /api/tenant/projects/{id}/racks/
  *     {rackId}/canvas-data`), quand le canevas du rack, qui le charge
- *     d'ordinaire, n'est pas monté (vue Connectique).
+ *     d'ordinaire, n'est pas monté (tiroir du synoptique, Gérer).
  *
  * Une seule lecture par contenant, partagée par tous les abonnés ; les câbles
  * ne sont lus que si un abonné au moins les demande (Gérer ne lit que le

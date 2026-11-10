@@ -1,6 +1,6 @@
 /**
- * Jeu de données d'un contenant pour les tests Strata du lot 3 (inspecteur,
- * dock bas, vue Connectique).
+ * Jeu de données d'un contenant pour les tests Strata (tiroirs de Concevoir,
+ * pages de Gérer).
  *
  * Réponse `canvas-data` reprise des tests de la phase 4b
  * (`app/(fullscreen)/project/rack-tab.test.tsx` : `CAMERA`, `SLOT`,
