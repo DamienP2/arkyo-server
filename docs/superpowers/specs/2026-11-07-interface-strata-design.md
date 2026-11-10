@@ -3,6 +3,7 @@
 > Date : 2026-11-07 · Statut : à valider par Damien
 > Branche : `ui-strata` (worktree séparé), rebasée régulièrement sur `main`
 > Maquette de référence : « Strata Arkyo Plateau-Atelier » (https://claude.ai/artifact/P6UbrhCa5WZqiGGugjvBSV), issue des quatre propositions UI/UX du 7 novembre (concepts Plateau et Atelier retenus)
+> Remplacée en partie : les §6 et §7 (interface v1 : docks, lentilles, grilles) sont remplacés par la spec v2 `2026-11-09-interface-strata-v2-design.md` ; le reste reste valable.
 
 ## 1. Intention
 
@@ -114,6 +115,8 @@ Toute autre modification d'un fichier copié est refusée en relecture.
 
 ## 6. Ce que montre l'interface Strata
 
+> **Remplacé par la spec v2** (`2026-11-09-interface-strata-v2-design.md`, §4 et §5). L'interface Strata v1 décrite ici (docks, lentilles, grilles du catalogue, accueil en cartes) a été retirée ; ce paragraphe ne reste que pour l'historique.
+
 ### 6.1 Coquille générale (lot 1)
 - **Topbar 46 px** façon Strata Graphics, de gauche à droite :
   - lockup, puis nom du site ;
@@ -165,6 +168,8 @@ Toute autre modification d'un fichier copié est refusée en relecture.
   - La création et l'édition ouvrent les éditeurs existants. Dans la fiche équipement, un panneau « Faces et schéma » s'ajoute au-dessus de l'onglet Connectique ; il est mis à jour en direct pendant la saisie.
 
 ## 7. Où vit chaque fonction
+
+> **Remplacé par la spec v2** (`2026-11-09-interface-strata-v2-design.md`, §7). La table ci-dessous est celle de la v1, gardée pour l'historique ; la table qui fait foi pour l'interface Strata est le §7 de la spec v2, vérifiée ligne à ligne par `web/src/strata/shell/function-map.test.tsx`. Le reste de cette spec (réglage, contexte, règle « deux interfaces », liste fermée des accroches du §5.2 amendée par la v2 §5.1) reste valable.
 
 | Fonction | Classique | Strata |
 | --- | --- | --- |

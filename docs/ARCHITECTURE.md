@@ -99,36 +99,38 @@ Le produit s'affiche « Strata Arkyo » ; seuls les noms affichés changent, jam
 
 ## Deux interfaces (Classique / Strata)
 
-Le site choisit son interface dans Administration › Système. **Classique** est le recodage fidèle d'arkyo ; **Strata** refond la présentation sans toucher aux fonctions ni à l'API. Spec : `docs/superpowers/specs/2026-11-07-interface-strata-design.md`.
+Le site choisit son interface dans Administration › Système. **Classique** est le recodage fidèle d'arkyo ; **Strata** refond la présentation sans toucher aux fonctions ni à l'API. L'interface Strata en place est la **v2 « Concevoir / Gérer »** : spec `docs/superpowers/specs/2026-11-09-interface-strata-v2-design.md`, dont la table « Où vit chaque fonction » (§7) fait foi. La spec v1 (`2026-11-07-interface-strata-design.md`) reste valable pour le réglage, le contexte et la liste fermée des accroches ; ses §6 et §7 (docks, lentilles, grilles) sont remplacés. Suivi : `docs/superpowers/plans/2026-11-09-interface-strata-v2-suivi.md`.
 
 - **Réglage.** Clé `ui.interface` de `AppConfig` (`classique`, défaut quand la clé est absente, ou `strata`). Pas de migration. Comme `site.*`, elle n'entre pas dans l'export de sauvegarde au format arkyo.
   - `GET /api/site` renvoie `{ name, logoUrl, interface }`.
   - `PUT /api/system/interface` `{ "interface": "strata" }` : garde `settings:admin`, évènement `("config", "updated")`, `204`. Toute autre valeur donne `400 { "error": "Interface inconnue." }`.
-  - Les sessions ouvertes basculent sans rechargement : `AppSync` rafraîchit à chaque évènement et la coquille relit `/api/site`.
+  - Les sessions ouvertes basculent sans rechargement : `AppSync` rafraîchit à chaque évènement et la coquille relit `/api/site`. Une bascule ne remonte ni la page ouverte ni le canevas de l'éditeur.
 - **Contexte.** `web/src/strata/interface-context.tsx` fournit `InterfaceProvider` et `useInterface()` (`"classique"` hors provider) ; le provider pose `data-interface` sur `<html>`, ce qui active le bloc `[data-interface="strata"]` de `globals.css`.
-- **Points d'accroche dans les fichiers copiés.** Liste fermée, chacun commenté `// arkyo-server: interface Strata` et sans effet en Classique. Toute autre modification d'un fichier copié est refusée en relecture.
+- **Ce que montre Strata v2.**
+  - *Hors projet* : topbar 46 px `Projets` · `Catalogue` · `Administration ▾` (mêmes routes et permissions que le rail, pas de barre latérale), palette ⌘K, présence, notifications, langue, thème, profil. Page Projets en liste + détail ; catalogue en liste + détail (équipements, cordons, adaptateurs, modèles) ; éditeur d'équipement pleine page ; pages d'administration d'arkyo dans la coquille.
+  - *Dans un projet, deux espaces* portés par l'URL : **Concevoir** (`?tab=synoptique|rack|…`, même stockage local qu'arkyo) pose le canevas sur toute la surface, avec la barre d'outils d'arkyo flottante, un sélecteur de mode (Synoptique, Racks, Plan, Lumière, Schémas), un tiroir à droite pour l'objet sélectionné (carte Faces, bibliothèque en mode Racks) et un bandeau de validation ; **Gérer** (`?space=gerer&page=…&sel=…`) donne des pages liste + détail : Vue d'ensemble (« Ce qu'il reste à faire »), Fiche, Matériel, Câbles (mode tableau), et les bouchons Réseau, Livraison, Dossier. En Gérer, le canevas de Concevoir est démonté.
+- **Points d'accroche dans les fichiers copiés.** Liste fermée (spec v1 §5.2, amendée par la spec v2 §5.1), chacun commenté `// arkyo-server: interface Strata` et sans effet en Classique. Toute autre modification d'un fichier copié est refusée en relecture.
 
 | Fichier | Accroche |
 | --- | --- |
-| `app/(app)/app-layout.tsx` | provider ; en Strata, `StrataTopbar` et `StrataSideNav` à la place de `Topbar` et `Sidebar`, `<Outlet/>` à la même place (une bascule ne remonte pas la page) ; dernière interface connue si `/api/site` échoue |
+| `app/(app)/app-layout.tsx` | provider ; en Strata, `TopbarV2` à la place de `Topbar` et pas de `Sidebar`, `<Outlet/>` à la même place (une bascule ne remonte pas la page) ; dernière interface connue si `/api/site` échoue |
 | `app/(fullscreen)/fullscreen-layout.tsx` | provider seulement |
-| `components/editor-shell/editor-shell.tsx` | en Strata, délègue à `StrataEditorShell` avec les mêmes slots ; type `EditorShellSlots` : champ optionnel `strata?: { leftDockTabs; bottomDock }` |
-| `_editor/project-global-topbar.tsx` | en Strata, `StrataProjectTopbar` avec les mêmes props |
+| `components/editor-shell/editor-shell.tsx` | canevas monté une fois dans un hôte stable (`useCanvasStage`) ; en Strata, `StrataCanvasShell` avec les mêmes slots ; type `EditorShellSlots` : champ optionnel `strata?: { drawerTop?; mode?: "canvas" \| "page" }` |
+| `_editor/project-global-topbar.tsx` | en Strata, `ProjectTopbarV2` (Concevoir · Gérer, menu Vues, ⌘K) avec les mêmes props |
+| `project-editor.tsx` | espace Gérer (`ManageShell`) quand `?space=gerer` ; tiroir du mode Racks (`strata.drawerTop`) ; `strata.mode = "page"` pour Inventaire, Préparation, Réseau, Recette ; état d'enregistrement transmis à la topbar ; raccourcis de l'Inventaire coupés en Gérer |
+| `synoptique/synoptique-tab-client.tsx` | carte Faces de l'objet sélectionné dans `strata.drawerTop`, ouverture du tiroir à la sélection |
 | `components/layout/topbar.tsx` | exports des menus internes (notifications, langue, profil, rôle) |
 | `admin/systeme/systeme-page.tsx` | section « Interface » |
-| `admin/equipment/[id]/equipment-editor.tsx` | en Strata, `EquipmentEditorLayout` (éditeur pleine page : barre d'actions, bandeau des faces, aperçu) autour du contenu, en-tête d'arkyo remplacé par la barre |
-| `project-editor.tsx` (`getEditorSlots`) | bibliothèque en dock gauche, face de l'équipement dans l'inspecteur (rack et inventaire), dock bas, vue Connectique ; état d'enregistrement transmis à la topbar Strata |
+| `admin/equipment/[id]/equipment-editor.tsx` | en Strata, `EquipmentEditorLayout` (éditeur pleine page : barre d'actions, bandeau des faces, aperçu, « Utilisé dans ») autour du contenu, en-tête d'arkyo remplacé par la barre |
 | `app/globals.css` | bloc `[data-interface="strata"]` et variables `--strata-face-*` (clair et sombre) |
-| `admin/catalogue/_components/{equipment,cables,adapters}-list-panel.tsx` | grilles dessinées en vue grille |
 
 - **Code neuf, `web/src/strata/`.**
-  - `shell/` : `StrataTopbar`, `StrataSideNav`, `StrataProjectTopbar`, `StrataEditorShell`, `BottomDock`, état d'enregistrement.
-  - `drawings/` : `EquipmentFace`, `BlockDiagram`, `CableDrawing`, `AdapterDrawing`, `RackElevation`, `Gauge` ; calcul de disposition des faces dans `face-layout.ts`.
-  - `pages/` : `StrataHome` (accueil) et grilles du catalogue (équipements, cordons, adaptateurs).
-  - `library/` : `LibraryDock`, bibliothèque glissable du dock gauche.
-  - `inspector/` : carte de la face de l'équipement sélectionné.
-  - `bottom/` : dock bas du rack (onglets Contrôles, Câbles, Bilan), alimenté par `use-rack-live`.
-  - `lenses/` : lentilles portées par l'URL sans nouvel id d'onglet (Connectique = onglet `rack` avec `?lens=connectique`).
-  - `editor/` : variantes Strata des onglets Inventaire et Rack.
+  - `shell/` : `TopbarV2` et son modèle de navigation (`nav-model.ts`), `ProjectTopbarV2`, `StrataCanvasShell` (canevas plein, outils flottants, tiroir, `useStrataDrawer`), sélecteurs d'espace et de mode, bandeau de validation, navigation vers les onglets (`tab-nav.ts`), demandes de la palette à l'éditeur (`project-requests.ts`), état d'enregistrement.
+  - `manage/` : pages de Gérer, données partagées (`use-manage.ts` : éditeur, `canvas-data`, inventaires, câbles du projet lus une fois par `ManageShell`, rapport de validation noté par projet) et mode tableau des câbles.
+  - `pages/` : page Projets, catalogue liste + détail, mise en page de l'éditeur pleine page.
+  - `catalogue/` : onglets du catalogue, filtres mémorisés, actions (Dupliquer, Supprimer, suppression groupée) sur les routes d'arkyo.
+  - `palette/` : palette ⌘K et ses sources enfichables (`registerPaletteSource`) ; sources du site et du projet ouvert (`project-sources.tsx`).
+  - `editor/` : tiroirs du synoptique et du mode Racks ; `library/` : bibliothèque glissable ; `inspector/` : carte de face ; `drawings/` : dessins (faces, schéma de principe, élévation, câble, adaptateur, jauge) ; `bottom/` : modèle et données vivantes d'un contenant (`use-rack-live`) ; `advanced/` : sections « Avancé » et leur mémoire.
   - Couleurs : variables de `globals.css` uniquement ; couleurs métier inchangées.
-- **Règle de phase.** Une phase qui porte une page la rend dans les deux interfaces, et ajoute au besoin sa présentation Strata. La table « Où vit chaque fonction » de la spec se met à jour à chaque phase.
+- **Palette ⌘K.** Montée dans les deux topbars (site et projet). Elle ne lit les données qu'à l'ouverture, par les routes existantes, et seulement quand la page correspondante est permise. Ses navigations passent par la garde des saisies non enregistrées. Dans un projet, les actions qui demandent l'état de l'éditeur (« Valider », « Ajouter du matériel ») posent une demande (`project-requests.ts`) que le bandeau de validation ou l'espace Gérer servent une fois montés : aucune accroche de plus dans les fichiers copiés.
+- **Règle de phase.** Une phase qui porte une page la rend dans les deux interfaces, et ajoute au besoin sa présentation Strata. La table §7 de la spec v2 se met à jour à chaque phase ; `web/src/strata/shell/function-map.test.tsx` la relit et vérifie chaque ligne dans l'application.

@@ -1,6 +1,6 @@
 # Interface Strata v2 : « Concevoir / Gérer »
 
-> Date : 2026-11-09 · Statut : à valider par Damien
+> Date : 2026-11-09 · Statut : à valider par Damien · Réalignée sur la livraison (tâche 9, 2026-11-10) : les écarts décidés en cours de route sont notés « Ruling N » à leur place ; la liste complète est dans `docs/superpowers/plans/2026-11-09-interface-strata-v2-suivi.md`
 > Branche : `ui-strata-v2` (worktree séparé), rebasée régulièrement sur `main`
 > Maquette de référence : « Strata Arkyo, synthèse Toile et Gérer » (https://claude.ai/artifact/M2TE3HREorjMmWpBUFwika), issue des dix pistes du 9 novembre (pistes 10 « Toile » et 7 « Simple / Expert » retenues, enrichies des pistes 1, 2, 3, 4, 6, 8, 9)
 > Remplace : l'interface Strata v1 de `docs/superpowers/specs/2026-11-07-interface-strata-design.md` (§6 et §7), dont le reste (réglage, contexte, règle « deux interfaces ») est conservé
@@ -40,6 +40,7 @@ Damien juge l'interface Strata v1 « très complexe et illisible… il y en a pa
 - La lentille Connectique (`lenses/`).
 - Les grilles de cartes du catalogue (`strata-*-grid.tsx`, `strata-card.tsx`) : le catalogue devient liste + détail.
 - La barre latérale de bibliothèque v1 (`strata-side-nav.tsx`) : remplacée par la navigation propre à chaque page.
+- Ruling 1 : les accroches v1 de `project-editor.tsx` (`withStrataRack`, `withStrataInventaireFace`) ont d'abord été réduites à des enveloppes neutres, puis remplacées par `strata.drawerTop` ; elles n'existent plus.
 
 ### Conservé et réutilisé
 - `interface-context.tsx`, `interface-switch.tsx`, le réglage Système et la route serveur.
@@ -61,39 +62,43 @@ Mode par défaut : **Synoptique**. Un sélecteur discret dans la barre flottante
 - **Topbar projet 46 px** : lockup, « PROJET / nom », sélecteur `Concevoir` · `Gérer`, état d'enregistrement, présence, ⌘K, statut du projet, Fermer.
 - **Canevas sur toute la surface.**
 - **Barre d'outils flottante** : le `leftToolbar` existant, posé en surimpression en haut au centre. La barre contextuelle existante (sélecteur de vue, etc.) est repliée dans un menu « Options de la vue ».
-- **Tiroir à droite** : le `rightPanel` existant (propriétés, calques, actions), posé en tiroir de 360 à 420 px. Il **s'ouvre seul quand un objet est sélectionné** (détails remontés par `onNodeDetailsChange` / `onCableDetailsChange` / …) et se ferme par Échap ou une croix ; un bouton le rouvre. Au-dessus du contenu arkyo, pour un équipement, une carte « Faces » (avant / arrière, ports reliés), avec « Voir dans le rack » qui passe en mode Racks sur ce rack.
-- **Bandeau de validation** discret sous la topbar : compteurs erreurs / avertissements tirés de `useTopbarActions().validationReport`. Il ouvre la liste des 11 contrôles en tiroir ; un clic sur un contrôle appelle `onSelectValidationIssue` (la sélection et le cerclage sur le canevas sont ceux du synoptique arkyo).
+- **Tiroir à droite** : le `rightPanel` existant (propriétés, calques, actions), posé en tiroir de 360 à 420 px. Il **s'ouvre seul quand un objet est sélectionné** (détails remontés par `onNodeDetailsChange` / `onCableDetailsChange` / …) et se ferme par Échap ou une croix ; un bouton le rouvre. Une sélection multiple est reconnue par le nombre de nœuds et de racks et le dernier nœud cliqué (Ruling 8 : le synoptique ne transmet que des comptes). Au-dessus du contenu arkyo, pour un équipement, une carte « Faces » (avant / arrière, ports reliés), avec « Voir dans le rack » qui passe en mode Racks sur ce rack, sans y sélectionner l'emplacement (Ruling 7 : `RackTabClient` n'expose aucune sélection externe).
+- **Bandeau de validation** discret sous la topbar : compteurs erreurs / avertissements tirés de `useTopbarActions().validationReport`. Il ouvre la liste des contrôles (celle du synoptique arkyo, groupée par contrôle) dans un volet flottant à gauche, et non dans le tiroir, qui reste à l'objet sélectionné (Ruling 4) ; un clic sur un contrôle appelle `onSelectValidationIssue` (la sélection et le cerclage sur le canevas sont ceux du synoptique arkyo). « Valider » de la palette ⌘K ouvre cette liste.
 - **Mini-carte et zoom** : ceux du synoptique s'ils existent, sinon les commandes de zoom du `SynopticViewHandle`.
 
-**Mode Racks** : l'onglet Rack existant (élévations, placement, DnD), avec la même disposition (canevas plein, outils flottants, tiroir). Le tiroir porte la bibliothèque v1 (glisser sur un U libre) et la carte de face de l'emplacement sélectionné.
+**Mode Racks** : l'onglet Rack existant (élévations, placement, DnD), avec la même disposition (canevas plein, outils flottants, tiroir). Le tiroir porte la bibliothèque v1 (glisser sur un U libre) et la carte de face de l'emplacement sélectionné, en deux onglets « Bibliothèque » et « Équipement » plutôt qu'empilés (Ruling 6).
+
+Les onglets Inventaire, Préparation, Réseau et Recette sont des pages et non des canevas : leurs outils sont posés en bande au-dessus du contenu, sans barre flottante (`strata.mode = "page"`, Ruling 3). Vidéo et Audio n'ont pas de mode dans le sélecteur : ils restent dans le menu « Vues » de la topbar projet.
 
 ### 4.2 Gérer
-Une colonne de navigation fine, puis une liste filtrable, puis le détail (modèle unique, piste 8) :
-- **Vue d'ensemble** : une ligne par domaine (Matériel : n équipements / emplacements ; Racks : U et puissance ; Câblage : n câbles, erreurs ; Validation : compteurs ; Fiche : complétion) et la liste **« Ce qu'il reste à faire »**, calculée sur les données disponibles (contrôles de validation, équipements non placés, longueurs manquantes, champs de fiche manquants). Chaque ligne mène à l'objet, dans Concevoir ou dans Gérer.
+Une colonne de navigation fine, puis une liste filtrable, puis le détail (modèle unique, piste 8). En Gérer, le canevas de Concevoir est démonté, et remonté au retour : ses raccourcis globaux (⌘Z, ⌘X, ⌘V) n'agissent jamais sur une vue invisible (Ruling 5).
+- **Vue d'ensemble** : une ligne par domaine (Matériel : n équipements / emplacements ; Racks : U et puissance ; Câblage : n câbles, erreurs ; Validation : compteurs ; Fiche : complétion) et la liste **« Ce qu'il reste à faire »**, calculée sur les données disponibles (contrôles de validation, équipements non placés, champs de fiche manquants). Pas de « longueurs manquantes » : arkyo n'a aucune longueur de câble (Ruling 9). Le rapport de validation est le dernier que le synoptique a publié pour ce projet, avec le lieu qu'il couvre. Chaque ligne mène à l'objet, dans Concevoir ou dans Gérer.
 - **Fiche** : la fiche existante (`fiche-client.tsx`) et le dialogue des caractéristiques, dans la zone de détail. Tâches, messages et documents restent ce qu'ils sont en Classique (comptes et liste de documents en lecture ; pas de route de modification à ce jour).
 - **Matériel** : liste des équipements du projet groupés par emplacement et contenant (données `/editor` et `racks/{rack}/inventory`), détail avec faces, position et « Avancé ». « Ajouter du catalogue » ouvre le parcours d'ajout existant de l'inventaire. La nomenclature est un second onglet de la liste.
-- **Câbles** : liste agrégée de tous les câbles du projet, par lecture des routes existantes (`/racks/{id}/connections` par rack et `synoptic/general`). Détail : deux extrémités dessinées, type, longueur. Un **mode tableau** permet de saisir longueurs et numéros en série (édition en cellule, remplissage vers le bas), enregistrés par les routes existantes de modification de connexion.
+- **Câbles** : liste agrégée de tous les câbles du projet, par lecture des routes existantes (`synoptic/location/{id}` par lieu, `/racks/{id}/connections` pour les contenants sans lieu, et `synoptic/general`). Détail : deux extrémités dessinées, type. Un **mode tableau** permet de saisir numéros, couleurs et notes en série (édition en cellule, remplissage vers le bas), enregistrés par les routes existantes de modification de connexion. Ruling 9 : arkyo n'a aucune longueur de câble (`RackConnection` : label, color, notes, tags, waypoints, cableStyle, bundleId) ; en ajouter une demande une colonne et une route, question reportée par Damien.
 - **Réseau, Livraison (préparation, recette), Dossier** : `ComingSoon` jusqu'aux phases 5 et 6, avec la même phrase qu'en Classique.
 
 ### 4.3 Hors projet
 - **Projets** (accueil) : liste des projets (avancement, date de captation, statut, équipe) et détail (résumé, alertes connues, ouvrir dans Concevoir ou Gérer). Prestation / Intégration sont des filtres.
-- **Catalogue** : liste + détail. Détail en lecture : faces, schéma de principe, ports, essentiel et « Avancé ». « Modifier » ouvre l'**éditeur pleine page** :
+- **Catalogue** : liste + détail (Équipements, Cordons, Adaptateurs, Modèles). Toute fonction des panneaux de liste d'arkyo y est reprise : tri, filtres (à choix multiples, mémorisés par sorte), Dupliquer, Supprimer, suppression groupée (Ruling 10). Détail en lecture : faces, schéma de principe, ports, essentiel et « Avancé ». « Modifier » ouvre l'**éditeur pleine page** pour un équipement ; les éditeurs de cordons et d'adaptateurs restent les pages d'arkyo, dans la coquille Strata (Ruling 11) :
   - bandeau des faces en direct (`faces-panel`) ;
   - colonne principale avec le formulaire arkyo existant (ses onglets Généralités et Connectique) ;
-  - colonne d'aperçu à droite (schéma de principe, ports par famille, totaux, « Utilisé dans ») ;
+  - colonne d'aperçu à droite (schéma de principe, ports par famille, totaux, « Utilisé dans », lu sur les régies et les contenants hors régie ; un composant de châssis modulaire n'y figure pas, d'où « Aucun emplacement connu » plutôt que « Non utilisé ») ;
   - barre d'actions (état d'enregistrement de l'autosave arkyo, Annuler et Rétablir de `useEditorHistory`, Dupliquer, Supprimer).
   
   Le formulaire arkyo n'est pas découpé en sections (non-objectif) ; « Avancé » ne s'y applique donc pas.
-- **Administration** : les pages existantes (Utilisateurs, Paramètres, Espace, Système avec Sauvegardes), dans la coquille Strata, avec une navigation de section.
+- **Administration** : les pages existantes (Utilisateurs, Paramètres, Espace, Système avec Sauvegardes), dans la coquille Strata. Leur navigation de section est le menu « Administration ▾ » de la topbar et les onglets de page existants, sans rail de plus (Ruling 2).
 
 ### 4.4 Palette ⌘K
 Projets, équipements et câbles du projet ouvert, fiches du catalogue, utilisateurs, et actions (Nouveau projet, Ajouter du matériel, Valider, aller à Concevoir / Gérer, Modifier une fiche). Navigation au clavier.
+
+Livré (tâche 9) : les sources du projet ouvert viennent en tête (Matériel, Câbles, Projet). Une fiche du catalogue ouvre le catalogue Strata sur `?tab=<sorte>&id=<id>` ; « Modifier » (bouton de la ligne ou ⌘Entrée) ouvre son éditeur. Les sources Catalogue et Utilisateurs suivent les permissions de leurs pages (`catalog:admin`, `members:admin`). Les navigations passent par la garde des saisies non enregistrées. « Valider » mène au synoptique de Concevoir et ouvre la liste des contrôles dès que le rapport est publié ; « Ajouter du matériel » mène à Gérer › Matériel, qui ouvre l'outil Équipements de l'Inventaire comme « Ajouter du catalogue ».
 
 ## 5. Architecture
 
 ### 5.1 Points d'accroche dans les fichiers copiés
 Ce sont ceux de la v1, liste fermée, inchangée sauf ce qui suit :
-- `editor-shell.tsx` : en Strata, rend `StrataCanvasShell` au lieu de `StrataEditorShell`. Le champ `strata?` d'`EditorShellSlots` change de forme : `{ drawerTop?: ReactNode; mode?: "canvas" | "page" }`.
+- `editor-shell.tsx` : en Strata, rend `StrataCanvasShell` au lieu de `StrataEditorShell`. Le champ `strata?` d'`EditorShellSlots` change de forme : `{ drawerTop?: ReactNode; mode?: "canvas" | "page" }` (`mode = "page"` : Ruling 3).
 - `project-global-topbar.tsx` : rend la topbar v2.
 - `project-editor.tsx` (`getEditorSlots`) : les accroches v1 (`withStrataRack`, `withStrataInventaireFace`) sont remplacées par l'alimentation de `strata.drawerTop` (carte Faces) et le passage en mode Gérer.
 - `synoptique-tab-client.tsx` : **ajout à la liste fermée**. Une accroche passe la carte Faces de l'objet sélectionné dans `strata.drawerTop` et ouvre le tiroir à la sélection, à partir des détails qu'il tient déjà (`:484-507`).
@@ -122,23 +127,28 @@ Chaque lot se termine branche à jour de `main`, avec les trois jeux de commande
 
 ## 7. Où vit chaque fonction (Strata v2)
 
+Table réalignée sur ce qui a été livré (tâche 9). Elle remplace la table « Où vit chaque fonction » de la spec v1 et fait foi pour l'interface Strata. Chaque ligne a son test de routeur (`web/src/strata/shell/function-map.test.tsx`), qui relit cette table : une ligne ajoutée ici sans test fait échouer la suite.
+
 | Fonction | Strata v2 |
 | --- | --- |
 | Tableau de bord | Projets (liste + détail), filtres Prestation / Intégration |
-| Création de projet | Projets › Nouveau projet (assistant existant) |
-| Fiche, caractéristiques | Gérer › Fiche |
-| Inventaire, nomenclature | Gérer › Matériel (liste groupée, onglet Nomenclature) ; ajout via l'assistant existant |
-| Rack (4 faces, placement) | Concevoir › Racks (bibliothèque dans le tiroir) |
-| Synoptique, validation 11 contrôles | Concevoir › Synoptique, bandeau de validation |
-| Câblage, numérotation | Concevoir (outil câble) ; Gérer › Câbles (liste, mode tableau) |
-| Plan, Lumière, Schémas, Vidéo, Audio | Concevoir › modes (bouchons phase 5) |
+| Création de projet | Projets › Nouveau projet (assistant existant) ; ⌘K › Nouveau projet |
+| Fiche, caractéristiques | Gérer › Fiche (fiche d'arkyo, dialogue des caractéristiques) ; menu Vues › Caractéristiques du projet |
+| Inventaire, nomenclature | Gérer › Matériel (liste groupée, onglet Nomenclature) ; « Ajouter du catalogue » ouvre l'Inventaire d'arkyo sur l'outil Équipements |
+| Rack (4 faces, placement) | Concevoir › Racks (tiroir en onglets Bibliothèque et Équipement, Ruling 6) |
+| Synoptique, validation 11 contrôles | Concevoir › Synoptique : bandeau de validation et volet des contrôles à gauche (Ruling 4), action « Validation synoptique » d'arkyo dans le tiroir ; ⌘K › Valider |
+| Câblage, numérotation | Concevoir (outil câble et numérotation d'arkyo) ; Gérer › Câbles (liste, mode tableau : numéro, couleur, notes ; pas de longueur, Ruling 9) |
+| Plan, Lumière, Schémas | Concevoir › modes (bouchons phase 5) |
+| Vidéo, Audio | Menu Vues de la topbar projet (bouchons phase 5, sans mode du sélecteur) |
 | Réseau | Gérer › Réseau (bouchon phase 5) |
-| Préparation, Recette, Dossier | Gérer › Livraison, Dossier (bouchons phase 6) |
+| Préparation, Recette, Dossier | Gérer › Livraison, Dossier (bouchons phase 6) ; export du dossier : menu Vues › Exporter un dossier |
 | Exports par vue | Tiroir de la vue (actions arkyo existantes) |
-| Modèles (contenants, régies, panels, éditeur de panel) | Catalogue › Modèles |
-| Catalogue (équipements, câbles, adaptateurs, éditeurs) | Catalogue (liste + détail, éditeur pleine page) |
-| Paramètres, Utilisateurs, Espace, Système (dont Sauvegardes, Interface) | Administration |
+| Modèles (contenants, régies, panels, éditeur de panel) | Catalogue › Modèles (onglet du catalogue, puis les pages d'arkyo et leur navigation Contenants · Panels · Dossiers dans la topbar) |
+| Catalogue (équipements, cordons, adaptateurs) | Catalogue : liste + détail, tri, filtres multiples mémorisés, Dupliquer, Supprimer, suppression groupée (Ruling 10) ; ⌘K › fiches |
+| Éditeurs du catalogue | Équipement : éditeur pleine page ; cordons et adaptateurs : pages d'arkyo dans la coquille Strata (Ruling 11) |
+| Paramètres, Utilisateurs, Espace, Système (dont Sauvegardes, Interface) | Administration (menu Administration ▾ et onglets des pages, Ruling 2) |
 | Profil, notifications, langue, thème, présence | Topbar |
+| Recherche et actions | Palette ⌘K, sur toutes les pages Strata (projet ouvert compris) |
 
 ## 8. Vérification
 - **Classique** : tous les tests existants passent sans modification.
